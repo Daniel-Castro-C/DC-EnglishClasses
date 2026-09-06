@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D.C English Classes — Entrar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-brand">
+    <div class="brand-top">
+      <img class="logo" src="logo.png" alt="Logo">
+      <span>D.C English Classes</span>
+    </div>
+    <div class="brand-text-wrap">
+      <h1>Suas aulas de inglês, organizadas em um só lugar.</h1>
+      <p>Materiais, apresentações, exercícios e relatórios de cada aula, sempre à mão.</p>
+    </div>
+  </div>
+
+  <div class="login-form-side">
+    <div class="login-box">
+      <h2>Bem-vindo de volta</h2>
+      <div class="sub">Entre com seu e-mail e senha para continuar</div>
+
+      <div id="login-error" class="form-error"></div>
+
+      <label for="login-email">E-mail</label>
+      <input id="login-email" type="email" placeholder="voce@email.com" autocomplete="username">
+      <label for="login-pass">Senha</label>
+      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+
+      <button id="login-btn" class="btn-primary" onclick="handleLogin()">Entrar</button>
+      <div class="small-note">Esqueceu a senha? Fale com seu professor para redefinir.</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+// Se já existir uma sessão ativa, manda direto pro painel certo
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    const profile = await getMyProfile(session.user.id);
+    if (profile) {
+      window.location.href = profile.role === 'admin' ? 'admin.html' : 'aluno.html';
+    }
+  }
+})();
+
+function showError(msg){
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function clearError(){
+  document.getElementById('login-error').classList.remove('show');
+}
+
+async function handleLogin(){
+  clearError();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+
+  if(!email || !password){
+    showError('Preencha e-mail e senha.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    showError('E-mail ou senha incorretos.');
+    return;
+  }
+
+  const profile = await getMyProfile(data.user.id);
+  if (!profile) {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    showError('Não encontramos seu perfil. Fale com o professor.');
+    return;
+  }
+
+  window.location.href = profile.role === 'admin' ? 'admin.html' : 'aluno.html';
+}
+
+// permite apertar Enter para logar
+document.getElementById('login-pass').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleLogin();
+});
+</script>
+</body>
+</html>
