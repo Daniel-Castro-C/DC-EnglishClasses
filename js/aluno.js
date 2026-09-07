@@ -110,20 +110,23 @@ async function renderLesson(lessonId){
         <div class="name">${escapeHtml(r.name)}</div>
         <div class="desc">${escapeHtml(r.description || '')}</div>
       </div>
-      <button class="resource-action" onclick="openResource('${r.file_path}')">Abrir</button>
+      <button class="resource-action" onclick="downloadResource('${r.file_path}')">Baixar arquivo</button>
     </div>`;
   }).join('');
 }
 
-async function openResource(filePath){
+async function downloadResource(filePath){
+  // Nome de exibição do arquivo baixado (remove o prefixo de timestamp usado internamente)
+  const displayName = filePath.split('/').pop().replace(/^\d+_/, '');
+
   const { data, error } = await sb.storage
     .from(STORAGE_BUCKET)
-    .createSignedUrl(filePath, 60 * 10); // link válido por 10 minutos
+    .createSignedUrl(filePath, 60 * 10, { download: displayName }); // força download em vez de abrir no navegador
 
   if (error || !data) {
-    alert('Não foi possível abrir este arquivo. Tente novamente.');
+    alert('Não foi possível baixar este arquivo. Tente novamente.');
     return;
   }
-  window.open(data.signedUrl, '_blank');
+  window.location.href = data.signedUrl;
 }
 

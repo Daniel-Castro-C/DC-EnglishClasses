@@ -9,6 +9,7 @@ const TYPE_LABELS = { ppt:'Slides (PPT)', pdf:'PDF', ex:'Exercícios', rep:'Rela
 let students = [];
 let currentStudent = null;
 let currentLessons = [];
+let currentTab = 'geral';
 
 (async function init(){
   const session = await requireSession();
@@ -105,8 +106,14 @@ async function refreshStudents(){
 
 async function openStudent(studentId){
   currentStudent = students.find(s => s.id === studentId);
+  currentTab = 'geral';
   renderNav();
   await loadLessonsFor(studentId);
+  renderStudentDetail();
+}
+
+function switchTab(tab){
+  currentTab = tab;
   renderStudentDetail();
 }
 
@@ -158,6 +165,24 @@ function renderStudentDetail(){
       <button class="btn-dark-sm" onclick="renderHome()">← Todos os alunos</button>
     </div>
 
+    <div class="role-switch" style="max-width:260px;margin-bottom:26px;">
+      <button class="${currentTab === 'geral' ? 'active' : ''}" onclick="switchTab('geral')">Geral</button>
+      <button class="${currentTab === 'aulas' ? 'active' : ''}" onclick="switchTab('aulas')">Aulas</button>
+    </div>
+
+    <div id="tab-content"></div>
+  `;
+
+  if (currentTab === 'geral') {
+    renderGeralTab();
+  } else {
+    renderAulasTab(lessonsHtml);
+  }
+}
+
+function renderGeralTab(){
+  const s = currentStudent;
+  document.getElementById('tab-content').innerHTML = `
     <div class="box">
       <h3>Perfil do aluno</h3>
       <div class="row" style="align-items:center;">
@@ -210,7 +235,13 @@ function renderStudentDetail(){
       <textarea id="password-sql-output" readonly style="display:none;width:100%;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:7px;font-family:monospace;font-size:12.5px;height:70px;"></textarea>
       <button id="copy-sql-btn" class="btn-ghost" style="display:none;margin-top:8px;" onclick="copyPasswordSQL()">Copiar comando</button>
     </div>
+  `;
 
+  document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
+}
+
+function renderAulasTab(lessonsHtml){
+  document.getElementById('tab-content').innerHTML = `
     <div class="box" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <div>
         <h3 style="margin:0 0 4px;">Notificar aluno por e-mail</h3>
@@ -260,8 +291,6 @@ function renderStudentDetail(){
       </div>
     </div>
   `;
-
-  document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
 }
 
 async function uploadStudentAvatar(e){
