@@ -175,3 +175,11 @@ input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border
 .row > *{flex:1;min-width:160px;}
 .empty-state{color:var(--text-soft);font-size:14px;padding:24px 0;}
 .small-note{font-size:12px;color:var(--text-soft);margin-top:6px;}
+
+.role-switch{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.role-switch button{
+  flex:1;padding:10px;border:none;background:var(--paper-card);
+  font-family:inherit;font-size:13px;color:var(--text-soft);cursor:pointer;
+  border-bottom:2px solid transparent;
+}
+.role-switch button.active{color:var(--ink);font-weight:600;border-bottom:2px solid var(--ink);}
