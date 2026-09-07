@@ -159,11 +159,64 @@ function renderStudentDetail(){
     </div>
 
     <div class="box">
-      <h3>Nome de exibição do aluno</h3>
-      <div class="row">
+      <h3>Perfil do aluno</h3>
+      <div class="row" style="align-items:center;">
+        ${s.avatar_url
+          ? `<img id="student-avatar-preview" src="${s.avatar_url}" alt="Foto" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:0 0 auto;">`
+          : `<div id="student-avatar-preview" style="width:56px;height:56px;border-radius:50%;background:var(--sky-soft);flex:0 0 auto;"></div>`}
+        <input id="student-avatar-file" type="file" accept="image/*">
+      </div>
+      <div class="row" style="margin-top:12px;">
         <input id="student-name-input" placeholder="Nome completo" value="${escapeAttr(s.full_name || '')}">
         <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="saveStudentName()">Salvar nome</button>
       </div>
+    </div>
+
+    <div class="box">
+      <h3>Link fixo da aula</h3>
+      <div class="small-note" style="margin-top:0;margin-bottom:10px;">Este link fica disponível no perfil do aluno (ex: link de videochamada permanente).</div>
+      <div class="row">
+        <input id="student-link-input" placeholder="https://..." value="${escapeAttr(s.permanent_lesson_link || '')}">
+        <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="saveStudentLink()">Salvar link</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Financeiro</h3>
+      <div class="row">
+        <div>
+          <label>Dia de pagamento</label>
+          <input id="student-payday-input" type="number" min="1" max="31" placeholder="ex: 8" value="${s.payment_day ?? ''}">
+        </div>
+        <div>
+          <label>Valor da mensalidade (R$)</label>
+          <input id="student-fee-input" type="number" min="0" step="0.01" placeholder="ex: 250.00" value="${s.monthly_fee ?? ''}">
+        </div>
+      </div>
+      <button class="btn-dark-sm" onclick="saveStudentFinance()">Salvar dados financeiros</button>
+    </div>
+
+    <div class="box">
+      <h3>Redefinir senha do aluno</h3>
+      <div class="small-note" style="margin-top:0;margin-bottom:10px;">
+        Por segurança, o professor não consegue trocar a senha de outra pessoa diretamente pelo site.
+        Digite a nova senha abaixo e clique em "Gerar comando" — copie o comando gerado e cole no
+        <b>SQL Editor</b> do Supabase para efetivar a troca.
+      </div>
+      <div class="row">
+        <input id="student-newpass-input" type="password" placeholder="Nova senha (mín. 6 caracteres)">
+        <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="generatePasswordSQL()">Gerar comando</button>
+      </div>
+      <textarea id="password-sql-output" readonly style="display:none;width:100%;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:7px;font-family:monospace;font-size:12.5px;height:70px;"></textarea>
+      <button id="copy-sql-btn" class="btn-ghost" style="display:none;margin-top:8px;" onclick="copyPasswordSQL()">Copiar comando</button>
+    </div>
+
+    <div class="box" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0 0 4px;">Notificar aluno por e-mail</h3>
+        <div class="small-note" style="margin-top:0;">Envia: "Os dados da sua última aula já estão disponíveis no portal!"</div>
+      </div>
+      <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="notifyStudentAboutLesson()">Enviar e-mail ao aluno</button>
     </div>
 
     ${lessonsHtml}
@@ -207,6 +260,99 @@ function renderStudentDetail(){
       </div>
     </div>
   `;
+
+  document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
+}
+
+async function uploadStudentAvatar(e){
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const filePath = `${currentStudent.id}/avatar.${ext}`;
+
+  const { error: uploadError } = await sb.storage
+    .from(AVATARS_BUCKET)
+    .upload(filePath, file, { upsert: true });
+
+  if (uploadError) { alert('Não foi possível enviar a foto.'); return; }
+
+  const { data: urlData } = sb.storage.from(AVATARS_BUCKET).getPublicUrl(filePath);
+  const publicUrl = urlData.publicUrl + '?t=' + Date.now();
+
+  const { error: updateError } = await sb.from('profiles')
+    .update({ avatar_url: publicUrl })
+    .eq('id', currentStudent.id);
+
+  if (updateError) { alert('Foto enviada, mas não foi possível salvar.'); return; }
+
+  currentStudent.avatar_url = publicUrl;
+  const idx = students.findIndex(s => s.id === currentStudent.id);
+  if (idx >= 0) students[idx].avatar_url = publicUrl;
+  renderStudentDetail();
+}
+
+async function notifyStudentAboutLesson(){
+  const confirmed = confirm(
+    `Enviar e-mail para ${currentStudent.email} avisando que os dados da última aula estão disponíveis?`
+  );
+  if (!confirmed) return;
+
+  const result = await sendLessonNotification(
+    currentStudent.email,
+    currentStudent.full_name,
+    'Os dados da sua última aula já estão disponíveis no portal!'
+  );
+
+  if (result.ok) {
+    alert('E-mail enviado com sucesso!');
+  } else {
+    alert('Não foi possível enviar o e-mail. Verifique a configuração do EmailJS.');
+  }
+}
+
+async function saveStudentLink(){
+  const link = document.getElementById('student-link-input').value.trim();
+  const { error } = await sb.from('profiles').update({ permanent_lesson_link: link }).eq('id', currentStudent.id);
+  if (error) { alert('Não foi possível salvar o link.'); return; }
+  currentStudent.permanent_lesson_link = link;
+  alert('Link salvo!');
+}
+
+async function saveStudentFinance(){
+  const dayRaw = document.getElementById('student-payday-input').value;
+  const feeRaw = document.getElementById('student-fee-input').value;
+
+  const payment_day = dayRaw ? parseInt(dayRaw, 10) : null;
+  const monthly_fee = feeRaw ? parseFloat(feeRaw) : null;
+
+  const { error } = await sb.from('profiles').update({ payment_day, monthly_fee }).eq('id', currentStudent.id);
+  if (error) { alert('Não foi possível salvar os dados financeiros.'); return; }
+
+  currentStudent.payment_day = payment_day;
+  currentStudent.monthly_fee = monthly_fee;
+  alert('Dados financeiros salvos!');
+}
+
+function generatePasswordSQL(){
+  const pass = document.getElementById('student-newpass-input').value;
+  if (pass.length < 6) { alert('Digite uma senha com pelo menos 6 caracteres.'); return; }
+
+  const sql = `update auth.users set encrypted_password = crypt('${pass.replace(/'/g,"''")}', gen_salt('bf')), email_confirmed_at = now() where email = '${currentStudent.email.replace(/'/g,"''")}';`;
+
+  const box = document.getElementById('password-sql-output');
+  box.style.display = 'block';
+  box.value = sql;
+  document.getElementById('copy-sql-btn').style.display = 'inline-block';
+}
+
+async function copyPasswordSQL(){
+  const box = document.getElementById('password-sql-output');
+  await navigator.clipboard.writeText(box.value);
+  const btn = document.getElementById('copy-sql-btn');
+  const old = btn.textContent;
+  btn.textContent = 'Copiado!';
+  setTimeout(() => { btn.textContent = old; }, 1500);
 }
 
 async function saveStudentName(){
@@ -304,9 +450,4 @@ function formatDate(isoDate){
   return `${d}/${m}/${y}`;
 }
 
-function escapeHtml(str){
-  return String(str ?? '').replace(/[&<>"']/g, m => ({
-    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
-  }[m]));
-}
 function escapeAttr(str){ return escapeHtml(str); }
