@@ -2,8 +2,8 @@
 // CONFIGURAÇÃO — cole aqui os dados do SEU projeto Supabase
 // (Painel Supabase > Project Settings > API)
 // ==========================================================
-const SUPABASE_URL = "COLE_AQUI_A_URL_DO_SEU_PROJETO";
-const SUPABASE_ANON_KEY = "COLE_AQUI_A_CHAVE_ANON_PUBLIC";
+const SUPABASE_URL = "https://dgwbjgngewymzgedlzix.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRnd2JqZ25nZXd5bXpnZWRseml4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3MjA0NDUsImV4cCI6MjEwNDI5NjQ0NX0.P2CzyJiYTRH13nuXOKQXl5F65Voq0XHSLC8kQdhvqGw";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
