@@ -41,7 +41,7 @@ async function loadLessons(){
   myLessons = data || [];
 
   if (myLessons.length === 0) {
-    document.getElementById('nav-container').innerHTML = `<div class="nav-label">Minhas aulas</div>`;
+    document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas') + `<div class="nav-label">Minhas aulas</div>`;
     document.getElementById('main-content').innerHTML = `
       <div class="topline"><div><h1>Ainda não há aulas por aqui</h1>
       <div class="sub">Assim que seu professor cadastrar sua primeira aula, ela aparece aqui.</div></div></div>`;
@@ -54,7 +54,8 @@ async function loadLessons(){
 }
 
 function renderNav(){
-  let html = `<div class="nav-label">Minhas aulas</div>`;
+  let html = buildStudentTopNav('aulas');
+  html += `<div class="nav-label">Minhas aulas</div>`;
   myLessons.forEach(l => {
     html += `<div class="nav-item ${l.id === activeLessonId ? 'active' : ''}" onclick="renderLesson('${l.id}')">
       <span>${escapeHtml(l.title)}</span><span class="dot"></span>
@@ -126,8 +127,3 @@ async function openResource(filePath){
   window.open(data.signedUrl, '_blank');
 }
 
-function escapeHtml(str){
-  return String(str ?? '').replace(/[&<>"']/g, m => ({
-    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
-  }[m]));
-}
