@@ -3,8 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>D.C English Classes — Minhas aulas</title>
+<title>D.C English Classes — Perfil</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  .avatar-row{display:flex;align-items:center;gap:20px;margin-bottom:10px;}
+  .avatar-preview{width:76px;height:76px;border-radius:50%;object-fit:cover;background:var(--sky-soft);border:1px solid var(--line);}
+  .feedback{font-size:13px;margin-top:8px;display:none;}
+  .feedback.show{display:block;}
+  .feedback.ok{color:var(--sage);}
+  .feedback.err{color:var(--danger);}
+</style>
 </head>
 <body>
 
@@ -14,11 +22,11 @@
       <img class="logo" src="logo.png" alt="Logo">
       <div>
         <span>D.C English Classes</span>
-        <small>Painel do aluno</small>
+        <small>Área do aluno</small>
       </div>
     </div>
 
-    <div id="nav-container"><div class="nav-label">Carregando...</div></div>
+    <div id="nav-container"></div>
 
     <div class="sidebar-foot">
       <button class="logout-link" onclick="signOutAndRedirect()">← Sair</button>
@@ -26,13 +34,13 @@
   </div>
 
   <div class="main" id="main-content">
-    <div class="empty-state">Carregando suas aulas...</div>
+    <div class="empty-state">Carregando...</div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabaseClient.js"></script>
 <script src="js/common.js"></script>
-<script src="js/aluno.js"></script>
+<script src="js/perfil.js"></script>
 </body>
 </html>

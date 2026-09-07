@@ -33,7 +33,7 @@
       <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
 
       <button id="login-btn" class="btn-primary" onclick="handleLogin()">Entrar</button>
-      <div class="small-note">Esqueceu a senha? Fale com seu professor para redefinir.</div>
+      <div class="small-note"><a href="esqueci-senha.html" style="color:var(--ink);">Esqueci minha senha</a></div>
     </div>
   </div>
 </div>
@@ -47,7 +47,7 @@
   if (session) {
     const profile = await getMyProfile(session.user.id);
     if (profile) {
-      window.location.href = profile.role === 'admin' ? 'admin.html' : 'aluno.html';
+      window.location.href = profile.role === 'admin' ? 'admin.html' : 'home.html';
     }
   }
 })();
@@ -94,7 +94,7 @@ async function handleLogin(){
     return;
   }
 
-  window.location.href = profile.role === 'admin' ? 'admin.html' : 'aluno.html';
+  window.location.href = profile.role === 'admin' ? 'admin.html' : 'home.html';
 }
 
 // permite apertar Enter para logar

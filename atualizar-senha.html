@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D.C English Classes — Criar nova senha</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-brand">
+    <div class="brand-top">
+      <img class="logo" src="logo.png" alt="Logo">
+      <span>D.C English Classes</span>
+    </div>
+    <div class="brand-text-wrap">
+      <h1>Vamos criar sua nova senha.</h1>
+      <p>Escolha uma senha nova para voltar a acessar suas aulas.</p>
+    </div>
+  </div>
+
+  <div class="login-form-side">
+    <div class="login-box">
+      <h2>Nova senha</h2>
+      <div class="sub" id="sub-text">Digite e confirme sua nova senha</div>
+
+      <div id="msg-box" class="form-error"></div>
+
+      <div id="form-fields">
+        <label for="pass-1">Nova senha</label>
+        <input id="pass-1" type="password" placeholder="Mínimo 6 caracteres">
+        <label for="pass-2">Confirmar nova senha</label>
+        <input id="pass-2" type="password" placeholder="Repita a nova senha">
+        <button id="save-btn" class="btn-primary" onclick="savePassword()">Salvar nova senha</button>
+      </div>
+
+      <div class="small-note"><a href="index.html" style="color:var(--ink);">← Voltar para o login</a></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+function showMsg(msg, ok){
+  const el = document.getElementById('msg-box');
+  el.textContent = msg;
+  el.style.background = ok ? '#E7F0E8' : '#FBEAE6';
+  el.style.color = ok ? 'var(--sage)' : 'var(--danger)';
+  el.classList.add('show');
+}
+
+// Quando o link do e-mail é clicado, o Supabase cria uma sessão temporária
+// de recuperação automaticamente. Verificamos se ela existe.
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('form-fields').style.display = 'none';
+    document.getElementById('sub-text').textContent = '';
+    showMsg('Este link é inválido ou já expirou. Volte para o login e solicite um novo link em "Esqueci minha senha".', false);
+  }
+})();
+
+async function savePassword(){
+  const p1 = document.getElementById('pass-1').value;
+  const p2 = document.getElementById('pass-2').value;
+
+  if (p1.length < 6) { showMsg('A senha precisa ter pelo menos 6 caracteres.', false); return; }
+  if (p1 !== p2) { showMsg('As senhas não coincidem.', false); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const { error } = await sb.auth.updateUser({ password: p1 });
+
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = 'Salvar nova senha';
+    showMsg('Não foi possível salvar sua senha. Tente solicitar um novo link.', false);
+    return;
+  }
+
+  document.getElementById('form-fields').style.display = 'none';
+  showMsg('Senha atualizada com sucesso! Redirecionando para o login...', true);
+  setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+}
+</script>
+</body>
+</html>

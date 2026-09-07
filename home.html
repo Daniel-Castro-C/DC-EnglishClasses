@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D.C English Classes — Área do aluno</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .home-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:8px;}
+  .home-card{
+    background:var(--paper-card);border:1px solid var(--line);border-radius:12px;
+    padding:26px;cursor:pointer;transition:border-color .15s, transform .15s;
+  }
+  .home-card:hover{border-color:var(--ink);transform:translateY(-2px);}
+  .home-card .icon{
+    width:42px;height:42px;border-radius:10px;background:var(--sky-soft);color:var(--ink);
+    display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px;
+  }
+  .home-card h3{margin:0 0 6px;font-size:17px;}
+  .home-card p{margin:0;color:var(--text-soft);font-size:13.5px;line-height:1.5;}
+  .welcome-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--sky-soft);}
+  .welcome-row{display:flex;align-items:center;gap:16px;margin-bottom:34px;}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="sidebar">
+    <div class="side-brand">
+      <img class="logo" src="logo.png" alt="Logo">
+      <div>
+        <span>D.C English Classes</span>
+        <small>Área do aluno</small>
+      </div>
+    </div>
+
+    <div id="nav-container"></div>
+
+    <div class="sidebar-foot">
+      <button class="logout-link" onclick="signOutAndRedirect()">← Sair</button>
+    </div>
+  </div>
+
+  <div class="main" id="main-content">
+    <div class="empty-state">Carregando...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/common.js"></script>
+<script>
+(async function init(){
+  const session = await requireSession();
+  if (!session) return;
+
+  const profile = await getMyProfile(session.user.id);
+  if (!profile) { await signOutAndRedirect(); return; }
+  if (profile.role !== 'student') { window.location.href = 'admin.html'; return; }
+
+  document.getElementById('nav-container').innerHTML = buildStudentTopNav('home');
+
+  const firstName = (profile.full_name || profile.email || '').split(' ')[0];
+  const avatar = profile.avatar_url
+    ? `<img class="welcome-avatar" src="${profile.avatar_url}" alt="Foto">`
+    : `<div class="welcome-avatar"></div>`;
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="welcome-row">
+      ${avatar}
+      <div>
+        <h1 style="margin:0;font-size:24px;">Olá, ${escapeHtml(firstName)}</h1>
+        <div class="sub" style="color:var(--text-soft);font-size:13.5px;">Bem-vindo(a) à sua área do aluno</div>
+      </div>
+    </div>
+
+    <div class="home-cards">
+      <div class="home-card" onclick="window.location.href='perfil.html'">
+        <div class="icon">👤</div>
+        <h3>Perfil</h3>
+        <p>Sua foto, seu nome, sua senha e o link fixo da sua aula.</p>
+      </div>
+      <div class="home-card" onclick="window.location.href='aluno.html'">
+        <div class="icon">📚</div>
+        <h3>Minhas aulas</h3>
+        <p>Slides, PDFs, exercícios e relatórios de cada aula já dada.</p>
+      </div>
+      <div class="home-card" onclick="window.location.href='financeiro.html'">
+        <div class="icon">💳</div>
+        <h3>Financeiro</h3>
+        <p>Data de pagamento e valor da sua mensalidade.</p>
+      </div>
+    </div>
+  `;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D.C English Classes — Financeiro</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .fin-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px;}
+  .fin-box{background:var(--paper-card);border:1px solid var(--line);border-radius:12px;padding:26px;}
+  .fin-box .label{font-size:13px;color:var(--text-soft);margin-bottom:8px;}
+  .fin-box .value{font-size:28px;font-family:'Baskerville Old Face','Libre Baskerville',Georgia,serif;color:var(--ink);}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="sidebar">
+    <div class="side-brand">
+      <img class="logo" src="logo.png" alt="Logo">
+      <div>
+        <span>D.C English Classes</span>
+        <small>Área do aluno</small>
+      </div>
+    </div>
+
+    <div id="nav-container"></div>
+
+    <div class="sidebar-foot">
+      <button class="logout-link" onclick="signOutAndRedirect()">← Sair</button>
+    </div>
+  </div>
+
+  <div class="main" id="main-content">
+    <div class="empty-state">Carregando...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/common.js"></script>
+<script>
+(async function init(){
+  const session = await requireSession();
+  if (!session) return;
+
+  const profile = await getMyProfile(session.user.id);
+  if (!profile) { await signOutAndRedirect(); return; }
+  if (profile.role !== 'student') { window.location.href = 'admin.html'; return; }
+
+  document.getElementById('nav-container').innerHTML = buildStudentTopNav('financeiro');
+
+  const hasInfo = profile.payment_day || profile.monthly_fee;
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="topline">
+      <div>
+        <h1>Financeiro</h1>
+        <div class="sub">Data de pagamento e valor da sua mensalidade</div>
+      </div>
+    </div>
+    ${!hasInfo ? `
+      <div class="empty-state">Seu professor ainda não configurou essas informações.</div>
+    ` : `
+      <div class="fin-grid">
+        <div class="fin-box">
+          <div class="label">Dia de pagamento</div>
+          <div class="value">${profile.payment_day ? 'Todo dia ' + profile.payment_day : '—'}</div>
+        </div>
+        <div class="fin-box">
+          <div class="label">Valor da mensalidade</div>
+          <div class="value">${profile.monthly_fee ? formatCurrencyBRL(profile.monthly_fee) : '—'}</div>
+        </div>
+      </div>
+    `}
+  `;
+})();
+</script>
+</body>
+</html>
