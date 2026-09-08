@@ -2,9 +2,9 @@
 // CONFIGURAÇÃO DO EMAILJS — cole aqui os 3 códigos da sua conta
 // (emailjs.com → Account → General / Email Services / Email Templates)
 // ==========================================================
-const EMAILJS_PUBLIC_KEY  = "kd2VU5GSBqEM8Yy9I";
-const EMAILJS_SERVICE_ID  = "service_3d6bcqs";
-const EMAILJS_TEMPLATE_ID = "template_haw3qj7";
+const EMAILJS_PUBLIC_KEY  = "COLE_AQUI_SUA_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID  = "COLE_AQUI_SEU_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "COLE_AQUI_SEU_TEMPLATE_ID";
 
 (function(){
   if (window.emailjs) {

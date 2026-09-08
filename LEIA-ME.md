@@ -160,5 +160,26 @@ Suba para o GitHub (substituindo os antigos): `js/emailConfig.js` (novo), `js/ad
 Pronto — a partir daí, aparece o botão "Enviar e-mail ao aluno" em cada aluno; clicando nele
 e confirmando o pop-up, o e-mail é disparado na hora.
 
+---
+
+## ATUALIZAÇÃO 4 — Botão do WhatsApp e envio de material pelo aluno
+
+### A) Botão do WhatsApp
+Já está pronto e configurado com seu número. Não precisa fazer nada no Supabase — é só subir os arquivos
+HTML atualizados (todos ganharam o botão flutuante no canto inferior direito).
+
+### B) Envio de material pelo aluno
+1. Rode o arquivo `supabase-update-3.sql` no SQL Editor do Supabase.
+2. Suba os arquivos novos/atualizados no GitHub: `enviar-material.html`, `js/enviarMaterial.js`,
+   `js/common.js`, `home.html`, `admin.html`, `js/admin.js`, `style.css`, e todos os `.html` (por causa do botão do WhatsApp).
+
+### Como funciona
+- O aluno acessa "Enviar material" no menu, escolhe a data que quer usar o material, anexa um arquivo
+  ou cola um link, escreve como pretende usá-lo, e clica em "Avisar ao professor".
+- Você recebe um e-mail: *"Aluno [nome] adicionou um material para ser usado na data [data]. Acesse o
+  portal para conferir os detalhes."*
+- No seu painel, dentro de cada aluno, a aba **"Materiais do aluno"** mostra todos os pedidos enviados
+  por ele (com o arquivo pra baixar, o link, e as observações), e você pode excluir depois de já ter usado.
+
 ## Se quiser mudar alguma coisa depois
 Qualquer alteração de design, texto ou funcionalidade, é só me pedir — eu edito os arquivos e te devolvo os atualizados para você subir de novo no GitHub (o site na Vercel se atualiza sozinho sempre que os arquivos do GitHub mudam).

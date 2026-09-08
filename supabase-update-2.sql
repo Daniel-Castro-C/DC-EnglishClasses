@@ -20,7 +20,7 @@ alter table public.profiles
 create or replace function public.protect_profile_columns()
 returns trigger as $$
 begin
-  if not public.is_admin() then
+  if auth.uid() is not null and not public.is_admin() then
     new.role := old.role;
     new.payment_day := old.payment_day;
     new.monthly_fee := old.monthly_fee;

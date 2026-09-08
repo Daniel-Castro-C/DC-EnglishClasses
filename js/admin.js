@@ -165,10 +165,11 @@ function renderStudentDetail(){
       <button class="btn-dark-sm" onclick="renderHome()">← Todos os alunos</button>
     </div>
 
-    <div class="role-switch" style="max-width:460px;margin-bottom:26px;">
+    <div class="role-switch" style="max-width:620px;margin-bottom:26px;">
       <button class="${currentTab === 'perfil' ? 'active' : ''}" onclick="switchTab('perfil')">Perfil</button>
       <button class="${currentTab === 'nova' ? 'active' : ''}" onclick="switchTab('nova')">Cadastrar nova aula</button>
       <button class="${currentTab === 'cadastradas' ? 'active' : ''}" onclick="switchTab('cadastradas')">Aulas cadastradas</button>
+      <button class="${currentTab === 'pedidos' ? 'active' : ''}" onclick="switchTab('pedidos')">Materiais do aluno</button>
     </div>
 
     <div id="tab-content"></div>
@@ -178,8 +179,10 @@ function renderStudentDetail(){
     renderPerfilTab();
   } else if (currentTab === 'nova') {
     renderNovaAulaTab();
-  } else {
+  } else if (currentTab === 'cadastradas') {
     renderAulasCadastradasTab(lessonsHtml);
+  } else {
+    renderPedidosTab();
   }
 }
 
@@ -241,6 +244,57 @@ function renderPerfilTab(){
   `;
 
   document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
+}
+
+async function renderPedidosTab(){
+  document.getElementById('tab-content').innerHTML = `<div class="empty-state">Carregando pedidos...</div>`;
+
+  const { data, error } = await sb
+    .from('material_requests')
+    .select('*')
+    .eq('student_id', currentStudent.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    document.getElementById('tab-content').innerHTML = `<div class="empty-state">Não foi possível carregar os pedidos.</div>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    document.getElementById('tab-content').innerHTML = `<div class="empty-state">${escapeHtml(currentStudent.full_name || currentStudent.email)} ainda não enviou nenhum pedido de material.</div>`;
+    return;
+  }
+
+  const html = data.map(r => `
+    <div class="lesson-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <h3>Para ${formatDate(r.requested_date)}</h3>
+          <div class="meta">Enviado em ${new Date(r.created_at).toLocaleDateString('pt-BR')}</div>
+        </div>
+        <button class="resource-action" onclick="deleteMaterialRequest('${r.id}')">Excluir</button>
+      </div>
+      ${r.notes ? `<p style="font-size:14px;margin:10px 0;">${escapeHtml(r.notes)}</p>` : ''}
+      ${r.external_link ? `<div class="resource-row"><div class="resource-icon ic-pdf">Link</div><div class="resource-info"><div class="name">Link enviado pelo aluno</div></div><button class="resource-action" onclick="window.open('${escapeAttr(r.external_link)}','_blank')">Abrir link</button></div>` : ''}
+      ${r.file_path ? `<div class="resource-row"><div class="resource-icon ic-pdf">Arq</div><div class="resource-info"><div class="name">${escapeHtml(r.file_name || 'Arquivo enviado')}</div></div><button class="resource-action" onclick="downloadRequestFile('${r.file_path}')">Baixar</button></div>` : ''}
+    </div>
+  `).join('');
+
+  document.getElementById('tab-content').innerHTML = html;
+}
+
+async function deleteMaterialRequest(id){
+  if (!confirm('Excluir este pedido de material?')) return;
+  const { error } = await sb.from('material_requests').delete().eq('id', id);
+  if (error) { alert('Não foi possível excluir.'); return; }
+  renderPedidosTab();
+}
+
+async function downloadRequestFile(filePath){
+  const displayName = filePath.split('/').pop().replace(/^\d+_/, '');
+  const { data, error } = await sb.storage.from(STORAGE_BUCKET).createSignedUrl(filePath, 60 * 10, { download: displayName });
+  if (error || !data) { alert('Não foi possível baixar este arquivo.'); return; }
+  window.location.href = data.signedUrl;
 }
 
 function renderNovaAulaTab(){

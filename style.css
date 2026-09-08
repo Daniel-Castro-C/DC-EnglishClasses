@@ -183,3 +183,20 @@ input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border
   border-bottom:2px solid transparent;
 }
 .role-switch button.active{color:var(--ink);font-weight:600;border-bottom:2px solid var(--ink);}
+
+/* ---------- BOTÃO FLUTUANTE WHATSAPP ---------- */
+.whatsapp-fab{
+  position:fixed;right:22px;bottom:22px;z-index:999;
+  display:flex;align-items:center;gap:9px;
+  background:#25D366;color:#fff;text-decoration:none;
+  padding:13px 20px;border-radius:100px;
+  font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:600;
+  box-shadow:0 6px 18px rgba(0,0,0,0.18);
+  transition:transform .15s, box-shadow .15s;
+}
+.whatsapp-fab:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,0.22);}
+.whatsapp-fab svg{width:20px;height:20px;flex-shrink:0;}
+@media (max-width:560px){
+  .whatsapp-fab span{display:none;}
+  .whatsapp-fab{padding:14px;}
+}
