@@ -106,15 +106,33 @@ async function submitRequest(){
   }
 
   // Avisa o professor por e-mail
-  const { data: adminProfile } = await sb.from('profiles').select('email, full_name').eq('role', 'admin').limit(1).single();
-  if (adminProfile) {
-    const dateFormatted = formatDateBR(date);
-    const studentName = myProfile.full_name || myProfile.email;
-    await sendLessonNotification(
-      adminProfile.email,
-      adminProfile.full_name,
-      `Aluno ${studentName} adicionou um material para ser usado na data ${dateFormatted}. Acesse o portal para conferir os detalhes.`
-    );
+  const { data: adminProfile, error: adminError } = await sb
+    .from('profiles')
+    .select('email, full_name')
+    .eq('role', 'admin')
+    .limit(1)
+    .single();
+
+  if (adminError || !adminProfile) {
+    console.error('Erro ao buscar perfil do professor:', adminError);
+    showFeedback('Pedido salvo, mas não foi possível encontrar o e-mail do professor para notificar. (Erro: ' + (adminError ? adminError.message : 'perfil não encontrado') + ')', false);
+    loadMyRequests();
+    return;
+  }
+
+  const dateFormatted = formatDateBR(date);
+  const studentName = myProfile.full_name || myProfile.email;
+  const emailResult = await sendLessonNotification(
+    adminProfile.email,
+    adminProfile.full_name,
+    `Aluno ${studentName} adicionou um material para ser usado na data ${dateFormatted}. Acesse o portal para conferir os detalhes.`
+  );
+
+  if (!emailResult.ok) {
+    console.error('Erro ao enviar e-mail:', emailResult.err);
+    showFeedback('Pedido salvo, mas não foi possível enviar o e-mail de aviso. (Verifique o console para detalhes)', false);
+    loadMyRequests();
+    return;
   }
 
   showFeedback('Pedido enviado! O professor foi avisado por e-mail.', true);
