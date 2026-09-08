@@ -10,6 +10,7 @@ let students = [];
 let currentStudent = null;
 let currentLessons = [];
 let currentTab = 'geral';
+let currentView = 'home'; // 'home' | 'comunicados' | 'student'
 
 (async function init(){
   const session = await requireSession();
@@ -40,12 +41,15 @@ async function loadStudents(){
 }
 
 function renderNav(){
-  let html = `<div class="nav-label">Alunos</div>`;
+  let html = `<div class="nav-item ${currentView === 'comunicados' ? 'active' : ''}" onclick="openComunicados()">
+    <span>Comunicados</span>
+  </div>`;
+  html += `<div class="nav-label">Alunos</div>`;
   if (students.length === 0) {
     html += `<div class="nav-item" style="opacity:.6;cursor:default;">Nenhum aluno ainda</div>`;
   }
   students.forEach(s => {
-    const active = currentStudent && currentStudent.id === s.id ? 'active' : '';
+    const active = currentView === 'student' && currentStudent && currentStudent.id === s.id ? 'active' : '';
     html += `<div class="nav-item ${active}" onclick="openStudent('${s.id}')">
       <span>${escapeHtml(s.full_name || s.email)}</span><span class="dot" style="background:var(--sky)"></span>
     </div>`;
@@ -55,6 +59,7 @@ function renderNav(){
 
 function renderHome(){
   currentStudent = null;
+  currentView = 'home';
   renderNav();
   document.getElementById('main-content').innerHTML = `
     <div class="topline">
@@ -98,6 +103,77 @@ function renderHome(){
   `;
 }
 
+function openComunicados(){
+  currentStudent = null;
+  currentView = 'comunicados';
+  renderNav();
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="topline">
+      <div>
+        <h1>Comunicados</h1>
+        <div class="sub">Envie um aviso por e-mail para todos os ${students.length} aluno(s) cadastrado(s)</div>
+      </div>
+    </div>
+
+    <div class="lesson-card">
+      <h3>Novo comunicado</h3>
+      <label>Assunto</label>
+      <input id="broadcast-subject" placeholder="Ex: Aviso importante sobre as aulas desta semana">
+      <label>Mensagem</label>
+      <textarea id="broadcast-message" placeholder="Escreva aqui o comunicado que será enviado a todos os alunos..."></textarea>
+      <button id="broadcast-btn" class="btn-dark-sm" onclick="sendBroadcast()">Enviar comunicado a todos os alunos</button>
+      <div id="broadcast-feedback" class="feedback"></div>
+    </div>
+  `;
+}
+
+async function sendBroadcast(){
+  const subject = document.getElementById('broadcast-subject').value.trim();
+  const message = document.getElementById('broadcast-message').value.trim();
+  const feedbackEl = document.getElementById('broadcast-feedback');
+
+  if (!subject || !message) {
+    feedbackEl.textContent = 'Preencha o assunto e a mensagem.';
+    feedbackEl.className = 'feedback show err';
+    return;
+  }
+
+  if (students.length === 0) {
+    feedbackEl.textContent = 'Não há alunos cadastrados para receber este comunicado.';
+    feedbackEl.className = 'feedback show err';
+    return;
+  }
+
+  if (!confirm(`Enviar este comunicado para todos os ${students.length} alunos?`)) return;
+
+  const btn = document.getElementById('broadcast-btn');
+  btn.disabled = true;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < students.length; i++) {
+    const s = students[i];
+    btn.textContent = `Enviando... (${i + 1}/${students.length})`;
+    const result = await sendLessonNotification(s.email, s.full_name, message, subject);
+    if (result.ok) successCount++; else failCount++;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar comunicado a todos os alunos';
+
+  feedbackEl.className = 'feedback show ' + (failCount === 0 ? 'ok' : 'err');
+  feedbackEl.textContent = failCount === 0
+    ? `Comunicado enviado com sucesso para todos os ${successCount} alunos!`
+    : `Enviado para ${successCount} aluno(s). ${failCount} falharam — verifique o console para detalhes.`;
+
+  if (failCount === 0) {
+    document.getElementById('broadcast-subject').value = '';
+    document.getElementById('broadcast-message').value = '';
+  }
+}
+
 async function refreshStudents(){
   await loadStudents();
   renderNav();
@@ -106,6 +182,7 @@ async function refreshStudents(){
 
 async function openStudent(studentId){
   currentStudent = students.find(s => s.id === studentId);
+  currentView = 'student';
   currentTab = 'perfil';
   renderNav();
   await loadLessonsFor(studentId);
