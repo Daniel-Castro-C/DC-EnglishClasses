@@ -207,8 +207,12 @@ function renderPerfilTab(){
       <h3>Link fixo da aula</h3>
       <div class="small-note" style="margin-top:0;margin-bottom:10px;">Este link fica disponível no perfil do aluno (ex: link de videochamada permanente).</div>
       <div class="row">
-        <input id="student-link-input" placeholder="https://..." value="${escapeAttr(s.permanent_lesson_link || '')}">
-        <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="saveStudentLink()">Salvar link</button>
+        <input id="student-link-input" placeholder="https://..." value="${escapeAttr(s.permanent_lesson_link || '')}" ${s.permanent_lesson_link ? 'disabled' : ''}>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button id="link-save-btn" class="btn-dark-sm" style="flex:0 0 auto;${s.permanent_lesson_link ? 'display:none;' : ''}" onclick="saveStudentLink()">Salvar link</button>
+        <button id="link-edit-btn" class="btn-ghost" style="flex:0 0 auto;${s.permanent_lesson_link ? '' : 'display:none;'}" onclick="enableLinkEditing()">Editar link</button>
+        <button id="link-open-btn" class="btn-ghost" style="flex:0 0 auto;${s.permanent_lesson_link ? '' : 'display:none;'}" onclick="openStudentLink()">Abrir aula</button>
       </div>
     </div>
 
@@ -406,7 +410,22 @@ async function saveStudentLink(){
   const { error } = await sb.from('profiles').update({ permanent_lesson_link: link }).eq('id', currentStudent.id);
   if (error) { alert('Não foi possível salvar o link.'); return; }
   currentStudent.permanent_lesson_link = link;
-  alert('Link salvo!');
+  const idx = students.findIndex(s => s.id === currentStudent.id);
+  if (idx >= 0) students[idx].permanent_lesson_link = link;
+  renderPerfilTab();
+}
+
+function enableLinkEditing(){
+  document.getElementById('student-link-input').disabled = false;
+  document.getElementById('student-link-input').focus();
+  document.getElementById('link-save-btn').style.display = 'inline-block';
+  document.getElementById('link-edit-btn').style.display = 'none';
+}
+
+function openStudentLink(){
+  const link = currentStudent.permanent_lesson_link;
+  if (!link) return;
+  window.open(link, '_blank');
 }
 
 async function saveStudentFinance(){
