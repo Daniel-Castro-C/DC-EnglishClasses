@@ -2,9 +2,9 @@
 // CONFIGURAÇÃO DO EMAILJS — cole aqui os 3 códigos da sua conta
 // (emailjs.com → Account → General / Email Services / Email Templates)
 // ==========================================================
-const EMAILJS_PUBLIC_KEY  = "kd2VU5GSBqEM8Yy9I";
-const EMAILJS_SERVICE_ID  = "service_3d6bcqs";
-const EMAILJS_TEMPLATE_ID = "template_haw3qj7";
+const EMAILJS_PUBLIC_KEY  = "COLE_AQUI_SUA_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID  = "COLE_AQUI_SEU_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "COLE_AQUI_SEU_TEMPLATE_ID";
 
 (function(){
   if (window.emailjs) {
@@ -12,18 +12,20 @@ const EMAILJS_TEMPLATE_ID = "template_haw3qj7";
   }
 })();
 
-// Envia a notificação por e-mail para o aluno.
+// Envia a notificação por e-mail para o destinatário.
 // message: o texto que aparece no corpo do e-mail (variável {{message}} no template do EmailJS)
-async function sendLessonNotification(studentEmail, studentName, message){
+// subject: o assunto do e-mail (variável {{subject}} no template do EmailJS)
+async function sendLessonNotification(toEmail, toName, message, subject){
   if (!window.emailjs) {
     console.error('EmailJS não carregado.');
     return { ok: false };
   }
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email: studentEmail,
-      to_name: studentName || studentEmail,
-      message: message
+      to_email: toEmail,
+      to_name: toName || toEmail,
+      message: message,
+      subject: subject || 'Atualização no Portal — D.C English Classes'
     });
     return { ok: true };
   } catch (err) {

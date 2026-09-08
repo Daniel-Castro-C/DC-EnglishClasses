@@ -181,5 +181,36 @@ HTML atualizados (todos ganharam o botão flutuante no canto inferior direito).
 - No seu painel, dentro de cada aluno, a aba **"Materiais do aluno"** mostra todos os pedidos enviados
   por ele (com o arquivo pra baixar, o link, e as observações), e você pode excluir depois de já ter usado.
 
+---
+
+## ATUALIZAÇÃO 5 — "Pergunte ao Daniel"
+
+### A) Rodar o novo SQL
+1. Copie e cole o conteúdo do arquivo `supabase-update-4.sql` no SQL Editor do Supabase → **Run**.
+
+### B) Ajustar o template do EmailJS (importante!)
+Agora os e-mails têm assuntos diferentes dependendo do tipo de aviso (ex: "Nova dúvida de [nome]...",
+"Sua pergunta foi respondida..."). Para isso funcionar, o assunto do e-mail precisa vir dinâmico do sistema,
+em vez de fixo no template:
+1. No painel do EmailJS, vá em **Email Templates** → abra o template que você já criou.
+2. No campo **Subject**, apague o texto fixo e coloque: `{{subject}}`
+3. Salve.
+
+*(Se você pular esse passo, os e-mails continuam funcionando, só que todos com o mesmo assunto genérico de antes.)*
+
+### C) Subir os arquivos no GitHub
+Novos arquivos: `pergunte-ao-daniel.html`, `js/perguntaAoDaniel.js`.
+Atualizados: `js/common.js`, `js/emailConfig.js`, `js/admin.js`, `home.html`, e todos os `.html`
+(por causa do botão do WhatsApp na nova página).
+
+### Como funciona
+- O aluno acessa "Pergunte ao Daniel" no menu, escreve o assunto e a pergunta, e clica em "Enviar pergunta".
+- Você recebe um e-mail: *"Nova dúvida de [nome] adicionada ao portal"*.
+- A pergunta fica arquivada no menu lateral da própria página do aluno (por assunto), pra ele consultar depois.
+- No seu painel, dentro de cada aluno, a nova aba **"Pergunte ao Daniel"** mostra todas as perguntas dele,
+  com um campo para você escrever a resposta e o botão **"Responder ao aluno"**.
+- Ao responder, o aluno recebe um e-mail avisando que a pergunta foi respondida, e a resposta aparece
+  arquivada junto com a pergunta dele no portal.
+
 ## Se quiser mudar alguma coisa depois
 Qualquer alteração de design, texto ou funcionalidade, é só me pedir — eu edito os arquivos e te devolvo os atualizados para você subir de novo no GitHub (o site na Vercel se atualiza sozinho sempre que os arquivos do GitHub mudam).

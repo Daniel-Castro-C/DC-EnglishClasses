@@ -12,11 +12,12 @@ function formatCurrencyBRL(value){
 // Constrói o menu principal (topo da barra lateral) usado em todas as páginas do aluno
 function buildStudentTopNav(activeKey){
   const items = [
-    { key: 'home',      label: 'Início',            href: 'home.html' },
-    { key: 'perfil',    label: 'Perfil',             href: 'perfil.html' },
-    { key: 'aulas',     label: 'Minhas aulas',       href: 'aluno.html' },
-    { key: 'enviar',    label: 'Enviar material',    href: 'enviar-material.html' },
-    { key: 'financeiro',label: 'Financeiro',         href: 'financeiro.html' },
+    { key: 'home',      label: 'Início',              href: 'home.html' },
+    { key: 'perfil',    label: 'Perfil',               href: 'perfil.html' },
+    { key: 'aulas',     label: 'Minhas aulas',         href: 'aluno.html' },
+    { key: 'enviar',    label: 'Enviar material',      href: 'enviar-material.html' },
+    { key: 'daniel',    label: 'Pergunte ao Daniel',   href: 'pergunte-ao-daniel.html' },
+    { key: 'financeiro',label: 'Financeiro',           href: 'financeiro.html' },
   ];
   let html = `<div class="nav-label">Menu</div>`;
   items.forEach(it => {

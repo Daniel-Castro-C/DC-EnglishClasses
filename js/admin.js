@@ -165,11 +165,12 @@ function renderStudentDetail(){
       <button class="btn-dark-sm" onclick="renderHome()">← Todos os alunos</button>
     </div>
 
-    <div class="role-switch" style="max-width:620px;margin-bottom:26px;">
+    <div class="role-switch" style="max-width:760px;margin-bottom:26px;">
       <button class="${currentTab === 'perfil' ? 'active' : ''}" onclick="switchTab('perfil')">Perfil</button>
       <button class="${currentTab === 'nova' ? 'active' : ''}" onclick="switchTab('nova')">Cadastrar nova aula</button>
       <button class="${currentTab === 'cadastradas' ? 'active' : ''}" onclick="switchTab('cadastradas')">Aulas cadastradas</button>
       <button class="${currentTab === 'pedidos' ? 'active' : ''}" onclick="switchTab('pedidos')">Materiais do aluno</button>
+      <button class="${currentTab === 'daniel' ? 'active' : ''}" onclick="switchTab('daniel')">Pergunte ao Daniel</button>
     </div>
 
     <div id="tab-content"></div>
@@ -181,8 +182,10 @@ function renderStudentDetail(){
     renderNovaAulaTab();
   } else if (currentTab === 'cadastradas') {
     renderAulasCadastradasTab(lessonsHtml);
-  } else {
+  } else if (currentTab === 'pedidos') {
     renderPedidosTab();
+  } else {
+    renderDanielTab();
   }
 }
 
@@ -248,6 +251,63 @@ function renderPerfilTab(){
   `;
 
   document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
+}
+
+async function renderDanielTab(){
+  document.getElementById('tab-content').innerHTML = `<div class="empty-state">Carregando perguntas...</div>`;
+
+  const { data, error } = await sb
+    .from('daniel_questions')
+    .select('*')
+    .eq('student_id', currentStudent.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    document.getElementById('tab-content').innerHTML = `<div class="empty-state">Não foi possível carregar as perguntas.</div>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    document.getElementById('tab-content').innerHTML = `<div class="empty-state">${escapeHtml(currentStudent.full_name || currentStudent.email)} ainda não enviou nenhuma pergunta.</div>`;
+    return;
+  }
+
+  document.getElementById('tab-content').innerHTML = data.map(q => `
+    <div class="lesson-card">
+      <h3>${escapeHtml(q.subject)}</h3>
+      <div class="meta">Enviada em ${new Date(q.created_at).toLocaleDateString('pt-BR')} ${q.answer ? '· Respondida' : '· Aguardando resposta'}</div>
+      <p style="font-size:14px;margin:10px 0;">${escapeHtml(q.question)}</p>
+      <label>Sua resposta</label>
+      <textarea id="answer-${q.id}" placeholder="Escreva a resposta para o aluno...">${escapeHtml(q.answer || '')}</textarea>
+      <button class="btn-dark-sm" onclick="answerQuestion('${q.id}', '${escapeHtml(q.subject).replace(/'/g, "\\'")}')">Responder ao aluno</button>
+    </div>
+  `).join('');
+}
+
+async function answerQuestion(questionId, subject){
+  const answer = document.getElementById(`answer-${questionId}`).value.trim();
+  if (!answer) { alert('Escreva uma resposta antes de enviar.'); return; }
+
+  const { error } = await sb.from('daniel_questions')
+    .update({ answer, answered_at: new Date().toISOString() })
+    .eq('id', questionId);
+
+  if (error) { alert('Não foi possível salvar a resposta.'); console.error(error); return; }
+
+  const emailResult = await sendLessonNotification(
+    currentStudent.email,
+    currentStudent.full_name,
+    `Sua pergunta sobre "${subject}" foi respondida. Confira no portal!`,
+    `Sua pergunta sobre ${subject} foi respondida`
+  );
+
+  if (!emailResult.ok) {
+    alert('Resposta salva, mas não foi possível enviar o e-mail avisando o aluno.');
+  } else {
+    alert('Resposta enviada ao aluno!');
+  }
+
+  renderDanielTab();
 }
 
 async function renderPedidosTab(){
