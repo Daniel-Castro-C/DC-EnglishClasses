@@ -106,7 +106,7 @@ async function refreshStudents(){
 
 async function openStudent(studentId){
   currentStudent = students.find(s => s.id === studentId);
-  currentTab = 'geral';
+  currentTab = 'perfil';
   renderNav();
   await loadLessonsFor(studentId);
   renderStudentDetail();
@@ -165,22 +165,25 @@ function renderStudentDetail(){
       <button class="btn-dark-sm" onclick="renderHome()">← Todos os alunos</button>
     </div>
 
-    <div class="role-switch" style="max-width:260px;margin-bottom:26px;">
-      <button class="${currentTab === 'geral' ? 'active' : ''}" onclick="switchTab('geral')">Geral</button>
-      <button class="${currentTab === 'aulas' ? 'active' : ''}" onclick="switchTab('aulas')">Aulas</button>
+    <div class="role-switch" style="max-width:460px;margin-bottom:26px;">
+      <button class="${currentTab === 'perfil' ? 'active' : ''}" onclick="switchTab('perfil')">Perfil</button>
+      <button class="${currentTab === 'nova' ? 'active' : ''}" onclick="switchTab('nova')">Cadastrar nova aula</button>
+      <button class="${currentTab === 'cadastradas' ? 'active' : ''}" onclick="switchTab('cadastradas')">Aulas cadastradas</button>
     </div>
 
     <div id="tab-content"></div>
   `;
 
-  if (currentTab === 'geral') {
-    renderGeralTab();
+  if (currentTab === 'perfil') {
+    renderPerfilTab();
+  } else if (currentTab === 'nova') {
+    renderNovaAulaTab();
   } else {
-    renderAulasTab(lessonsHtml);
+    renderAulasCadastradasTab(lessonsHtml);
   }
 }
 
-function renderGeralTab(){
+function renderPerfilTab(){
   const s = currentStudent;
   document.getElementById('tab-content').innerHTML = `
     <div class="box">
@@ -240,18 +243,8 @@ function renderGeralTab(){
   document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
 }
 
-function renderAulasTab(lessonsHtml){
+function renderNovaAulaTab(){
   document.getElementById('tab-content').innerHTML = `
-    <div class="box" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-      <div>
-        <h3 style="margin:0 0 4px;">Notificar aluno por e-mail</h3>
-        <div class="small-note" style="margin-top:0;">Envia: "Os dados da sua última aula já estão disponíveis no portal!"</div>
-      </div>
-      <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="notifyStudentAboutLesson()">Enviar e-mail ao aluno</button>
-    </div>
-
-    ${lessonsHtml}
-
     <div class="box">
       <h3>+ Adicionar nova aula</h3>
       <div class="row">
@@ -290,6 +283,20 @@ function renderAulasTab(lessonsHtml){
         </button>
       </div>
     </div>
+  `;
+}
+
+function renderAulasCadastradasTab(lessonsHtml){
+  document.getElementById('tab-content').innerHTML = `
+    <div class="box" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0 0 4px;">Notificar aluno por e-mail</h3>
+        <div class="small-note" style="margin-top:0;">Envia: "Os dados da sua última aula já estão disponíveis no portal!"</div>
+      </div>
+      <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="notifyStudentAboutLesson()">Enviar e-mail ao aluno</button>
+    </div>
+
+    ${lessonsHtml}
   `;
 }
 
