@@ -272,16 +272,43 @@ async function renderDanielTab(){
     return;
   }
 
-  document.getElementById('tab-content').innerHTML = data.map(q => `
-    <div class="lesson-card">
-      <h3>${escapeHtml(q.subject)}</h3>
-      <div class="meta">Enviada em ${new Date(q.created_at).toLocaleDateString('pt-BR')} ${q.answer ? '· Respondida' : '· Aguardando resposta'}</div>
-      <p style="font-size:14px;margin:10px 0;">${escapeHtml(q.question)}</p>
-      <label>Sua resposta</label>
-      <textarea id="answer-${q.id}" placeholder="Escreva a resposta para o aluno...">${escapeHtml(q.answer || '')}</textarea>
-      <button class="btn-dark-sm" onclick="answerQuestion('${q.id}', '${escapeHtml(q.subject).replace(/'/g, "\\'")}')">Responder ao aluno</button>
-    </div>
-  `).join('');
+  document.getElementById('tab-content').innerHTML = data.map(q => {
+    if (q.answer) {
+      // Pergunta já respondida: aparece minimizada, só com o assunto
+      return `
+        <details class="lesson-card">
+          <summary style="cursor:pointer;font-weight:600;font-size:15px;list-style:none;display:flex;align-items:center;justify-content:space-between;">
+            <span>${escapeHtml(q.subject)}</span>
+            <span class="pill" style="background:var(--sky-soft);">Respondida</span>
+          </summary>
+          <div style="margin-top:16px;">
+            <div class="meta">Enviada em ${new Date(q.created_at).toLocaleDateString('pt-BR')}</div>
+            <p style="font-size:14px;margin:10px 0;">${escapeHtml(q.question)}</p>
+            <label>Resposta</label>
+            <textarea id="answer-${q.id}">${escapeHtml(q.answer)}</textarea>
+            <div class="row">
+              <button class="btn-dark-sm" onclick="updateAnswerNoEmail('${q.id}')">Editar resposta</button>
+              <button class="btn-ghost" onclick="deleteQuestionByAdmin('${q.id}')">Excluir pergunta</button>
+            </div>
+          </div>
+        </details>
+      `;
+    }
+
+    return `
+      <div class="lesson-card">
+        <h3>${escapeHtml(q.subject)}</h3>
+        <div class="meta">Enviada em ${new Date(q.created_at).toLocaleDateString('pt-BR')} · Aguardando resposta</div>
+        <p style="font-size:14px;margin:10px 0;">${escapeHtml(q.question)}</p>
+        <label>Sua resposta</label>
+        <textarea id="answer-${q.id}" placeholder="Escreva a resposta para o aluno..."></textarea>
+        <div class="row">
+          <button class="btn-dark-sm" onclick="answerQuestion('${q.id}', '${escapeHtml(q.subject).replace(/'/g, "\\'")}')">Responder ao aluno</button>
+          <button class="btn-ghost" onclick="deleteQuestionByAdmin('${q.id}')">Excluir pergunta</button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function answerQuestion(questionId, subject){
@@ -306,6 +333,25 @@ async function answerQuestion(questionId, subject){
   } else {
     alert('Resposta enviada ao aluno!');
   }
+
+  renderDanielTab();
+}
+
+async function updateAnswerNoEmail(questionId){
+  const answer = document.getElementById(`answer-${questionId}`).value.trim();
+  if (!answer) { alert('A resposta não pode ficar vazia.'); return; }
+
+  const { error } = await sb.from('daniel_questions').update({ answer }).eq('id', questionId);
+  if (error) { alert('Não foi possível salvar a alteração.'); console.error(error); return; }
+
+  renderDanielTab();
+}
+
+async function deleteQuestionByAdmin(questionId){
+  if (!confirm('Excluir esta pergunta? O aluno não será notificado.')) return;
+
+  const { error } = await sb.from('daniel_questions').delete().eq('id', questionId);
+  if (error) { alert('Não foi possível excluir.'); console.error(error); return; }
 
   renderDanielTab();
 }

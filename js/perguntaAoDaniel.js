@@ -146,6 +146,8 @@ function showQuestion(id){
   renderNav();
   const q = myQuestions.find(item => item.id === id);
 
+  const canEdit = !q.answer;
+
   document.getElementById('main-content').innerHTML = `
     <div class="topline">
       <div>
@@ -166,6 +168,84 @@ function showQuestion(id){
       ` : `
         <div class="waiting-note">Aguardando resposta do professor.</div>
       `}
+
+      ${canEdit ? `
+        <div class="row" style="margin-top:18px;">
+          <button class="btn-ghost" style="flex:0 0 auto;" onclick="editQuestion('${q.id}')">Editar pergunta</button>
+          <button class="btn-ghost" style="flex:0 0 auto;" onclick="deleteQuestionByStudent('${q.id}')">Excluir pergunta</button>
+        </div>
+      ` : ''}
     </div>
   `;
+}
+
+function editQuestion(id){
+  const q = myQuestions.find(item => item.id === id);
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="topline">
+      <div><h1>Editar pergunta</h1></div>
+    </div>
+
+    <div class="lesson-card">
+      <label>Assunto</label>
+      <input id="edit-q-subject" value="${escapeHtml(q.subject)}">
+      <label>Sua pergunta</label>
+      <textarea id="edit-q-question">${escapeHtml(q.question)}</textarea>
+      <div class="row">
+        <button class="btn-dark-sm" onclick="saveQuestionEdit('${q.id}')">Salvar alterações</button>
+        <button class="btn-ghost" onclick="showQuestion('${q.id}')">Cancelar</button>
+      </div>
+      <div id="edit-feedback" class="feedback"></div>
+    </div>
+  `;
+}
+
+async function saveQuestionEdit(id){
+  const subject = document.getElementById('edit-q-subject').value.trim();
+  const question = document.getElementById('edit-q-question').value.trim();
+
+  if (!subject || !question) {
+    const el = document.getElementById('edit-feedback');
+    el.textContent = 'Preencha assunto e pergunta.';
+    el.className = 'feedback show err';
+    return;
+  }
+
+  const { error } = await sb.from('daniel_questions').update({ subject, question }).eq('id', id);
+  if (error) {
+    const el = document.getElementById('edit-feedback');
+    el.textContent = 'Não foi possível salvar as alterações.';
+    el.className = 'feedback show err';
+    console.error(error);
+    return;
+  }
+
+  await loadQuestions();
+  showQuestion(id);
+}
+
+async function deleteQuestionByStudent(id){
+  if (!confirm('Excluir esta pergunta? Essa ação não pode ser desfeita.')) return;
+
+  const q = myQuestions.find(item => item.id === id);
+  const subject = q ? q.subject : '';
+
+  const { error } = await sb.from('daniel_questions').delete().eq('id', id);
+  if (error) { alert('Não foi possível excluir a pergunta.'); console.error(error); return; }
+
+  // Avisa o professor por e-mail sobre a exclusão
+  const { data: adminProfile } = await sb.from('profiles').select('email, full_name').eq('role', 'admin').limit(1).single();
+  if (adminProfile) {
+    const studentName = myProfile.full_name || myProfile.email;
+    await sendLessonNotification(
+      adminProfile.email,
+      adminProfile.full_name,
+      `${studentName} excluiu a pergunta sobre "${subject}" no portal.`,
+      `Pergunta excluída por ${studentName}`
+    );
+  }
+
+  await loadQuestions();
+  renderNewQuestionForm();
 }
