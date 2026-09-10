@@ -212,5 +212,67 @@ Atualizados: `js/common.js`, `js/emailConfig.js`, `js/admin.js`, `home.html`, e 
 - Ao responder, o aluno recebe um e-mail avisando que a pergunta foi respondida, e a resposta aparece
   arquivada junto com a pergunta dele no portal.
 
+---
+
+## ATUALIZAÇÃO 6 — Editar/excluir pergunta e minimizar respondidas
+
+### A) Rodar o novo SQL
+Copie e cole o conteúdo do arquivo `supabase-update-5.sql` no SQL Editor do Supabase → **Run**.
+
+### B) Subir os arquivos no GitHub
+Atualizados: `js/perguntaAoDaniel.js`, `js/admin.js`, `style.css`, `js/emailConfig.js` (já vem com suas
+chaves do EmailJS preenchidas, não precisa editar nada nele).
+
+### Como funciona agora
+- **Aluno**: enquanto a pergunta não for respondida, aparecem os botões "Editar pergunta" e "Excluir
+  pergunta" na tela dela. Ao excluir, você recebe um e-mail avisando. Depois de respondida, esses
+  botões somem (não dá mais pra editar/excluir).
+- **Professor**: perguntas já respondidas aparecem minimizadas (só o assunto, com a etiqueta "Respondida")
+  — clique para expandir. Dentro, dá pra editar a resposta ou excluir a pergunta a qualquer momento,
+  sem disparar e-mail nenhum ao aluno nesses dois casos.
+
+---
+
+## ATUALIZAÇÃO 7 — Comunicados para todos os alunos
+
+Não precisa rodar nenhum SQL novo desta vez. Só suba os arquivos atualizados no GitHub:
+`js/admin.js` e `style.css`.
+
+### Como funciona
+- No painel do professor, agora existe o item **"Comunicados"** no topo do menu lateral (separado da
+  lista de alunos).
+- Ao clicar, aparece um campo de assunto e uma caixa de mensagem. Ao clicar em "Enviar comunicado a
+  todos os alunos", o sistema pede confirmação e depois envia o e-mail, um por um, para todos os
+  alunos cadastrados no portal — com o assunto e a mensagem que você escreveu.
+- No final, aparece quantos e-mails foram enviados com sucesso (e se algum falhou).
+
+---
+
+## ATUALIZAÇÃO 8 — Remoção do Financeiro / Guias de Gramática (com bloqueio)
+
+### A) Rodar o novo SQL
+Copie e cole o conteúdo do arquivo `supabase-update-6.sql` no SQL Editor do Supabase → **Run**.
+(Isso remove os campos financeiros do banco e cria as tabelas dos Guias de Gramática.)
+
+### B) Subir os arquivos no GitHub
+- **Removido**: `financeiro.html` (pode excluir esse arquivo do seu repositório do GitHub).
+- **Novos**: `guias-gramatica.html`, `js/guiasGramatica.js`.
+- **Atualizados**: `js/common.js`, `js/admin.js`, `home.html`, `js/aluno.js`, `js/perfil.js`,
+  `js/enviarMaterial.js`, `js/perguntaAoDaniel.js`.
+
+### Como funciona
+- O Financeiro sumiu de vez — do menu do aluno e do painel do professor.
+- No seu painel, agora tem **"Guias de Gramática"** no topo do menu (junto com "Comunicados"),
+  onde você:
+  - Vê se o conteúdo está **bloqueado** ou **desbloqueado** para os alunos, com botões para trocar.
+  - Escolhe o nível (Básico / Intermediário / Avançado) e adiciona materiais, digitando o título
+    manualmente e escolhendo o arquivo.
+- **Enquanto estiver bloqueado**: os alunos não veem "Guias de Gramática" em lugar nenhum do menu —
+  como se a seção não existisse.
+- **Quando você desbloquear**: o item aparece no menu de todos os alunos (e um cartão na home).
+  Cada aluno escolhe um nível e vê a lista de materiais daquele nível, com botão de baixar.
+- Essa trava também funciona no banco de dados (não é só visual) — então mesmo que alguém tente
+  acessar por fora, o conteúdo continua bloqueado até você liberar.
+
 ## Se quiser mudar alguma coisa depois
 Qualquer alteração de design, texto ou funcionalidade, é só me pedir — eu edito os arquivos e te devolvo os atualizados para você subir de novo no GitHub (o site na Vercel se atualiza sozinho sempre que os arquivos do GitHub mudam).

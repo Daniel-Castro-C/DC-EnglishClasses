@@ -8,7 +8,7 @@ let myProfile = null;
   if (!myProfile) { await signOutAndRedirect(); return; }
   if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
 
-  document.getElementById('nav-container').innerHTML = buildStudentTopNav('perfil');
+  document.getElementById('nav-container').innerHTML = buildStudentTopNav('perfil', await isGrammarUnlocked());
   render();
 })();
 

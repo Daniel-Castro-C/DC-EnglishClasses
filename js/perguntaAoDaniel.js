@@ -1,6 +1,7 @@
 let myProfile = null;
 let myQuestions = [];
 let activeQuestionId = null; // null = formulário de nova pergunta
+let grammarUnlocked = false;
 
 (async function init(){
   const session = await requireSession();
@@ -10,6 +11,7 @@ let activeQuestionId = null; // null = formulário de nova pergunta
   if (!myProfile) { await signOutAndRedirect(); return; }
   if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
 
+  grammarUnlocked = await isGrammarUnlocked();
   await loadQuestions();
   renderNav();
   renderNewQuestionForm();
@@ -27,7 +29,7 @@ async function loadQuestions(){
 }
 
 function renderNav(){
-  let html = buildStudentTopNav('daniel');
+  let html = buildStudentTopNav('daniel', grammarUnlocked);
   html += `<div class="nav-label">Minhas perguntas</div>`;
   html += `<div class="nav-item ${activeQuestionId === null ? 'active' : ''}" onclick="renderNewQuestionForm()">
     <span>+ Nova pergunta</span>

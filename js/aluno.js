@@ -8,6 +8,7 @@ const ICONS = {
 let myProfile = null;
 let myLessons = [];
 let activeLessonId = null;
+let grammarUnlocked = false;
 
 (async function init(){
   const session = await requireSession();
@@ -22,6 +23,7 @@ let activeLessonId = null;
     return;
   }
 
+  grammarUnlocked = await isGrammarUnlocked();
   await loadLessons();
 })();
 
@@ -41,7 +43,7 @@ async function loadLessons(){
   myLessons = data || [];
 
   if (myLessons.length === 0) {
-    document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas') + `<div class="nav-label">Minhas aulas</div>`;
+    document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas', grammarUnlocked) + `<div class="nav-label">Minhas aulas</div>`;
     document.getElementById('main-content').innerHTML = `
       <div class="topline"><div><h1>Ainda não há aulas por aqui</h1>
       <div class="sub">Assim que seu professor cadastrar sua primeira aula, ela aparece aqui.</div></div></div>`;
@@ -54,7 +56,7 @@ async function loadLessons(){
 }
 
 function renderNav(){
-  let html = buildStudentTopNav('aulas');
+  let html = buildStudentTopNav('aulas', grammarUnlocked);
   html += `<div class="nav-label">Minhas aulas</div>`;
   myLessons.forEach(l => {
     html += `<div class="nav-item ${l.id === activeLessonId ? 'active' : ''}" onclick="renderLesson('${l.id}')">

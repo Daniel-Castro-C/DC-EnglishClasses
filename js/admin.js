@@ -44,6 +44,9 @@ function renderNav(){
   let html = `<div class="nav-item ${currentView === 'comunicados' ? 'active' : ''}" onclick="openComunicados()">
     <span>Comunicados</span>
   </div>`;
+  html += `<div class="nav-item ${currentView === 'guias' ? 'active' : ''}" onclick="openGuias()">
+    <span>Guias de Gramática</span>
+  </div>`;
   html += `<div class="nav-label">Alunos</div>`;
   if (students.length === 0) {
     html += `<div class="nav-item" style="opacity:.6;cursor:default;">Nenhum aluno ainda</div>`;
@@ -101,6 +104,159 @@ function renderHome(){
       </div>
     `}
   `;
+}
+
+let guiasCurrentLevel = 'basico';
+const GUIAS_LEVEL_LABELS = { basico: 'Básico', intermediario: 'Intermediário', avancado: 'Avançado' };
+
+async function openGuias(){
+  currentStudent = null;
+  currentView = 'guias';
+  renderNav();
+  await renderGuiasView();
+}
+
+async function renderGuiasView(){
+  const { data: settingData } = await sb.from('app_settings').select('value').eq('key', 'grammar_guides_locked').single();
+  const isLocked = !settingData || settingData.value !== 'false';
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="topline">
+      <div>
+        <h1>Guias de Gramática</h1>
+        <div class="sub">Materiais organizados por nível (Básico, Intermediário, Avançado)</div>
+      </div>
+    </div>
+
+    <div class="box" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0 0 4px;">Status para os alunos</h3>
+        <div class="small-note" style="margin-top:0;">
+          ${isLocked
+            ? 'O conteúdo está BLOQUEADO — os alunos não veem esta seção em lugar nenhum do portal.'
+            : 'O conteúdo está DESBLOQUEADO — todos os alunos já podem acessar os Guias de Gramática.'}
+        </div>
+      </div>
+      <div style="flex:0 0 auto;">
+        <button class="btn-dark-sm" onclick="setGuiasLock(true)" ${isLocked ? 'disabled' : ''}>Bloquear conteúdo</button>
+        <button class="btn-ghost" onclick="setGuiasLock(false)" ${!isLocked ? 'disabled' : ''}>Desbloquear conteúdo</button>
+      </div>
+    </div>
+
+    <div class="role-switch" style="max-width:460px;margin-bottom:20px;">
+      <button class="${guiasCurrentLevel === 'basico' ? 'active' : ''}" onclick="switchGuiasLevel('basico')">Básico</button>
+      <button class="${guiasCurrentLevel === 'intermediario' ? 'active' : ''}" onclick="switchGuiasLevel('intermediario')">Intermediário</button>
+      <button class="${guiasCurrentLevel === 'avancado' ? 'active' : ''}" onclick="switchGuiasLevel('avancado')">Avançado</button>
+    </div>
+
+    <div id="guias-level-content"></div>
+  `;
+
+  await renderGuiasLevelContent();
+}
+
+async function setGuiasLock(locked){
+  const { error } = await sb.from('app_settings')
+    .update({ value: locked ? 'true' : 'false' })
+    .eq('key', 'grammar_guides_locked');
+
+  if (error) { alert('Não foi possível atualizar o status.'); console.error(error); return; }
+  renderGuiasView();
+}
+
+function switchGuiasLevel(level){
+  guiasCurrentLevel = level;
+  renderGuiasView();
+}
+
+async function renderGuiasLevelContent(){
+  const level = guiasCurrentLevel;
+  const container = document.getElementById('guias-level-content');
+  container.innerHTML = `<div class="empty-state">Carregando materiais...</div>`;
+
+  const { data, error } = await sb
+    .from('grammar_materials')
+    .select('*')
+    .eq('level', level)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    container.innerHTML = `<div class="empty-state">Não foi possível carregar os materiais.</div>`;
+    return;
+  }
+
+  const rows = (data || []).map(m => `
+    <div class="resource-row">
+      <div class="resource-icon ic-pdf">Arq</div>
+      <div class="resource-info">
+        <div class="name">${escapeHtml(m.title)}</div>
+      </div>
+      <button class="resource-action" onclick="deleteGrammarMaterial('${m.id}')">Excluir</button>
+    </div>
+  `).join('') || `<div class="empty-state">Nenhum material no nível ${GUIAS_LEVEL_LABELS[level]} ainda.</div>`;
+
+  container.innerHTML = `
+    <div class="lesson-card">
+      <h3>Materiais — ${GUIAS_LEVEL_LABELS[level]}</h3>
+      ${rows}
+    </div>
+
+    <div class="box">
+      <h3>+ Adicionar material ao nível ${GUIAS_LEVEL_LABELS[level]}</h3>
+      <div class="row">
+        <input id="guias-material-title" placeholder="Título do material (ex: Present Perfect — teoria e exercícios)">
+      </div>
+      <div class="row">
+        <input id="guias-material-file" type="file">
+      </div>
+      <div style="margin-top:12px;">
+        <button id="guias-upload-btn" class="btn-dark-sm" onclick="uploadGrammarMaterial()">Adicionar material</button>
+      </div>
+    </div>
+  `;
+}
+
+async function uploadGrammarMaterial(){
+  const title = document.getElementById('guias-material-title').value.trim();
+  const fileInput = document.getElementById('guias-material-file');
+  const file = fileInput.files[0];
+  const level = guiasCurrentLevel;
+
+  if (!title) { alert('Dê um título para o material.'); return; }
+  if (!file) { alert('Escolha um arquivo.'); return; }
+
+  const btn = document.getElementById('guias-upload-btn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filePath = `grammar/${level}/${Date.now()}_${safeFileName}`;
+
+  const { error: uploadError } = await sb.storage.from(STORAGE_BUCKET).upload(filePath, file);
+
+  if (uploadError) {
+    alert('Não foi possível enviar o arquivo.');
+    console.error(uploadError);
+    btn.disabled = false;
+    btn.textContent = 'Adicionar material';
+    return;
+  }
+
+  const { error: insertError } = await sb.from('grammar_materials').insert({ level, title, file_path: filePath });
+
+  if (insertError) {
+    alert('O arquivo foi enviado, mas não foi possível salvar as informações.');
+    console.error(insertError);
+  }
+
+  await renderGuiasLevelContent();
+}
+
+async function deleteGrammarMaterial(id){
+  if (!confirm('Excluir este material?')) return;
+  const { error } = await sb.from('grammar_materials').delete().eq('id', id);
+  if (error) { alert('Não foi possível excluir.'); return; }
+  await renderGuiasLevelContent();
 }
 
 function openComunicados(){
@@ -294,21 +450,6 @@ function renderPerfilTab(){
         <button id="link-edit-btn" class="btn-ghost" style="flex:0 0 auto;${s.permanent_lesson_link ? '' : 'display:none;'}" onclick="enableLinkEditing()">Editar link</button>
         <button id="link-open-btn" class="btn-ghost" style="flex:0 0 auto;${s.permanent_lesson_link ? '' : 'display:none;'}" onclick="openStudentLink()">Abrir aula</button>
       </div>
-    </div>
-
-    <div class="box">
-      <h3>Financeiro</h3>
-      <div class="row">
-        <div>
-          <label>Dia de pagamento</label>
-          <input id="student-payday-input" type="number" min="1" max="31" placeholder="ex: 8" value="${s.payment_day ?? ''}">
-        </div>
-        <div>
-          <label>Valor da mensalidade (R$)</label>
-          <input id="student-fee-input" type="number" min="0" step="0.01" placeholder="ex: 250.00" value="${s.monthly_fee ?? ''}">
-        </div>
-      </div>
-      <button class="btn-dark-sm" onclick="saveStudentFinance()">Salvar dados financeiros</button>
     </div>
 
     <div class="box">
@@ -609,21 +750,6 @@ function openStudentLink(){
   const link = currentStudent.permanent_lesson_link;
   if (!link) return;
   window.open(link, '_blank');
-}
-
-async function saveStudentFinance(){
-  const dayRaw = document.getElementById('student-payday-input').value;
-  const feeRaw = document.getElementById('student-fee-input').value;
-
-  const payment_day = dayRaw ? parseInt(dayRaw, 10) : null;
-  const monthly_fee = feeRaw ? parseFloat(feeRaw) : null;
-
-  const { error } = await sb.from('profiles').update({ payment_day, monthly_fee }).eq('id', currentStudent.id);
-  if (error) { alert('Não foi possível salvar os dados financeiros.'); return; }
-
-  currentStudent.payment_day = payment_day;
-  currentStudent.monthly_fee = monthly_fee;
-  alert('Dados financeiros salvos!');
 }
 
 function generatePasswordSQL(){
