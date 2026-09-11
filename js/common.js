@@ -27,11 +27,11 @@ function buildStudentTopNav(activeKey, showGrammarGuides){
     { key: 'perfil',    label: 'Perfil',               href: 'perfil.html' },
     { key: 'aulas',     label: 'Minhas aulas',         href: 'aluno.html' },
     { key: 'enviar',    label: 'Enviar material',      href: 'enviar-material.html' },
-    { key: 'daniel',    label: 'Pergunte ao Daniel',   href: 'pergunte-ao-daniel.html' },
   ];
   if (showGrammarGuides) {
     items.push({ key: 'gramatica', label: 'Guias de Gramática', href: 'guias-gramatica.html' });
   }
+  items.push({ key: 'daniel', label: 'Pergunte ao Daniel', href: 'pergunte-ao-daniel.html' });
   let html = `<div class="nav-label">Menu</div>`;
   items.forEach(it => {
     const active = it.key === activeKey ? 'active' : '';

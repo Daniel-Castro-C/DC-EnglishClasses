@@ -107,7 +107,7 @@ function renderHome(){
 }
 
 let guiasCurrentLevel = 'basico';
-const GUIAS_LEVEL_LABELS = { basico: 'Básico', intermediario: 'Intermediário', avancado: 'Avançado' };
+const GUIAS_LEVEL_LABELS = { basico: 'Básico (A1/A2)', intermediario: 'Intermediário (B1/B2)', avancado: 'Avançado (C1/C2)' };
 
 async function openGuias(){
   currentStudent = null;
@@ -144,9 +144,9 @@ async function renderGuiasView(){
     </div>
 
     <div class="role-switch" style="max-width:460px;margin-bottom:20px;">
-      <button class="${guiasCurrentLevel === 'basico' ? 'active' : ''}" onclick="switchGuiasLevel('basico')">Básico</button>
-      <button class="${guiasCurrentLevel === 'intermediario' ? 'active' : ''}" onclick="switchGuiasLevel('intermediario')">Intermediário</button>
-      <button class="${guiasCurrentLevel === 'avancado' ? 'active' : ''}" onclick="switchGuiasLevel('avancado')">Avançado</button>
+      <button class="${guiasCurrentLevel === 'basico' ? 'active' : ''}" onclick="switchGuiasLevel('basico')">Básico (A1/A2)</button>
+      <button class="${guiasCurrentLevel === 'intermediario' ? 'active' : ''}" onclick="switchGuiasLevel('intermediario')">Intermediário (B1/B2)</button>
+      <button class="${guiasCurrentLevel === 'avancado' ? 'active' : ''}" onclick="switchGuiasLevel('avancado')">Avançado (C1/C2)</button>
     </div>
 
     <div id="guias-level-content"></div>

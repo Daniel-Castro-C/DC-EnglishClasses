@@ -2,7 +2,7 @@ let myProfile = null;
 let activeLevel = null; // null = tela de seleção de nível
 let grammarUnlocked = false;
 
-const LEVEL_LABELS = { basico: 'Básico', intermediario: 'Intermediário', avancado: 'Avançado' };
+const LEVEL_LABELS = { basico: 'Básico (A1/A2)', intermediario: 'Intermediário (B1/B2)', avancado: 'Avançado (C1/C2)' };
 
 (async function init(){
   const session = await requireSession();
@@ -39,9 +39,9 @@ function renderLevelSelection(){
       </div>
     </div>
     <div class="level-cards">
-      <div class="level-card" onclick="showLevel('basico')"><h3>Básico</h3><p>Fundamentos da gramática</p></div>
-      <div class="level-card" onclick="showLevel('intermediario')"><h3>Intermediário</h3><p>Aprofundando as estruturas</p></div>
-      <div class="level-card" onclick="showLevel('avancado')"><h3>Avançado</h3><p>Nuances e usos mais complexos</p></div>
+      <div class="level-card" onclick="showLevel('basico')"><h3>Básico (A1/A2)</h3><p>Fundamentos da gramática</p></div>
+      <div class="level-card" onclick="showLevel('intermediario')"><h3>Intermediário (B1/B2)</h3><p>Aprofundando as estruturas</p></div>
+      <div class="level-card" onclick="showLevel('avancado')"><h3>Avançado (C1/C2)</h3><p>Nuances e usos mais complexos</p></div>
     </div>
   `;
 }
