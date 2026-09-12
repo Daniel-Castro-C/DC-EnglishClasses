@@ -131,6 +131,13 @@ input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border
 .logout-link{color:#9FB1CE;font-size:13px;cursor:pointer;text-decoration:none;background:none;border:none;font-family:inherit;padding:0;}
 .logout-link:hover{color:#fff;}
 
+.sidebar-nav-btn{
+  background:none;border:1px solid rgba(255,255,255,0.28);color:#D6DCE8;
+  border-radius:6px;cursor:pointer;font-family:inherit;
+}
+.sidebar-nav-btn:hover:not(:disabled){border-color:#fff;color:#fff;}
+.sidebar-nav-btn:disabled{opacity:.35;cursor:default;}
+
 .main{flex:1;padding:40px 52px;max-width:920px;}
 .topline{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:34px;gap:20px;}
 .topline h1{font-size:26px;margin:0 0 4px;}
