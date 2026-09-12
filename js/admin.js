@@ -736,10 +736,6 @@ function resourceRowHtml(rowIndex){
           <option value="ex">Exercícios</option>
           <option value="rep">Relatório de desempenho</option>
         </select>
-        <input id="resource-name-${rowIndex}" placeholder="Nome do material (ex: Slides da aula 3.pptx)">
-      </div>
-      <div class="row">
-        <input id="resource-desc-${rowIndex}" placeholder="Descrição curta (opcional)">
         <input id="resource-file-${rowIndex}" type="file">
       </div>
     </div>
@@ -755,19 +751,19 @@ async function uploadResources(){
   const lessonId = document.getElementById('resource-lesson').value;
   if (!lessonId) { alert('Cadastre uma aula antes de enviar materiais.'); return; }
 
+  const lesson = currentLessons.find(l => l.id === lessonId);
+  const lessonTitle = lesson ? lesson.title : 'Aula';
+
   // Monta a lista de linhas preenchidas (só as que têm arquivo escolhido)
   const rowsToUpload = [];
   for (let i = 1; i <= resourceRowCount; i++) {
     const fileInput = document.getElementById(`resource-file-${i}`);
     if (!fileInput || !fileInput.files[0]) continue; // linha vazia, ignora
 
-    const name = document.getElementById(`resource-name-${i}`).value.trim();
-    if (!name) { alert(`Dê um nome para o material da linha ${i}.`); return; }
-
+    const type = document.getElementById(`resource-type-${i}`).value;
     rowsToUpload.push({
-      type: document.getElementById(`resource-type-${i}`).value,
-      name,
-      desc: document.getElementById(`resource-desc-${i}`).value.trim(),
+      type,
+      name: `${lessonTitle} - ${TYPE_LABELS[type]}`,
       file: fileInput.files[0]
     });
   }
@@ -792,7 +788,7 @@ async function uploadResources(){
     if (uploadError) { failCount++; console.error(uploadError); continue; }
 
     const { error: insertError } = await sb.from('resources').insert({
-      lesson_id: lessonId, type: r.type, name: r.name, description: r.desc, file_path: filePath
+      lesson_id: lessonId, type: r.type, name: r.name, file_path: filePath
     });
     if (insertError) { failCount++; console.error(insertError); continue; }
 

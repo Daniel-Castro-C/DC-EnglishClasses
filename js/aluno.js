@@ -74,10 +74,10 @@ function renderNav(){
 
   if (totalPages > 1) {
     html += `<div style="display:flex;gap:6px;margin-top:10px;padding:0 6px;">`;
-    html += `<button class="btn-ghost" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(-1)" ${lessonsPage === 0 ? 'disabled' : ''}>← Anterior</button>`;
-    html += `<button class="btn-ghost" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(1)" ${lessonsPage >= totalPages - 1 ? 'disabled' : ''}>Próxima →</button>`;
+    html += `<button class="sidebar-nav-btn" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(-1)" ${lessonsPage === 0 ? 'disabled' : ''}>← Anterior</button>`;
+    html += `<button class="sidebar-nav-btn" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(1)" ${lessonsPage >= totalPages - 1 ? 'disabled' : ''}>Próxima →</button>`;
     html += `</div>`;
-    html += `<div class="small-note" style="text-align:center;margin-top:6px;">Página ${lessonsPage + 1} de ${totalPages}</div>`;
+    html += `<div class="small-note" style="text-align:center;margin-top:6px;color:#93A3C0;">Página ${lessonsPage + 1} de ${totalPages}</div>`;
   }
 
   document.getElementById('nav-container').innerHTML = html;
