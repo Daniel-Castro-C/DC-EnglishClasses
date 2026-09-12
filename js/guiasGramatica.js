@@ -57,6 +57,8 @@ function renderNav(){
   document.getElementById('nav-container').innerHTML = html;
 }
 
+let currentMaterials = [];
+
 async function showLevel(level){
   activeLevel = level;
   renderNav();
@@ -92,15 +94,24 @@ async function showLevel(level){
     return;
   }
 
+  currentMaterials = data;
+
   list.innerHTML = data.map(m => `
     <div class="resource-row">
       <div class="resource-icon ic-pdf">Arq</div>
       <div class="resource-info">
         <div class="name">${escapeHtml(m.title)}</div>
       </div>
+      ${m.video_visible && m.youtube_link ? `<button class="resource-action" onclick="openYoutubeLink('${m.id}')">Assistir videoaula</button>` : ''}
       <button class="resource-action" onclick="downloadGrammarMaterial('${m.file_path}')">Baixar arquivo</button>
     </div>
   `).join('');
+}
+
+function openYoutubeLink(materialId){
+  const m = currentMaterials.find(item => item.id === materialId);
+  if (!m || !m.youtube_link) return;
+  window.open(m.youtube_link, '_blank');
 }
 
 async function downloadGrammarMaterial(filePath){

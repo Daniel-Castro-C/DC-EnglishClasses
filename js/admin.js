@@ -185,15 +185,8 @@ async function renderGuiasLevelContent(){
     return;
   }
 
-  const rows = (data || []).map(m => `
-    <div class="resource-row">
-      <div class="resource-icon ic-pdf">Arq</div>
-      <div class="resource-info">
-        <div class="name">${escapeHtml(m.title)}</div>
-      </div>
-      <button class="resource-action" onclick="deleteGrammarMaterial('${m.id}')">Excluir</button>
-    </div>
-  `).join('') || `<div class="empty-state">Nenhum material no nível ${GUIAS_LEVEL_LABELS[level]} ainda.</div>`;
+  const rows = (data || []).map(m => materialRowHtml(m)).join('')
+    || `<div class="empty-state">Nenhum material no nível ${GUIAS_LEVEL_LABELS[level]} ainda.</div>`;
 
   container.innerHTML = `
     <div class="lesson-card">
@@ -209,6 +202,9 @@ async function renderGuiasLevelContent(){
       <div class="row">
         <input id="guias-material-file" type="file">
       </div>
+      <div class="row">
+        <input id="guias-material-youtube" placeholder="Link do YouTube (opcional — pode ser adicionado depois também)">
+      </div>
       <div style="margin-top:12px;">
         <button id="guias-upload-btn" class="btn-dark-sm" onclick="uploadGrammarMaterial()">Adicionar material</button>
       </div>
@@ -216,10 +212,68 @@ async function renderGuiasLevelContent(){
   `;
 }
 
+function materialRowHtml(m){
+  if (m.youtube_link) {
+    return `
+      <div class="lesson-card" style="padding:16px 18px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="name" style="font-weight:600;font-size:14.5px;">${escapeHtml(m.title)}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span class="pill" style="background:${m.video_visible ? 'var(--sky-soft)' : '#EFEBE3'};">${m.video_visible ? 'Vídeo visível para o aluno' : 'Vídeo oculto'}</span>
+            <button class="btn-ghost" onclick="toggleVideoVisible('${m.id}', ${m.video_visible ? 'false' : 'true'})">${m.video_visible ? 'Ocultar link' : 'Exibir link'}</button>
+            <button class="resource-action" onclick="deleteGrammarMaterial('${m.id}')">Excluir</button>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <input id="yt-input-${m.id}" value="${escapeAttr(m.youtube_link)}" placeholder="Link do YouTube">
+          <button class="btn-ghost" style="flex:0 0 auto;" onclick="saveYoutubeLink('${m.id}')">Salvar link</button>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="lesson-card" style="padding:16px 18px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="name" style="font-weight:600;font-size:14.5px;">${escapeHtml(m.title)}</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-ghost" onclick="toggleAddVideoForm('${m.id}')">+ Adicionar vídeo</button>
+          <button class="resource-action" onclick="deleteGrammarMaterial('${m.id}')">Excluir</button>
+        </div>
+      </div>
+      <div id="add-video-form-${m.id}" class="row" style="margin-top:10px;display:none;">
+        <input id="yt-input-${m.id}" placeholder="Colar link do YouTube">
+        <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="saveYoutubeLink('${m.id}')">Salvar link</button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleAddVideoForm(id){
+  const el = document.getElementById(`add-video-form-${id}`);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function saveYoutubeLink(id){
+  const input = document.getElementById(`yt-input-${id}`);
+  const val = input.value.trim();
+  const { error } = await sb.from('grammar_materials').update({ youtube_link: val || null }).eq('id', id);
+  if (error) { alert('Não foi possível salvar o link.'); console.error(error); return; }
+  await renderGuiasLevelContent();
+}
+
+async function toggleVideoVisible(id, newVal){
+  const { error } = await sb.from('grammar_materials').update({ video_visible: newVal === 'true' || newVal === true }).eq('id', id);
+  if (error) { alert('Não foi possível atualizar.'); console.error(error); return; }
+  await renderGuiasLevelContent();
+}
+
 async function uploadGrammarMaterial(){
   const title = document.getElementById('guias-material-title').value.trim();
   const fileInput = document.getElementById('guias-material-file');
   const file = fileInput.files[0];
+  const youtubeLink = document.getElementById('guias-material-youtube').value.trim();
   const level = guiasCurrentLevel;
 
   if (!title) { alert('Dê um título para o material.'); return; }
@@ -242,7 +296,9 @@ async function uploadGrammarMaterial(){
     return;
   }
 
-  const { error: insertError } = await sb.from('grammar_materials').insert({ level, title, file_path: filePath });
+  const { error: insertError } = await sb.from('grammar_materials').insert({
+    level, title, file_path: filePath, youtube_link: youtubeLink || null
+  });
 
   if (insertError) {
     alert('O arquivo foi enviado, mas não foi possível salvar as informações.');
@@ -355,7 +411,7 @@ async function loadLessonsFor(studentId){
     .from('lessons')
     .select('*, resources(*)')
     .eq('student_id', studentId)
-    .order('lesson_date', { ascending: true });
+    .order('created_at', { ascending: false });
 
   if (error) { console.error(error); currentLessons = []; return; }
   currentLessons = data || [];
@@ -625,7 +681,11 @@ async function downloadRequestFile(filePath){
   window.location.href = data.signedUrl;
 }
 
+let resourceRowCount = 0;
+
 function renderNovaAulaTab(){
+  resourceRowCount = 0;
+
   document.getElementById('tab-content').innerHTML = `
     <div class="box">
       <h3>+ Adicionar nova aula</h3>
@@ -640,32 +700,115 @@ function renderNovaAulaTab(){
     </div>
 
     <div class="box">
-      <h3>+ Adicionar material a uma aula</h3>
+      <h3>+ Adicionar materiais a uma aula</h3>
       <div class="row">
         <select id="resource-lesson">
           ${currentLessons.map(l => `<option value="${l.id}">${escapeHtml(l.title)}</option>`).join('')}
         </select>
-        <select id="resource-type">
+      </div>
+      <div id="resource-rows-container"></div>
+      <div style="margin-top:6px;">
+        <button class="btn-ghost" onclick="addResourceRow()">+ Adicionar mais</button>
+      </div>
+      <div style="margin-top:12px;">
+        <button id="upload-btn" class="btn-dark-sm" onclick="uploadResources()" ${currentLessons.length === 0 ? 'disabled' : ''}>
+          ${currentLessons.length === 0 ? 'Cadastre uma aula primeiro' : 'Enviar materiais'}
+        </button>
+      </div>
+      <div id="upload-feedback" class="feedback"></div>
+    </div>
+  `;
+
+  const container = document.getElementById('resource-rows-container');
+  for (let i = 0; i < 3; i++) {
+    resourceRowCount++;
+    container.insertAdjacentHTML('beforeend', resourceRowHtml(resourceRowCount));
+  }
+}
+
+function resourceRowHtml(rowIndex){
+  return `
+    <div class="lesson-card" id="resource-row-${rowIndex}" style="padding:14px 16px;margin-bottom:10px;">
+      <div class="row">
+        <select id="resource-type-${rowIndex}">
           <option value="ppt">Slides (PPT)</option>
           <option value="pdf">PDF</option>
           <option value="ex">Exercícios</option>
           <option value="rep">Relatório de desempenho</option>
         </select>
+        <input id="resource-name-${rowIndex}" placeholder="Nome do material (ex: Slides da aula 3.pptx)">
       </div>
       <div class="row">
-        <input id="resource-name" placeholder="Nome do material (ex: Slides da aula 3.pptx)">
-        <input id="resource-desc" placeholder="Descrição curta (opcional)">
-      </div>
-      <div class="row">
-        <input id="resource-file" type="file">
-      </div>
-      <div style="margin-top:12px;">
-        <button id="upload-btn" class="btn-dark-sm" onclick="uploadResource()" ${currentLessons.length === 0 ? 'disabled' : ''}>
-          ${currentLessons.length === 0 ? 'Cadastre uma aula primeiro' : 'Enviar material'}
-        </button>
+        <input id="resource-desc-${rowIndex}" placeholder="Descrição curta (opcional)">
+        <input id="resource-file-${rowIndex}" type="file">
       </div>
     </div>
   `;
+}
+
+function addResourceRow(){
+  resourceRowCount++;
+  document.getElementById('resource-rows-container').insertAdjacentHTML('beforeend', resourceRowHtml(resourceRowCount));
+}
+
+async function uploadResources(){
+  const lessonId = document.getElementById('resource-lesson').value;
+  if (!lessonId) { alert('Cadastre uma aula antes de enviar materiais.'); return; }
+
+  // Monta a lista de linhas preenchidas (só as que têm arquivo escolhido)
+  const rowsToUpload = [];
+  for (let i = 1; i <= resourceRowCount; i++) {
+    const fileInput = document.getElementById(`resource-file-${i}`);
+    if (!fileInput || !fileInput.files[0]) continue; // linha vazia, ignora
+
+    const name = document.getElementById(`resource-name-${i}`).value.trim();
+    if (!name) { alert(`Dê um nome para o material da linha ${i}.`); return; }
+
+    rowsToUpload.push({
+      type: document.getElementById(`resource-type-${i}`).value,
+      name,
+      desc: document.getElementById(`resource-desc-${i}`).value.trim(),
+      file: fileInput.files[0]
+    });
+  }
+
+  if (rowsToUpload.length === 0) { alert('Escolha ao menos um arquivo para enviar.'); return; }
+
+  const btn = document.getElementById('upload-btn');
+  const feedbackEl = document.getElementById('upload-feedback');
+  btn.disabled = true;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < rowsToUpload.length; i++) {
+    const r = rowsToUpload[i];
+    btn.textContent = `Enviando... (${i + 1}/${rowsToUpload.length})`;
+
+    const safeFileName = r.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${currentStudent.id}/${lessonId}/${Date.now()}_${i}_${safeFileName}`;
+
+    const { error: uploadError } = await sb.storage.from(STORAGE_BUCKET).upload(filePath, r.file);
+    if (uploadError) { failCount++; console.error(uploadError); continue; }
+
+    const { error: insertError } = await sb.from('resources').insert({
+      lesson_id: lessonId, type: r.type, name: r.name, description: r.desc, file_path: filePath
+    });
+    if (insertError) { failCount++; console.error(insertError); continue; }
+
+    successCount++;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar materiais';
+
+  feedbackEl.className = 'feedback show ' + (failCount === 0 ? 'ok' : 'err');
+  feedbackEl.textContent = failCount === 0
+    ? `${successCount} material(is) enviado(s) com sucesso!`
+    : `${successCount} enviado(s), ${failCount} falharam. Verifique o console para detalhes.`;
+
+  await loadLessonsFor(currentStudent.id);
+  renderStudentDetail();
 }
 
 function renderAulasCadastradasTab(lessonsHtml){
@@ -806,50 +949,6 @@ async function deleteLesson(lessonId){
   if (!confirm('Excluir esta aula e todos os materiais dela?')) return;
   const { error } = await sb.from('lessons').delete().eq('id', lessonId);
   if (error) { alert('Não foi possível excluir.'); return; }
-  await loadLessonsFor(currentStudent.id);
-  renderStudentDetail();
-}
-
-async function uploadResource(){
-  const lessonId = document.getElementById('resource-lesson').value;
-  const type = document.getElementById('resource-type').value;
-  const name = document.getElementById('resource-name').value.trim();
-  const desc = document.getElementById('resource-desc').value.trim();
-  const fileInput = document.getElementById('resource-file');
-  const file = fileInput.files[0];
-
-  if (!lessonId) { alert('Cadastre uma aula antes de enviar materiais.'); return; }
-  if (!name) { alert('Dê um nome para o material.'); return; }
-  if (!file) { alert('Escolha um arquivo.'); return; }
-
-  const btn = document.getElementById('upload-btn');
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
-
-  const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const filePath = `${currentStudent.id}/${lessonId}/${Date.now()}_${safeFileName}`;
-
-  const { error: uploadError } = await sb.storage
-    .from(STORAGE_BUCKET)
-    .upload(filePath, file);
-
-  if (uploadError) {
-    alert('Não foi possível enviar o arquivo.');
-    console.error(uploadError);
-    btn.disabled = false;
-    btn.textContent = 'Enviar material';
-    return;
-  }
-
-  const { error: insertError } = await sb.from('resources').insert({
-    lesson_id: lessonId, type, name, description: desc, file_path: filePath
-  });
-
-  if (insertError) {
-    alert('O arquivo foi enviado, mas não foi possível salvar as informações.');
-    console.error(insertError);
-  }
-
   await loadLessonsFor(currentStudent.id);
   renderStudentDetail();
 }
