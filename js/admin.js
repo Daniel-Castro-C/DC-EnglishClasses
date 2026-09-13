@@ -147,7 +147,7 @@ async function renderGuiasView(){
     <div class="role-switch" style="max-width:460px;margin-bottom:20px;">
       <button class="${guiasCurrentLevel === 'basico' ? 'active' : ''}" onclick="switchGuiasLevel('basico')">Básico (A1/A2)</button>
       <button class="${guiasCurrentLevel === 'intermediario' ? 'active' : ''}" onclick="switchGuiasLevel('intermediario')">Intermediário (B1/B2)</button>
-      <button class="${guiasCurrentLevel === 'avancado' ? 'active' : ''}" onclick="switchGuiasLevel('avancado')">Avançado (C1/C2)</button>
+      <button class="${guiasCurrentLevel === 'avancado' ? 'active' : ''}" onclick="switchGuiasLevel('avancado')">Avançado (C1)</button>
     </div>
 
     <div id="guias-level-content"></div>
