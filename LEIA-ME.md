@@ -276,3 +276,84 @@ Copie e cole o conteúdo do arquivo `supabase-update-6.sql` no SQL Editor do Sup
 
 ## Se quiser mudar alguma coisa depois
 Qualquer alteração de design, texto ou funcionalidade, é só me pedir — eu edito os arquivos e te devolvo os atualizados para você subir de novo no GitHub (o site na Vercel se atualiza sozinho sempre que os arquivos do GitHub mudam).
+
+---
+
+## ATUALIZAÇÃO 9 — Vídeo do YouTube nos Guias, upload em lote e ordenação por mais recente
+
+### A) Rodar o novo SQL
+Copie e cole o conteúdo do arquivo `supabase-update-7-youtube.sql` no SQL Editor do Supabase → **Run**.
+(Adiciona os campos de link do YouTube aos materiais de gramática.)
+
+### B) Subir os arquivos no GitHub
+Atualizados: `js/admin.js`, `js/aluno.js`, `js/guiasGramatica.js`.
+
+### Como funciona agora
+
+**1. Link de videoaula (YouTube) nos Guias de Gramática**
+- Ao adicionar um material num nível, agora existe um campo opcional para colar o link do YouTube.
+- Se você não colocar o link na hora, cada material sem link ganha um botão discreto **"+ Adicionar
+  vídeo"**, pra você colar o link depois (ideal para quando gravar as videoaulas na fase 2).
+- Assim que um material tem um link salvo, aparecem os botões **"Exibir link"** / **"Ocultar link"** —
+  o aluno só vê o botão "Assistir videoaula" quando você clicar em "Exibir link".
+- Enquanto não houver link nenhum cadastrado, nenhum botão de vídeo aparece pro aluno — só o material
+  escrito normalmente.
+
+**2. Vários materiais de uma vez ao cadastrar aula**
+- Na aba "Cadastrar nova aula", a seção de materiais agora abre com **3 conjuntos de campos** (tipo,
+  nome, descrição, arquivo) de uma vez.
+- Clique em **"+ Adicionar mais"** para liberar mais conjuntos, quantos precisar.
+- Um único botão **"Enviar materiais"** sobe todos os arquivos preenchidos de uma vez (linhas vazias
+  são ignoradas automaticamente).
+
+**3. Ordem por mais recente primeiro**
+- No painel do aluno (Minhas aulas) e no seu painel (Aulas cadastradas), as aulas agora aparecem da
+  mais recentemente cadastrada para a mais antiga.
+- No painel do aluno, a lista lateral mostra até **10 aulas por página**, com botões "Anterior" /
+  "Próxima" quando houver mais que isso.
+
+---
+
+## PDF — Guia para uso do Portal do Aluno
+Este PDF (entregue separadamente) explica ao aluno como usar cada página do portal. Ele **não menciona**
+os Guias de Gramática (para não criar expectativa antes da hora) e tem a capa com fundo branco e letras
+azul-marinho, no estilo da sua marca. Sempre que o portal mudar bastante, posso gerar uma versão atualizada.
+
+---
+
+## ATUALIZAÇÃO 12 — Indicadores de pendência, e-mail com identidade visual, app no celular e busca
+
+### A) Indicadores de pendência (sem SQL novo)
+Suba `js/admin.js` no GitHub. Agora:
+- **"Pergunte ao Daniel"** no menu mostra uma bolinha laranja com o número de perguntas ainda não respondidas.
+- Cada **aluno** na lista lateral mostra uma bolinha laranja com o total de pendências dele (perguntas
+  não respondidas + pedidos de material ainda não excluídos). Sem pendências, continua o pontinho azul de sempre.
+- Os números se atualizam sozinhos assim que você responde, exclui uma pergunta ou remove um pedido de material.
+
+### B) E-mail com a identidade do portal (e assinatura automática)
+1. Abra o arquivo `email-template-emailjs.html` (entregue junto com este pacote).
+2. No painel do EmailJS, vá em **Email Templates** → abra seu template → mude para o modo **"Code Editor"**
+   (às vezes aparece como "</> Code" ou um botão de alternância perto do editor visual).
+3. Apague o conteúdo atual e cole o conteúdo desse arquivo no lugar.
+4. Troque **"SEU-SITE.vercel.app"** (aparece 2 vezes: no link do logo e no botão "Acessar o portal")
+   pelo endereço real do seu site.
+5. Salve.
+
+A partir daí, todo e-mail do portal (aula nova, pergunta respondida, comunicado, etc.) chega com sua
+logo, as cores do portal, um botão "Acessar o portal", e já assinado como:
+> Um abraço,<br>**Daniel**<br>D.C English Classes
+
+Não precisa mudar nada no código do site — as variáveis continuam as mesmas, só a aparência do e-mail muda.
+
+### C) Portal instalável no celular (PWA)
+Novos arquivos: `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`.
+Suba TODOS os arquivos `.html` novamente (todos ganharam as tags necessárias), junto com esses 4 novos arquivos.
+
+Depois disso, ao abrir o portal pelo celular (Chrome no Android, ou Safari no iPhone), vai aparecer a
+opção "Adicionar à tela inicial" / "Instalar app". Uma vez instalado, o portal abre em tela cheia, com
+ícone próprio, sem a barra de endereço do navegador — com cara de aplicativo de verdade.
+
+### D) Busca em "Minhas aulas"
+Suba `js/aluno.js`. Agora, acima da lista de aulas do aluno, tem um campo de busca — digitar parte do
+título já filtra a lista na hora (e some com a paginação enquanto estiver buscando, já que o resultado
+tende a ser pequeno).
