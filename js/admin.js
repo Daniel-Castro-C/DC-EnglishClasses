@@ -11,6 +11,8 @@ let currentStudent = null;
 let currentLessons = [];
 let currentTab = 'geral';
 let currentView = 'home'; // 'home' | 'comunicados' | 'student'
+let danielPendingTotal = 0;
+let pendingCountsByStudent = {};
 
 (async function init(){
   const session = await requireSession();
@@ -25,6 +27,7 @@ let currentView = 'home'; // 'home' | 'comunicados' | 'student'
   }
 
   await loadStudents();
+  await refreshPendingCounts();
   renderNav();
   renderHome();
 })();
@@ -40,6 +43,18 @@ async function loadStudents(){
   students = data || [];
 }
 
+async function refreshPendingCounts(){
+  const { data: pendingQuestions } = await sb.from('daniel_questions').select('student_id').is('answer', null);
+  const { data: materialReqs } = await sb.from('material_requests').select('student_id');
+
+  const counts = {};
+  (pendingQuestions || []).forEach(q => { counts[q.student_id] = (counts[q.student_id] || 0) + 1; });
+  (materialReqs || []).forEach(r => { counts[r.student_id] = (counts[r.student_id] || 0) + 1; });
+
+  pendingCountsByStudent = counts;
+  danielPendingTotal = (pendingQuestions || []).length;
+}
+
 function renderNav(){
   let html = `<div class="nav-item ${currentView === 'comunicados' ? 'active' : ''}" onclick="openComunicados()">
     <span>Comunicados</span>
@@ -49,6 +64,7 @@ function renderNav(){
   </div>`;
   html += `<div class="nav-item ${currentView === 'daniel' ? 'active' : ''}" onclick="openDanielModule()">
     <span>Pergunte ao Daniel</span>
+    ${danielPendingTotal > 0 ? `<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;">${danielPendingTotal}</span>` : ''}
   </div>`;
   html += `<div class="nav-label">Alunos</div>`;
   if (students.length === 0) {
@@ -56,8 +72,12 @@ function renderNav(){
   }
   students.forEach(s => {
     const active = currentView === 'student' && currentStudent && currentStudent.id === s.id ? 'active' : '';
+    const pending = pendingCountsByStudent[s.id] || 0;
+    const badge = pending > 0
+      ? `<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;">${pending}</span>`
+      : `<span class="dot" style="background:var(--sky)"></span>`;
     html += `<div class="nav-item ${active}" onclick="openStudent('${s.id}')">
-      <span>${escapeHtml(s.full_name || s.email)}</span><span class="dot" style="background:var(--sky)"></span>
+      <span>${escapeHtml(s.full_name || s.email)}</span>${badge}
     </div>`;
   });
   document.getElementById('nav-container').innerHTML = html;
@@ -698,6 +718,8 @@ async function answerQuestionModule(questionId, subject, studentId){
   }
 
   renderDanielModuleList();
+  await refreshPendingCounts();
+  renderNav();
 }
 
 async function updateAnswerNoEmail(questionId){
@@ -717,6 +739,8 @@ async function deleteQuestionByAdmin(questionId){
   if (error) { alert('Não foi possível excluir.'); console.error(error); return; }
 
   renderDanielModuleList();
+  await refreshPendingCounts();
+  renderNav();
 }
 
 async function renderPedidosTab(){
@@ -761,6 +785,8 @@ async function deleteMaterialRequest(id){
   const { error } = await sb.from('material_requests').delete().eq('id', id);
   if (error) { alert('Não foi possível excluir.'); return; }
   renderPedidosTab();
+  await refreshPendingCounts();
+  renderNav();
 }
 
 async function downloadRequestFile(filePath){
