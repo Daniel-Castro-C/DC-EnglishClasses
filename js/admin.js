@@ -47,6 +47,9 @@ function renderNav(){
   html += `<div class="nav-item ${currentView === 'guias' ? 'active' : ''}" onclick="openGuias()">
     <span>Guias de Gramática</span>
   </div>`;
+  html += `<div class="nav-item ${currentView === 'daniel' ? 'active' : ''}" onclick="openDanielModule()">
+    <span>Pergunte ao Daniel</span>
+  </div>`;
   html += `<div class="nav-label">Alunos</div>`;
   if (students.length === 0) {
     html += `<div class="nav-item" style="opacity:.6;cursor:default;">Nenhum aluno ainda</div>`;
@@ -467,12 +470,11 @@ function renderStudentDetail(){
       <button class="btn-dark-sm" onclick="renderHome()">← Todos os alunos</button>
     </div>
 
-    <div class="role-switch" style="max-width:760px;margin-bottom:26px;">
+    <div class="role-switch" style="max-width:620px;margin-bottom:26px;">
       <button class="${currentTab === 'perfil' ? 'active' : ''}" onclick="switchTab('perfil')">Perfil</button>
       <button class="${currentTab === 'nova' ? 'active' : ''}" onclick="switchTab('nova')">Cadastrar nova aula</button>
       <button class="${currentTab === 'cadastradas' ? 'active' : ''}" onclick="switchTab('cadastradas')">Aulas cadastradas</button>
       <button class="${currentTab === 'pedidos' ? 'active' : ''}" onclick="switchTab('pedidos')">Materiais do aluno</button>
-      <button class="${currentTab === 'daniel' ? 'active' : ''}" onclick="switchTab('daniel')">Pergunte ao Daniel</button>
     </div>
 
     <div id="tab-content"></div>
@@ -484,10 +486,8 @@ function renderStudentDetail(){
     renderNovaAulaTab();
   } else if (currentTab === 'cadastradas') {
     renderAulasCadastradasTab(lessonsHtml);
-  } else if (currentTab === 'pedidos') {
-    renderPedidosTab();
   } else {
-    renderDanielTab();
+    renderPedidosTab();
   }
 }
 
@@ -540,65 +540,105 @@ function renderPerfilTab(){
   document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
 }
 
-async function renderDanielTab(){
-  document.getElementById('tab-content').innerHTML = `<div class="empty-state">Carregando perguntas...</div>`;
+let danielSubTab = 'pending'; // 'pending' | 'answered'
 
-  const { data, error } = await sb
-    .from('daniel_questions')
-    .select('*')
-    .eq('student_id', currentStudent.id)
-    .order('created_at', { ascending: false });
+async function openDanielModule(){
+  currentStudent = null;
+  currentView = 'daniel';
+  renderNav();
+  await renderDanielModuleView();
+}
+
+async function renderDanielModuleView(){
+  document.getElementById('main-content').innerHTML = `
+    <div class="topline">
+      <div>
+        <h1>Pergunte ao Daniel</h1>
+        <div class="sub">Perguntas enviadas por todos os alunos</div>
+      </div>
+    </div>
+
+    <div class="role-switch" style="max-width:420px;margin-bottom:20px;">
+      <button class="${danielSubTab === 'pending' ? 'active' : ''}" onclick="switchDanielSubTab('pending')">Perguntas a responder</button>
+      <button class="${danielSubTab === 'answered' ? 'active' : ''}" onclick="switchDanielSubTab('answered')">Perguntas respondidas</button>
+    </div>
+
+    <div id="daniel-module-content"></div>
+  `;
+
+  await renderDanielModuleList();
+}
+
+function switchDanielSubTab(tab){
+  danielSubTab = tab;
+  renderDanielModuleView();
+}
+
+async function renderDanielModuleList(){
+  const container = document.getElementById('daniel-module-content');
+  container.innerHTML = `<div class="empty-state">Carregando perguntas...</div>`;
+
+  let query = sb.from('daniel_questions').select('*, profiles(full_name, email)').order('created_at', { ascending: false });
+  query = danielSubTab === 'pending' ? query.is('answer', null) : query.not('answer', 'is', null);
+
+  const { data, error } = await query;
 
   if (error) {
-    document.getElementById('tab-content').innerHTML = `<div class="empty-state">Não foi possível carregar as perguntas.</div>`;
+    container.innerHTML = `<div class="empty-state">Não foi possível carregar as perguntas.</div>`;
+    console.error(error);
     return;
   }
 
   if (!data || data.length === 0) {
-    document.getElementById('tab-content').innerHTML = `<div class="empty-state">${escapeHtml(currentStudent.full_name || currentStudent.email)} ainda não enviou nenhuma pergunta.</div>`;
+    container.innerHTML = `<div class="empty-state">${danielSubTab === 'pending' ? 'Nenhuma pergunta pendente no momento.' : 'Nenhuma pergunta respondida ainda.'}</div>`;
     return;
   }
 
-  document.getElementById('tab-content').innerHTML = data.map(q => {
-    if (q.answer) {
-      // Pergunta já respondida: aparece minimizada, só com o assunto
-      return `
-        <details class="lesson-card">
-          <summary style="cursor:pointer;font-weight:600;font-size:15px;list-style:none;display:flex;align-items:center;justify-content:space-between;">
-            <span>${escapeHtml(q.subject)}</span>
-            <span class="pill" style="background:var(--sky-soft);">Respondida</span>
-          </summary>
-          <div style="margin-top:16px;">
-            <div class="meta">Enviada em ${new Date(q.created_at).toLocaleDateString('pt-BR')}</div>
-            <p style="font-size:14px;margin:10px 0;">${escapeHtml(q.question)}</p>
-            <label>Resposta</label>
-            <textarea id="answer-${q.id}">${escapeHtml(q.answer)}</textarea>
-            <div class="row">
-              <button class="btn-dark-sm" onclick="updateAnswerNoEmail('${q.id}')">Editar resposta</button>
-              <button class="btn-ghost" onclick="deleteQuestionByAdmin('${q.id}')">Excluir pergunta</button>
-            </div>
-          </div>
-        </details>
-      `;
-    }
-
-    return `
-      <div class="lesson-card">
-        <h3>${escapeHtml(q.subject)}</h3>
-        <div class="meta">Enviada em ${new Date(q.created_at).toLocaleDateString('pt-BR')} · Aguardando resposta</div>
-        <p style="font-size:14px;margin:10px 0;">${escapeHtml(q.question)}</p>
-        <label>Sua resposta</label>
-        <textarea id="answer-${q.id}" placeholder="Escreva a resposta para o aluno..."></textarea>
-        <div class="row">
-          <button class="btn-dark-sm" onclick="answerQuestion('${q.id}', '${escapeHtml(q.subject).replace(/'/g, "\\'")}')">Responder ao aluno</button>
-          <button class="btn-ghost" onclick="deleteQuestionByAdmin('${q.id}')">Excluir pergunta</button>
-        </div>
-      </div>
-    `;
-  }).join('');
+  container.innerHTML = data.map(q => danielModuleRowHtml(q)).join('');
 }
 
-async function answerQuestion(questionId, subject){
+function danielModuleRowHtml(q){
+  const studentName = (q.profiles && (q.profiles.full_name || q.profiles.email)) || 'Aluno';
+  const studentEmail = q.profiles ? q.profiles.email : '';
+  const dateStr = new Date(q.created_at).toLocaleDateString('pt-BR');
+
+  if (q.answer) {
+    return `
+      <details class="lesson-card">
+        <summary style="cursor:pointer;font-weight:600;font-size:15px;list-style:none;display:flex;align-items:center;justify-content:space-between;">
+          <span>${escapeHtml(studentName)} — ${escapeHtml(q.subject)}</span>
+          <span class="pill" style="background:var(--sky-soft);">Respondida</span>
+        </summary>
+        <div style="margin-top:16px;">
+          <div class="meta">Enviada em ${dateStr}</div>
+          <p style="font-size:14px;margin:10px 0;">${escapeHtml(q.question)}</p>
+          <label>Resposta</label>
+          <textarea id="answer-${q.id}">${escapeHtml(q.answer)}</textarea>
+          <div class="row">
+            <button class="btn-dark-sm" onclick="updateAnswerNoEmail('${q.id}')">Editar resposta</button>
+            <button class="btn-ghost" onclick="deleteQuestionByAdmin('${q.id}')">Excluir pergunta</button>
+          </div>
+        </div>
+      </details>
+    `;
+  }
+
+  return `
+    <div class="lesson-card">
+      <h3 style="margin:0 0 4px;">${escapeHtml(studentName)}</h3>
+      <div class="meta">${escapeHtml(q.subject)}${studentEmail ? ' · ' + escapeHtml(studentEmail) : ''} · Enviada em ${dateStr}</div>
+      <p style="font-size:14px;margin:10px 0;">${escapeHtml(q.question)}</p>
+      <label>Sua resposta</label>
+      <textarea id="answer-${q.id}" placeholder="Escreva a resposta para o aluno..."></textarea>
+      <div class="row">
+        <button class="btn-dark-sm" onclick="answerQuestionModule('${q.id}', '${escapeHtml(q.subject).replace(/'/g, "\\'")}', '${q.student_id}')">Responder ao aluno</button>
+        <button class="btn-ghost" onclick="deleteQuestionByAdmin('${q.id}')">Excluir pergunta</button>
+      </div>
+    </div>
+  `;
+}
+
+async function answerQuestionModule(questionId, subject, studentId){
   const answer = document.getElementById(`answer-${questionId}`).value.trim();
   if (!answer) { alert('Escreva uma resposta antes de enviar.'); return; }
 
@@ -608,20 +648,23 @@ async function answerQuestion(questionId, subject){
 
   if (error) { alert('Não foi possível salvar a resposta.'); console.error(error); return; }
 
-  const emailResult = await sendLessonNotification(
-    currentStudent.email,
-    currentStudent.full_name,
-    `Sua pergunta sobre "${subject}" foi respondida. Confira no portal!`,
-    `Sua pergunta sobre ${subject} foi respondida`
-  );
+  const { data: studentProfile } = await sb.from('profiles').select('email, full_name').eq('id', studentId).single();
 
-  if (!emailResult.ok) {
-    alert('Resposta salva, mas não foi possível enviar o e-mail avisando o aluno.');
-  } else {
-    alert('Resposta enviada ao aluno!');
+  if (studentProfile) {
+    const emailResult = await sendLessonNotification(
+      studentProfile.email,
+      studentProfile.full_name,
+      `Sua pergunta sobre "${subject}" foi respondida. Confira no portal!`,
+      `Sua pergunta sobre ${subject} foi respondida`
+    );
+    if (!emailResult.ok) {
+      alert('Resposta salva, mas não foi possível enviar o e-mail avisando o aluno.');
+    } else {
+      alert('Resposta enviada ao aluno!');
+    }
   }
 
-  renderDanielTab();
+  renderDanielModuleList();
 }
 
 async function updateAnswerNoEmail(questionId){
@@ -631,7 +674,7 @@ async function updateAnswerNoEmail(questionId){
   const { error } = await sb.from('daniel_questions').update({ answer }).eq('id', questionId);
   if (error) { alert('Não foi possível salvar a alteração.'); console.error(error); return; }
 
-  renderDanielTab();
+  renderDanielModuleList();
 }
 
 async function deleteQuestionByAdmin(questionId){
@@ -640,7 +683,7 @@ async function deleteQuestionByAdmin(questionId){
   const { error } = await sb.from('daniel_questions').delete().eq('id', questionId);
   if (error) { alert('Não foi possível excluir.'); console.error(error); return; }
 
-  renderDanielTab();
+  renderDanielModuleList();
 }
 
 async function renderPedidosTab(){
