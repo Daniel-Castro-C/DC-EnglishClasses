@@ -10,6 +10,7 @@ let myLessons = [];
 let activeLessonId = null;
 let grammarUnlocked = false;
 let lessonsPage = 0;
+let lessonSearchTerm = '';
 const LESSONS_PER_PAGE = 10;
 
 (async function init(){
@@ -61,16 +62,42 @@ async function loadLessons(){
 function renderNav(){
   let html = buildStudentTopNav('aulas', grammarUnlocked);
   html += `<div class="nav-label">Minhas aulas</div>`;
+  html += `<input id="lesson-search-input" placeholder="Buscar aula..." value="${escapeHtml(lessonSearchTerm)}"
+    oninput="onLessonSearchInput(this.value)"
+    style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;font-size:12.5px;border-radius:6px;border:1px solid rgba(255,255,255,0.28);background:rgba(255,255,255,0.06);color:#fff;">`;
+  html += `<div id="lessons-list-container"></div>`;
+  document.getElementById('nav-container').innerHTML = html;
+  renderLessonsList();
+}
 
+function onLessonSearchInput(value){
+  lessonSearchTerm = value;
+  lessonsPage = 0;
+  renderLessonsList(); // só atualiza a lista, sem recriar o campo de busca (mantém o foco)
+}
+
+function getFilteredLessons(){
+  const term = lessonSearchTerm.trim().toLowerCase();
+  if (!term) return myLessons;
+  return myLessons.filter(l => l.title.toLowerCase().includes(term));
+}
+
+function renderLessonsList(){
+  const filtered = getFilteredLessons();
   const start = lessonsPage * LESSONS_PER_PAGE;
-  const pageItems = myLessons.slice(start, start + LESSONS_PER_PAGE);
-  const totalPages = Math.ceil(myLessons.length / LESSONS_PER_PAGE);
+  const pageItems = filtered.slice(start, start + LESSONS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / LESSONS_PER_PAGE));
 
-  pageItems.forEach(l => {
-    html += `<div class="nav-item ${l.id === activeLessonId ? 'active' : ''}" onclick="renderLesson('${l.id}')">
-      <span>${escapeHtml(l.title)}</span><span class="dot"></span>
-    </div>`;
-  });
+  let html = '';
+  if (filtered.length === 0) {
+    html = `<div class="small-note" style="padding:4px 6px;">Nenhuma aula encontrada.</div>`;
+  } else {
+    pageItems.forEach(l => {
+      html += `<div class="nav-item ${l.id === activeLessonId ? 'active' : ''}" onclick="renderLesson('${l.id}')">
+        <span>${escapeHtml(l.title)}</span><span class="dot"></span>
+      </div>`;
+    });
+  }
 
   if (totalPages > 1) {
     html += `<div style="display:flex;gap:6px;margin-top:10px;padding:0 6px;">`;
@@ -80,17 +107,17 @@ function renderNav(){
     html += `<div class="small-note" style="text-align:center;margin-top:6px;color:#93A3C0;">Página ${lessonsPage + 1} de ${totalPages}</div>`;
   }
 
-  document.getElementById('nav-container').innerHTML = html;
+  document.getElementById('lessons-list-container').innerHTML = html;
 }
 
 function changeLessonsPage(delta){
   lessonsPage += delta;
-  renderNav();
+  renderLessonsList();
 }
 
 async function renderLesson(lessonId){
   activeLessonId = lessonId;
-  renderNav();
+  renderLessonsList();
   const lesson = myLessons.find(l => l.id === lessonId);
 
   document.getElementById('main-content').innerHTML = `
