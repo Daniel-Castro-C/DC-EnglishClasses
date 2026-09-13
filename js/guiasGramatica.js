@@ -2,7 +2,7 @@ let myProfile = null;
 let activeLevel = null; // null = tela de seleção de nível
 let grammarUnlocked = false;
 
-const LEVEL_LABELS = { basico: 'Básico (A1/A2)', intermediario: 'Intermediário (B1/B2)', avancado: 'Avançado (C1/C2)' };
+const LEVEL_LABELS = { basico: 'Básico (A1/A2)', intermediario: 'Intermediário (B1/B2)', avancado: 'Avançado (C1)' };
 
 (async function init(){
   const session = await requireSession();
@@ -41,7 +41,7 @@ function renderLevelSelection(){
     <div class="level-cards">
       <div class="level-card" onclick="showLevel('basico')"><h3>Básico (A1/A2)</h3><p>Fundamentos da gramática</p></div>
       <div class="level-card" onclick="showLevel('intermediario')"><h3>Intermediário (B1/B2)</h3><p>Aprofundando as estruturas</p></div>
-      <div class="level-card" onclick="showLevel('avancado')"><h3>Avançado (C1/C2)</h3><p>Nuances e usos mais complexos</p></div>
+      <div class="level-card" onclick="showLevel('avancado')"><h3>Avançado (C1)</h3><p>Nuances e usos mais complexos</p></div>
     </div>
   `;
 }
@@ -71,7 +71,7 @@ async function showLevel(level){
       </div>
       <button class="btn-dark-sm" onclick="renderLevelSelection()">← Todos os níveis</button>
     </div>
-    <div class="lesson-card">
+    <div class="lesson-card" style="padding:14px 16px;">
       <div id="materials-list"><div class="empty-state">Carregando materiais...</div></div>
     </div>
   `;
@@ -97,8 +97,8 @@ async function showLevel(level){
   currentMaterials = data;
 
   list.innerHTML = data.map(m => `
-    <div class="resource-row">
-      <div class="resource-icon ic-pdf">Arq</div>
+    <div class="resource-row" style="padding:8px 0;">
+      <div class="resource-icon ic-pdf" style="width:26px;height:26px;font-size:10.5px;flex-shrink:0;">${escapeHtml(m.sublevel || '')}</div>
       <div class="resource-info">
         <div class="name">${escapeHtml(m.title)}</div>
       </div>

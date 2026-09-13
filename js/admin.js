@@ -107,7 +107,8 @@ function renderHome(){
 }
 
 let guiasCurrentLevel = 'basico';
-const GUIAS_LEVEL_LABELS = { basico: 'Básico (A1/A2)', intermediario: 'Intermediário (B1/B2)', avancado: 'Avançado (C1/C2)' };
+const GUIAS_LEVEL_LABELS = { basico: 'Básico (A1/A2)', intermediario: 'Intermediário (B1/B2)', avancado: 'Avançado (C1)' };
+const GUIAS_SUBLEVELS = { basico: ['A1','A2'], intermediario: ['B1','B2'], avancado: ['C1'] };
 
 async function openGuias(){
   currentStudent = null;
@@ -197,6 +198,9 @@ async function renderGuiasLevelContent(){
     <div class="box">
       <h3>+ Adicionar material ao nível ${GUIAS_LEVEL_LABELS[level]}</h3>
       <div class="row">
+        <select id="guias-material-sublevel">
+          ${GUIAS_SUBLEVELS[level].map(sl => `<option value="${sl}">${sl}</option>`).join('')}
+        </select>
         <input id="guias-material-title" placeholder="Título do material (ex: Present Perfect — teoria e exercícios)">
       </div>
       <div class="row">
@@ -213,18 +217,23 @@ async function renderGuiasLevelContent(){
 }
 
 function materialRowHtml(m){
+  const sublevelBadge = `<div class="resource-icon ic-pdf" style="width:26px;height:26px;font-size:10.5px;flex-shrink:0;">${escapeHtml(m.sublevel || '')}</div>`;
+
   if (m.youtube_link) {
     return `
-      <div class="lesson-card" style="padding:16px 18px;margin-bottom:12px;">
+      <div class="lesson-card" style="padding:12px 16px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-          <div class="name" style="font-weight:600;font-size:14.5px;">${escapeHtml(m.title)}</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${sublevelBadge}
+            <div class="name" style="font-weight:600;font-size:14px;">${escapeHtml(m.title)}</div>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span class="pill" style="background:${m.video_visible ? 'var(--sky-soft)' : '#EFEBE3'};">${m.video_visible ? 'Vídeo visível para o aluno' : 'Vídeo oculto'}</span>
+            <span class="pill" style="background:${m.video_visible ? 'var(--sky-soft)' : '#EFEBE3'};">${m.video_visible ? 'Vídeo visível' : 'Vídeo oculto'}</span>
             <button class="btn-ghost" onclick="toggleVideoVisible('${m.id}', ${m.video_visible ? 'false' : 'true'})">${m.video_visible ? 'Ocultar link' : 'Exibir link'}</button>
             <button class="resource-action" onclick="deleteGrammarMaterial('${m.id}')">Excluir</button>
           </div>
         </div>
-        <div class="row" style="margin-top:10px;">
+        <div class="row" style="margin-top:8px;">
           <input id="yt-input-${m.id}" value="${escapeAttr(m.youtube_link)}" placeholder="Link do YouTube">
           <button class="btn-ghost" style="flex:0 0 auto;" onclick="saveYoutubeLink('${m.id}')">Salvar link</button>
         </div>
@@ -233,15 +242,18 @@ function materialRowHtml(m){
   }
 
   return `
-    <div class="lesson-card" style="padding:16px 18px;margin-bottom:12px;">
+    <div class="lesson-card" style="padding:12px 16px;margin-bottom:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div class="name" style="font-weight:600;font-size:14.5px;">${escapeHtml(m.title)}</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${sublevelBadge}
+          <div class="name" style="font-weight:600;font-size:14px;">${escapeHtml(m.title)}</div>
+        </div>
         <div style="display:flex;gap:8px;">
           <button class="btn-ghost" onclick="toggleAddVideoForm('${m.id}')">+ Adicionar vídeo</button>
           <button class="resource-action" onclick="deleteGrammarMaterial('${m.id}')">Excluir</button>
         </div>
       </div>
-      <div id="add-video-form-${m.id}" class="row" style="margin-top:10px;display:none;">
+      <div id="add-video-form-${m.id}" class="row" style="margin-top:8px;display:none;">
         <input id="yt-input-${m.id}" placeholder="Colar link do YouTube">
         <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="saveYoutubeLink('${m.id}')">Salvar link</button>
       </div>
@@ -274,6 +286,7 @@ async function uploadGrammarMaterial(){
   const fileInput = document.getElementById('guias-material-file');
   const file = fileInput.files[0];
   const youtubeLink = document.getElementById('guias-material-youtube').value.trim();
+  const sublevel = document.getElementById('guias-material-sublevel').value;
   const level = guiasCurrentLevel;
 
   if (!title) { alert('Dê um título para o material.'); return; }
@@ -297,7 +310,7 @@ async function uploadGrammarMaterial(){
   }
 
   const { error: insertError } = await sb.from('grammar_materials').insert({
-    level, title, file_path: filePath, youtube_link: youtubeLink || null
+    level, title, file_path: filePath, youtube_link: youtubeLink || null, sublevel
   });
 
   if (insertError) {
