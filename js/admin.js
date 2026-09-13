@@ -206,9 +206,22 @@ async function renderGuiasLevelContent(){
         </select>
         <input id="guias-material-title" placeholder="Título do material (ex: Present Perfect — teoria e exercícios)">
       </div>
+      ${level === 'basico' ? `
+      <div class="row">
+        <div>
+          <label>Arquivo em Português</label>
+          <input id="guias-material-file" type="file" accept=".pdf">
+        </div>
+        <div>
+          <label>Arquivo em Inglês</label>
+          <input id="guias-material-file-en" type="file" accept=".pdf">
+        </div>
+      </div>
+      ` : `
       <div class="row">
         <input id="guias-material-file" type="file">
       </div>
+      `}
       <div class="row">
         <input id="guias-material-youtube" placeholder="Link do YouTube (opcional — pode ser adicionado depois também)">
       </div>
@@ -221,6 +234,7 @@ async function renderGuiasLevelContent(){
 
 function materialRowHtml(m){
   const sublevelBadge = `<div class="resource-icon ic-pdf" style="width:26px;height:26px;font-size:10.5px;flex-shrink:0;">${escapeHtml(m.sublevel || '')}</div>`;
+  const langBadge = m.file_path_en ? `<span class="pill" style="background:var(--sky-soft);">PT + EN</span>` : '';
 
   if (m.youtube_link) {
     return `
@@ -229,6 +243,7 @@ function materialRowHtml(m){
           <div style="display:flex;align-items:center;gap:10px;">
             ${sublevelBadge}
             <div class="name" style="font-weight:600;font-size:14px;">${escapeHtml(m.title)}</div>
+            ${langBadge}
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <span class="pill" style="background:${m.video_visible ? 'var(--sky-soft)' : '#EFEBE3'};">${m.video_visible ? 'Vídeo visível' : 'Vídeo oculto'}</span>
@@ -250,6 +265,7 @@ function materialRowHtml(m){
         <div style="display:flex;align-items:center;gap:10px;">
           ${sublevelBadge}
           <div class="name" style="font-weight:600;font-size:14px;">${escapeHtml(m.title)}</div>
+          ${langBadge}
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn-ghost" onclick="toggleAddVideoForm('${m.id}')">+ Adicionar vídeo</button>
@@ -292,8 +308,12 @@ async function uploadGrammarMaterial(){
   const sublevel = document.getElementById('guias-material-sublevel').value;
   const level = guiasCurrentLevel;
 
+  const fileEnInput = level === 'basico' ? document.getElementById('guias-material-file-en') : null;
+  const fileEn = fileEnInput ? fileEnInput.files[0] : null;
+
   if (!title) { alert('Dê um título para o material.'); return; }
-  if (!file) { alert('Escolha um arquivo.'); return; }
+  if (!file) { alert(`Escolha o arquivo${level === 'basico' ? ' em português' : ''}.`); return; }
+  if (level === 'basico' && !fileEn) { alert('Para o nível Básico, envie também o arquivo em inglês.'); return; }
 
   const btn = document.getElementById('guias-upload-btn');
   btn.disabled = true;
@@ -312,8 +332,21 @@ async function uploadGrammarMaterial(){
     return;
   }
 
+  let filePathEn = null;
+  if (fileEn) {
+    const safeFileNameEn = fileEn.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    filePathEn = `grammar/${level}/${Date.now()}_en_${safeFileNameEn}`;
+
+    const { error: uploadErrorEn } = await sb.storage.from(STORAGE_BUCKET).upload(filePathEn, fileEn);
+    if (uploadErrorEn) {
+      alert('O arquivo em português foi enviado, mas houve um erro ao enviar o arquivo em inglês.');
+      console.error(uploadErrorEn);
+      filePathEn = null;
+    }
+  }
+
   const { error: insertError } = await sb.from('grammar_materials').insert({
-    level, title, file_path: filePath, youtube_link: youtubeLink || null, sublevel
+    level, title, file_path: filePath, file_path_en: filePathEn, youtube_link: youtubeLink || null, sublevel
   });
 
   if (insertError) {

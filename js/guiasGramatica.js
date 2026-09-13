@@ -103,7 +103,11 @@ async function showLevel(level){
         <div class="name">${escapeHtml(m.title)}</div>
       </div>
       ${m.video_visible && m.youtube_link ? `<button class="resource-action" onclick="openYoutubeLink('${m.id}')">Assistir videoaula</button>` : ''}
-      <button class="resource-action" onclick="downloadGrammarMaterial('${m.file_path}')">Baixar arquivo</button>
+      ${m.file_path_en
+        ? `<button class="resource-action" onclick="downloadGrammarMaterial('${m.file_path}')">Baixar (Português)</button>
+           <button class="resource-action" onclick="downloadGrammarMaterial('${m.file_path_en}')">Baixar (English)</button>`
+        : `<button class="resource-action" onclick="downloadGrammarMaterial('${m.file_path}')">Baixar arquivo</button>`
+      }
     </div>
   `).join('');
 }
