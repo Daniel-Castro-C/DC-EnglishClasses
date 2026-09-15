@@ -393,65 +393,129 @@ function openComunicados(){
     <div class="topline">
       <div>
         <h1>Comunicados</h1>
-        <div class="sub">Envie um aviso por e-mail para todos os ${students.length} aluno(s) cadastrado(s)</div>
+        <div class="sub">Envie um aviso por e-mail para os alunos que você escolher</div>
       </div>
     </div>
 
-    <div class="lesson-card">
-      <h3>Novo comunicado</h3>
-      <label>Assunto</label>
-      <input id="broadcast-subject" placeholder="Ex: Aviso importante sobre as aulas desta semana">
-      <label>Mensagem</label>
-      <textarea id="broadcast-message" placeholder="Escreva aqui o comunicado que será enviado a todos os alunos..."></textarea>
-      <button id="broadcast-btn" class="btn-dark-sm" onclick="sendBroadcast()">Enviar comunicado a todos os alunos</button>
-      <div id="broadcast-feedback" class="feedback"></div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">
+      <div class="lesson-card" style="flex:2;min-width:320px;">
+        <h3>Novo comunicado</h3>
+        <label>Assunto</label>
+        <input id="broadcast-subject" placeholder="Ex: Aviso importante sobre as aulas desta semana">
+        <label>Mensagem</label>
+        <textarea id="broadcast-message" placeholder="Escreva aqui o comunicado..."></textarea>
+        <label>Anexo (opcional)</label>
+        <input id="broadcast-file" type="file">
+        <div class="small-note" style="margin-bottom:12px;">O anexo vira um link de download dentro do e-mail.</div>
+        <button id="broadcast-btn" class="btn-dark-sm" onclick="sendBroadcast()">Enviar comunicado</button>
+        <div id="broadcast-feedback" class="feedback"></div>
+      </div>
+
+      <div class="lesson-card" style="flex:1;min-width:220px;">
+        <h3>Destinatários</h3>
+        ${students.length === 0 ? `
+          <div class="empty-state">Nenhum aluno cadastrado ainda.</div>
+        ` : `
+          <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:10px;">
+            <input type="checkbox" id="broadcast-select-all" onchange="toggleSelectAllStudents(this.checked)">
+            Todos
+          </label>
+          <div id="broadcast-student-list">
+            ${students.map(s => `
+              <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13.5px;cursor:pointer;">
+                <input type="checkbox" class="broadcast-student-checkbox" value="${s.id}" onchange="updateSelectAllState()">
+                ${escapeHtml(s.full_name || s.email)}
+              </label>
+            `).join('')}
+          </div>
+        `}
+      </div>
     </div>
   `;
+}
+
+function toggleSelectAllStudents(checked){
+  document.querySelectorAll('.broadcast-student-checkbox').forEach(cb => { cb.checked = checked; });
+}
+
+function updateSelectAllState(){
+  const all = document.querySelectorAll('.broadcast-student-checkbox');
+  const checkedCount = document.querySelectorAll('.broadcast-student-checkbox:checked').length;
+  document.getElementById('broadcast-select-all').checked = all.length > 0 && checkedCount === all.length;
 }
 
 async function sendBroadcast(){
   const subject = document.getElementById('broadcast-subject').value.trim();
   const message = document.getElementById('broadcast-message').value.trim();
+  const fileInput = document.getElementById('broadcast-file');
+  const file = fileInput.files[0];
   const feedbackEl = document.getElementById('broadcast-feedback');
 
   if (!subject || !message) {
+    feedbackEl.className = 'feedback show err';
     feedbackEl.textContent = 'Preencha o assunto e a mensagem.';
-    feedbackEl.className = 'feedback show err';
     return;
   }
 
-  if (students.length === 0) {
-    feedbackEl.textContent = 'Não há alunos cadastrados para receber este comunicado.';
+  const selectedIds = Array.from(document.querySelectorAll('.broadcast-student-checkbox:checked')).map(cb => cb.value);
+  if (selectedIds.length === 0) {
     feedbackEl.className = 'feedback show err';
+    feedbackEl.textContent = 'Selecione ao menos um aluno para receber o comunicado.';
     return;
   }
 
-  if (!confirm(`Enviar este comunicado para todos os ${students.length} alunos?`)) return;
+  const recipients = students.filter(s => selectedIds.includes(s.id));
+
+  if (!confirm(`Enviar este comunicado para ${recipients.length} aluno(s)?`)) return;
 
   const btn = document.getElementById('broadcast-btn');
   btn.disabled = true;
 
+  // Envia o anexo primeiro (se houver), gerando um link de download pra colocar no e-mail
+  let attachmentUrl = null;
+  if (file) {
+    btn.textContent = 'Enviando anexo...';
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `comunicados/${Date.now()}_${safeFileName}`;
+
+    const { error: uploadError } = await sb.storage.from(STORAGE_BUCKET).upload(filePath, file);
+    if (uploadError) {
+      console.error(uploadError);
+      feedbackEl.className = 'feedback show err';
+      feedbackEl.textContent = 'Não foi possível enviar o anexo. Tente novamente.';
+      btn.disabled = false;
+      btn.textContent = 'Enviar comunicado';
+      return;
+    }
+
+    const { data: urlData } = await sb.storage.from(STORAGE_BUCKET).createSignedUrl(filePath, 60 * 60 * 24 * 30, { download: file.name });
+    attachmentUrl = urlData ? urlData.signedUrl : null;
+  }
+
+  const fullMessage = attachmentUrl ? `${message}\n\nAnexo: ${attachmentUrl}` : message;
+
   let successCount = 0;
   let failCount = 0;
 
-  for (let i = 0; i < students.length; i++) {
-    const s = students[i];
-    btn.textContent = `Enviando... (${i + 1}/${students.length})`;
-    const result = await sendLessonNotification(s.email, s.full_name, message, subject);
+  for (let i = 0; i < recipients.length; i++) {
+    const s = recipients[i];
+    btn.textContent = `Enviando... (${i + 1}/${recipients.length})`;
+    const result = await sendLessonNotification(s.email, s.full_name, fullMessage, subject);
     if (result.ok) successCount++; else failCount++;
   }
 
   btn.disabled = false;
-  btn.textContent = 'Enviar comunicado a todos os alunos';
+  btn.textContent = 'Enviar comunicado';
 
   feedbackEl.className = 'feedback show ' + (failCount === 0 ? 'ok' : 'err');
   feedbackEl.textContent = failCount === 0
-    ? `Comunicado enviado com sucesso para todos os ${successCount} alunos!`
+    ? `Comunicado enviado com sucesso para ${successCount} aluno(s)!`
     : `Enviado para ${successCount} aluno(s). ${failCount} falharam — verifique o console para detalhes.`;
 
   if (failCount === 0) {
     document.getElementById('broadcast-subject').value = '';
     document.getElementById('broadcast-message').value = '';
+    document.getElementById('broadcast-file').value = '';
   }
 }
 
