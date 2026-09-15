@@ -6,12 +6,11 @@
   1. No painel do EmailJS, vá em Email Templates > abra seu template.
   2. Troque para o modo "Code Editor" (ou "</> Code", dependendo da versão).
   3. Apague o conteúdo atual e cole este arquivo inteiro no lugar.
-  4. Troque "SEU-SITE.vercel.app" (aparece 1 vez, no link do logo) pelo endereço
-     de verdade do seu site.
-  5. Salve.
+  4. Salve. O link do site (dc-english-classes.vercel.app) já está preenchido,
+     não precisa trocar nada.
 
-  As variáveis {{to_name}}, {{message}} e {{subject}} continuam funcionando
-  exatamente como antes — não precisa mudar nada no código do site.
+  As variáveis {{to_name}}, {{message}}, {{subject}} e {{attachment_html}} continuam
+  funcionando exatamente como antes — não precisa mudar nada no código do site.
 -->
 <div style="background-color:#EAF2FA; padding:32px 16px; font-family:Arial, Helvetica, sans-serif;">
   <table role="presentation" width="100%" style="max-width:520px; margin:0 auto; border-collapse:collapse; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(22,33,62,0.08);">
@@ -22,7 +21,7 @@
         <table role="presentation" width="100%" style="border-collapse:collapse;">
           <tr>
             <td style="vertical-align:middle;">
-              <img src="https://SEU-SITE.vercel.app/logo.png" alt="D.C English Classes" width="36" height="36" style="border-radius:6px; display:block;">
+              <img src="https://dc-english-classes.vercel.app/logo.png" alt="D.C English Classes" width="36" height="36" style="border-radius:6px; display:block;">
             </td>
             <td style="vertical-align:middle; padding-left:12px;">
               <span style="color:#ffffff; font-size:16px; font-weight:bold;">D.C English Classes</span>
@@ -42,10 +41,12 @@
           {{message}}
         </p>
 
+        {{attachment_html}}
+
         <table role="presentation" style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
             <td style="background-color:#16213E; border-radius:7px;">
-              <a href="https://SEU-SITE.vercel.app" style="display:inline-block; padding:12px 22px; font-size:14px; color:#ffffff; text-decoration:none; font-weight:bold;">
+              <a href="https://dc-english-classes.vercel.app" style="display:inline-block; padding:12px 22px; font-size:14px; color:#ffffff; text-decoration:none; font-weight:bold;">
                 Acessar o portal
               </a>
             </td>

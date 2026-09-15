@@ -331,13 +331,12 @@ Suba `js/admin.js` no GitHub. Agora:
 - Os números se atualizam sozinhos assim que você responde, exclui uma pergunta ou remove um pedido de material.
 
 ### B) E-mail com a identidade do portal (e assinatura automática)
-1. Abra o arquivo `email-template-emailjs.html` (entregue junto com este pacote).
+1. Abra o arquivo `email-template-emailjs.html` (entregue junto com este pacote — já vem com o link
+   `dc-english-classes.vercel.app` preenchido).
 2. No painel do EmailJS, vá em **Email Templates** → abra seu template → mude para o modo **"Code Editor"**
    (às vezes aparece como "</> Code" ou um botão de alternância perto do editor visual).
 3. Apague o conteúdo atual e cole o conteúdo desse arquivo no lugar.
-4. Troque **"SEU-SITE.vercel.app"** (aparece 2 vezes: no link do logo e no botão "Acessar o portal")
-   pelo endereço real do seu site.
-5. Salve.
+4. Salve.
 
 A partir daí, todo e-mail do portal (aula nova, pergunta respondida, comunicado, etc.) chega com sua
 logo, as cores do portal, um botão "Acessar o portal", e já assinado como:
@@ -357,3 +356,22 @@ opção "Adicionar à tela inicial" / "Instalar app". Uma vez instalado, o porta
 Suba `js/aluno.js`. Agora, acima da lista de aulas do aluno, tem um campo de busca — digitar parte do
 título já filtra a lista na hora (e some com a paginação enquanto estiver buscando, já que o resultado
 tende a ser pequeno).
+
+---
+
+## ATUALIZAÇÃO 13 — Anexo e escolha de destinatários nos Comunicados
+
+### A) Rodar o novo SQL
+Copie e cole o conteúdo do arquivo `supabase-update-10-anexos-comunicados.sql` no SQL Editor do
+Supabase → **Run**.
+
+### B) Subir o arquivo atualizado
+Suba `js/admin.js` no GitHub, substituindo o antigo.
+
+### Como funciona agora
+- Em **Comunicados**, agora tem um campo para anexar um arquivo (opcional) — ele vira um link de
+  download dentro do próprio texto do e-mail.
+- Ao lado do formulário, aparece a lista de alunos com uma caixa de seleção ao lado de cada um, e uma
+  caixa **"Todos"** no topo — marque ela pra selecionar todo mundo de uma vez, ou escolha só quem
+  você quiser.
+- O comunicado só é enviado para quem estiver marcado.
