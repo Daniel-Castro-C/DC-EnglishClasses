@@ -15,7 +15,8 @@ const EMAILJS_TEMPLATE_ID = "template_haw3qj7";
 // Envia a notificação por e-mail para o destinatário.
 // message: o texto que aparece no corpo do e-mail (variável {{message}} no template do EmailJS)
 // subject: o assunto do e-mail (variável {{subject}} no template do EmailJS)
-async function sendLessonNotification(toEmail, toName, message, subject){
+// attachmentHtml: bloco HTML opcional do botão de anexo (variável {{attachment_html}} no template)
+async function sendLessonNotification(toEmail, toName, message, subject, attachmentHtml){
   if (!window.emailjs) {
     console.error('EmailJS não carregado.');
     return { ok: false };
@@ -25,7 +26,8 @@ async function sendLessonNotification(toEmail, toName, message, subject){
       to_email: toEmail,
       to_name: toName || toEmail,
       message: message,
-      subject: subject || 'Atualização no Portal — D.C English Classes'
+      subject: subject || 'Atualização no Portal — D.C English Classes',
+      attachment_html: attachmentHtml || ''
     });
     return { ok: true };
   } catch (err) {

@@ -471,8 +471,8 @@ async function sendBroadcast(){
   const btn = document.getElementById('broadcast-btn');
   btn.disabled = true;
 
-  // Envia o anexo primeiro (se houver), gerando um link de download pra colocar no e-mail
-  let attachmentUrl = null;
+  // Envia o anexo primeiro (se houver), gerando um botão de download pra colocar no e-mail
+  let attachmentHtml = '';
   if (file) {
     btn.textContent = 'Enviando anexo...';
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -489,10 +489,21 @@ async function sendBroadcast(){
     }
 
     const { data: urlData } = await sb.storage.from(STORAGE_BUCKET).createSignedUrl(filePath, 60 * 60 * 24 * 30, { download: file.name });
-    attachmentUrl = urlData ? urlData.signedUrl : null;
-  }
+    const attachmentUrl = urlData ? urlData.signedUrl : null;
 
-  const fullMessage = attachmentUrl ? `${message}\n\nAnexo: ${attachmentUrl}` : message;
+    if (attachmentUrl) {
+      attachmentHtml = `
+        <table role="presentation" style="border-collapse:collapse;margin:16px 0 4px;">
+          <tr>
+            <td style="background-color:#5B93C4;border-radius:7px;">
+              <a href="${attachmentUrl}" style="display:inline-block;padding:11px 20px;font-size:13.5px;color:#ffffff;text-decoration:none;font-weight:bold;">
+                Baixar anexo (${escapeHtml(file.name)})
+              </a>
+            </td>
+          </tr>
+        </table>`;
+    }
+  }
 
   let successCount = 0;
   let failCount = 0;
@@ -500,7 +511,7 @@ async function sendBroadcast(){
   for (let i = 0; i < recipients.length; i++) {
     const s = recipients[i];
     btn.textContent = `Enviando... (${i + 1}/${recipients.length})`;
-    const result = await sendLessonNotification(s.email, s.full_name, fullMessage, subject);
+    const result = await sendLessonNotification(s.email, s.full_name, message, subject, attachmentHtml);
     if (result.ok) successCount++; else failCount++;
   }
 
