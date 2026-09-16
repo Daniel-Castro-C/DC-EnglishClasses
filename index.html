@@ -45,6 +45,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabaseClient.js"></script>
+<script src="js/common.js"></script>
 <script>
 // Se já existir uma sessão ativa, manda direto pro painel certo
 (async () => {
@@ -97,6 +98,10 @@ async function handleLogin(){
     btn.textContent = 'Entrar';
     showError('Não encontramos seu perfil. Fale com o professor.');
     return;
+  }
+
+  if (profile.role === 'student') {
+    logActivity(profile.id, 'login', null); // não bloqueia o redirecionamento
   }
 
   window.location.href = profile.role === 'admin' ? 'admin.html' : 'home.html';
