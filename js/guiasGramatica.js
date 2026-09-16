@@ -128,5 +128,9 @@ async function downloadGrammarMaterial(filePath){
     alert('Não foi possível baixar este arquivo. Tente novamente.');
     return;
   }
+
+  const material = currentMaterials.find(m => m.file_path === filePath || m.file_path_en === filePath);
+  logActivity(myProfile.id, 'download_grammar', material ? material.title : displayName);
+
   window.location.href = data.signedUrl;
 }

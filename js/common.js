@@ -4,6 +4,15 @@ function escapeHtml(str){
   }[m]));
 }
 
+// Registra uma ação do aluno no log de atividades (visível só para o professor)
+async function logActivity(studentId, action, details){
+  try {
+    await sb.from('activity_log').insert({ student_id: studentId, action, details: details || null });
+  } catch (e) {
+    console.error('Erro ao registrar atividade:', e);
+  }
+}
+
 function formatCurrencyBRL(value){
   if (value === null || value === undefined || value === '') return null;
   return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

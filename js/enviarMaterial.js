@@ -135,6 +135,7 @@ async function submitRequest(){
     return;
   }
 
+  logActivity(myProfile.id, 'material_request', `Para ${formatDateBR(date)}`);
   showFeedback('Pedido enviado! O professor foi avisado por e-mail.', true);
   document.getElementById('req-date').value = '';
   document.getElementById('req-file').value = '';

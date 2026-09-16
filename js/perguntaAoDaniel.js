@@ -132,6 +132,7 @@ async function submitQuestion(){
       console.error('Erro ao enviar e-mail:', emailResult.err);
       showFeedback('Pergunta salva, mas não foi possível enviar o e-mail de aviso.', false);
     } else {
+      logActivity(myProfile.id, 'daniel_question', subject);
       showFeedback('Pergunta enviada! O professor foi avisado por e-mail.', true);
     }
   }

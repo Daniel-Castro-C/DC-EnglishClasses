@@ -598,11 +598,12 @@ function renderStudentDetail(){
       <button class="btn-dark-sm" onclick="renderHome()">← Todos os alunos</button>
     </div>
 
-    <div class="role-switch" style="max-width:620px;margin-bottom:26px;">
+    <div class="role-switch" style="max-width:760px;margin-bottom:26px;">
       <button class="${currentTab === 'perfil' ? 'active' : ''}" onclick="switchTab('perfil')">Perfil</button>
       <button class="${currentTab === 'nova' ? 'active' : ''}" onclick="switchTab('nova')">Cadastrar nova aula</button>
       <button class="${currentTab === 'cadastradas' ? 'active' : ''}" onclick="switchTab('cadastradas')">Aulas cadastradas</button>
       <button class="${currentTab === 'pedidos' ? 'active' : ''}" onclick="switchTab('pedidos')">Materiais do aluno</button>
+      <button class="${currentTab === 'atividade' ? 'active' : ''}" onclick="switchTab('atividade')">Atividade</button>
     </div>
 
     <div id="tab-content"></div>
@@ -614,8 +615,10 @@ function renderStudentDetail(){
     renderNovaAulaTab();
   } else if (currentTab === 'cadastradas') {
     renderAulasCadastradasTab(lessonsHtml);
-  } else {
+  } else if (currentTab === 'pedidos') {
     renderPedidosTab();
+  } else {
+    renderAtividadeTab();
   }
 }
 
@@ -816,6 +819,60 @@ async function deleteQuestionByAdmin(questionId){
   renderDanielModuleList();
   await refreshPendingCounts();
   renderNav();
+}
+
+const ACTIVITY_LABELS = {
+  login: 'Acessou o portal',
+  download_material: 'Baixou um material de aula',
+  download_grammar: 'Baixou um material de gramática',
+  material_request: 'Enviou um pedido de material',
+  daniel_question: 'Fez uma pergunta ao Daniel'
+};
+
+async function renderAtividadeTab(){
+  document.getElementById('tab-content').innerHTML = `<div class="empty-state">Carregando atividades...</div>`;
+
+  const { data, error } = await sb
+    .from('activity_log')
+    .select('*')
+    .eq('student_id', currentStudent.id)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    document.getElementById('tab-content').innerHTML = `<div class="empty-state">Não foi possível carregar as atividades.</div>`;
+    console.error(error);
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    document.getElementById('tab-content').innerHTML = `<div class="empty-state">Nenhuma atividade registrada ainda para ${escapeHtml(currentStudent.full_name || currentStudent.email)}.</div>`;
+    return;
+  }
+
+  const rows = data.map(log => {
+    const dt = new Date(log.created_at);
+    const dateStr = dt.toLocaleDateString('pt-BR');
+    const timeStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const label = ACTIVITY_LABELS[log.action] || log.action;
+    return `
+      <div class="resource-row">
+        <div class="resource-icon ic-rep" style="width:26px;height:26px;font-size:10px;flex-shrink:0;">${dt.getDate()}</div>
+        <div class="resource-info">
+          <div class="name">${escapeHtml(label)}${log.details ? ' — ' + escapeHtml(log.details) : ''}</div>
+          <div class="desc">${dateStr} às ${timeStr}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('tab-content').innerHTML = `
+    <div class="lesson-card">
+      <h3>Atividade recente</h3>
+      <div class="meta">Mostrando as últimas ${data.length} ações registradas</div>
+      ${rows}
+    </div>
+  `;
 }
 
 async function renderPedidosTab(){

@@ -11,6 +11,7 @@ let activeLessonId = null;
 let grammarUnlocked = false;
 let lessonsPage = 0;
 let lessonSearchTerm = '';
+let currentResources = [];
 const LESSONS_PER_PAGE = 10;
 
 (async function init(){
@@ -153,6 +154,8 @@ async function renderLesson(lessonId){
     return;
   }
 
+  currentResources = resources;
+
   list.innerHTML = resources.map(r => {
     const [cls, label] = ICONS[r.type] || ['ic-pdf','?'];
     return `<div class="resource-row">
@@ -178,6 +181,10 @@ async function downloadResource(filePath){
     alert('Não foi possível baixar este arquivo. Tente novamente.');
     return;
   }
+
+  const resource = currentResources.find(r => r.file_path === filePath);
+  logActivity(myProfile.id, 'download_material', resource ? resource.name : displayName);
+
   window.location.href = data.signedUrl;
 }
 
