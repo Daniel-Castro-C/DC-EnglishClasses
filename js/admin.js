@@ -629,8 +629,8 @@ function renderPerfilTab(){
       <h3>Perfil do aluno</h3>
       <div class="row" style="align-items:center;">
         ${s.avatar_url
-          ? `<img id="student-avatar-preview" src="${s.avatar_url}" alt="Foto" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:0 0 auto;">`
-          : `<div id="student-avatar-preview" style="width:56px;height:56px;border-radius:50%;background:var(--sky-soft);flex:0 0 auto;"></div>`}
+          ? `<img id="student-avatar-preview" src="${s.avatar_url}" alt="Foto" style="width:56px;height:56px;min-width:56px;border-radius:50%;object-fit:cover;flex:0 0 auto;">`
+          : `<div id="student-avatar-preview" style="width:56px;height:56px;min-width:56px;border-radius:50%;background:var(--sky-soft);flex:0 0 auto;"></div>`}
         <input id="student-avatar-file" type="file" accept="image/*">
       </div>
       <div class="row" style="margin-top:12px;">
