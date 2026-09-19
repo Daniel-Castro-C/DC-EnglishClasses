@@ -15,6 +15,10 @@ let myProfile = null;
 function render(){
   const avatarSrc = myProfile.avatar_url || '';
   const linkAula = myProfile.permanent_lesson_link;
+  const WEEKDAY_LABELS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+  const scheduleLabel = (myProfile.lesson_weekday && myProfile.lesson_time)
+    ? `${WEEKDAY_LABELS[myProfile.lesson_weekday - 1]}, ${myProfile.lesson_time.slice(0,5)}`
+    : '';
 
   document.getElementById('main-content').innerHTML = `
     <div class="topline">
@@ -49,6 +53,11 @@ function render(){
       ${linkAula
         ? `<button class="btn-dark-sm" onclick="window.open('${escapeAttr(linkAula)}', '_blank')">Abrir link da aula</button>`
         : `<div class="empty-state">Seu professor ainda não configurou este link.</div>`}
+      ${scheduleLabel ? `
+        <div style="border-top:1px solid var(--line);margin:18px 0 12px;"></div>
+        <h3 style="margin-bottom:4px;">Dia e horário fixo</h3>
+        <div style="font-size:15px;color:var(--ink);font-weight:600;">${scheduleLabel}</div>
+      ` : ''}
     </div>
 
     <div class="lesson-card">

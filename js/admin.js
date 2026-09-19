@@ -5,6 +5,8 @@ const ICONS = {
   rep: ['ic-rep','R'],
 };
 const TYPE_LABELS = { ppt:'Slides (PPT)', pdf:'PDF', ex:'Exercícios', rep:'Relatório de desempenho' };
+const WEEKDAY_LABELS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 let students = [];
 let currentStudent = null;
@@ -41,6 +43,19 @@ async function loadStudents(){
 
   if (error) { console.error(error); students = []; return; }
   students = data || [];
+  sortStudentsBySchedule();
+}
+
+function sortStudentsBySchedule(){
+  students.sort((a, b) => {
+    const aHas = a.lesson_weekday != null && a.lesson_time;
+    const bHas = b.lesson_weekday != null && b.lesson_time;
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    if (!aHas && !bHas) return 0; // mantém a ordem de cadastro entre quem não tem horário definido
+    if (a.lesson_weekday !== b.lesson_weekday) return a.lesson_weekday - b.lesson_weekday;
+    return a.lesson_time.localeCompare(b.lesson_time);
+  });
 }
 
 async function refreshPendingCounts(){
@@ -74,10 +89,17 @@ function renderNav(){
     const active = currentView === 'student' && currentStudent && currentStudent.id === s.id ? 'active' : '';
     const pending = pendingCountsByStudent[s.id] || 0;
     const badge = pending > 0
-      ? `<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;">${pending}</span>`
-      : `<span class="dot" style="background:var(--sky)"></span>`;
+      ? `<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;flex-shrink:0;">${pending}</span>`
+      : `<span class="dot" style="background:var(--sky);flex-shrink:0;"></span>`;
+    const scheduleLabel = (s.lesson_weekday && s.lesson_time)
+      ? `${WEEKDAY_SHORT[s.lesson_weekday - 1]} ${s.lesson_time.slice(0,5)}`
+      : '';
     html += `<div class="nav-item ${active}" onclick="openStudent('${s.id}')">
-      <span>${escapeHtml(s.full_name || s.email)}</span>${badge}
+      <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(s.full_name || s.email)}</span>
+        ${scheduleLabel ? `<span style="font-size:11px;color:#8FA0BF;">${scheduleLabel}</span>` : ''}
+      </div>
+      ${badge}
     </div>`;
   });
   document.getElementById('nav-container').innerHTML = html;
@@ -650,6 +672,19 @@ function renderPerfilTab(){
         <button id="link-edit-btn" class="btn-ghost" style="flex:0 0 auto;${s.permanent_lesson_link ? '' : 'display:none;'}" onclick="enableLinkEditing()">Editar link</button>
         <button id="link-open-btn" class="btn-ghost" style="flex:0 0 auto;${s.permanent_lesson_link ? '' : 'display:none;'}" onclick="openStudentLink()">Abrir aula</button>
       </div>
+
+      <div style="border-top:1px solid var(--line);margin:20px 0 16px;"></div>
+
+      <h3 style="margin-bottom:6px;">Dia e horário fixo da aula</h3>
+      <div class="small-note" style="margin-top:0;margin-bottom:10px;">Usado só como referência (pra você e pro aluno) — e também define a ordem dos alunos na lista ao lado.</div>
+      <div class="row">
+        <select id="student-weekday-input">
+          <option value="">Sem dia definido</option>
+          ${WEEKDAY_LABELS.map((label, idx) => `<option value="${idx + 1}" ${s.lesson_weekday === idx + 1 ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+        <input id="student-time-input" type="time" value="${s.lesson_time ? s.lesson_time.slice(0,5) : ''}">
+      </div>
+      <button class="btn-dark-sm" style="margin-top:10px;" onclick="saveStudentSchedule()">Salvar dia e horário</button>
     </div>
 
     <div class="box">
@@ -1123,6 +1158,29 @@ async function saveStudentLink(){
   const idx = students.findIndex(s => s.id === currentStudent.id);
   if (idx >= 0) students[idx].permanent_lesson_link = link;
   renderPerfilTab();
+}
+
+async function saveStudentSchedule(){
+  const weekdayRaw = document.getElementById('student-weekday-input').value;
+  const timeRaw = document.getElementById('student-time-input').value;
+
+  const lesson_weekday = weekdayRaw ? parseInt(weekdayRaw, 10) : null;
+  const lesson_time = timeRaw || null;
+
+  const { error } = await sb.from('profiles')
+    .update({ lesson_weekday, lesson_time })
+    .eq('id', currentStudent.id);
+
+  if (error) { alert('Não foi possível salvar o dia/horário.'); console.error(error); return; }
+
+  currentStudent.lesson_weekday = lesson_weekday;
+  currentStudent.lesson_time = lesson_time;
+  const idx = students.findIndex(s => s.id === currentStudent.id);
+  if (idx >= 0) { students[idx].lesson_weekday = lesson_weekday; students[idx].lesson_time = lesson_time; }
+
+  sortStudentsBySchedule();
+  renderNav();
+  alert('Dia e horário salvos!');
 }
 
 function enableLinkEditing(){
