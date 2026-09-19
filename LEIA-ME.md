@@ -375,3 +375,43 @@ Suba `js/admin.js` no GitHub, substituindo o antigo.
   caixa **"Todos"** no topo — marque ela pra selecionar todo mundo de uma vez, ou escolha só quem
   você quiser.
 - O comunicado só é enviado para quem estiver marcado.
+
+---
+
+## ATUALIZAÇÃO 14 — Log de atividades dos alunos
+
+### A) Rodar o novo SQL
+Copie e cole o conteúdo do arquivo `supabase-update-11-log-atividade.sql` no SQL Editor do Supabase → **Run**.
+
+### B) Subir os arquivos no GitHub
+Suba: `index.html`, `js/common.js`, `js/aluno.js`, `js/guiasGramatica.js`, `js/enviarMaterial.js`,
+`js/perguntaAoDaniel.js`, `js/admin.js`.
+
+### O que é registrado
+- **Login** — toda vez que o aluno entra no portal.
+- **Download de material de aula** — qual material, dentro de "Minhas aulas".
+- **Download de material de gramática** — qual material, dentro dos Guias de Gramática.
+- **Envio de pedido de material** — com a data pretendida.
+- **Pergunta ao Daniel** — com o assunto da pergunta.
+
+### Onde ver
+No seu painel, dentro de cada aluno, tem uma nova aba **"Atividade"**, mostrando a lista mais recente
+primeiro, com data e horário de cada ação (ex: "Baixou um material de aula — Class #19 - Slides (PPT) · 16/09/2026 às 14:32").
+
+Isso é só para você — os alunos não têm acesso a esse histórico.
+
+---
+
+## ATUALIZAÇÃO 15 — Portal responsivo para celular
+
+Não precisa rodar SQL nenhum. Suba TODOS os arquivos `.html` novamente (todos ganharam o botão de
+menu ☰), junto com `style.css` e `js/common.js`.
+
+### O que mudou
+- **Tela de login**: em telas estreitas, o painel azul e o formulário agora empilham um embaixo do
+  outro, em vez de espremer as duas colunas lado a lado.
+- **Páginas com menu lateral** (Início, Perfil, Minhas aulas, etc.): no celular, o menu lateral fica
+  escondido por padrão, e aparece um botão ☰ no canto superior esquerdo. Tocando nele, o menu desliza
+  por cima da tela; tocando em qualquer item, ele fecha sozinho.
+- Os cartões da página inicial (Perfil, Minhas aulas, etc.) empilham em uma coluna só no celular, em
+  vez de ficarem espremidos lado a lado.
