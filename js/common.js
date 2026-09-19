@@ -13,6 +13,30 @@ async function logActivity(studentId, action, details){
   }
 }
 
+// ---------- Menu mobile (hambúrguer) ----------
+function toggleMobileSidebar(){
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (!sidebar || !backdrop) return;
+  sidebar.classList.toggle('open');
+  backdrop.classList.toggle('open');
+}
+
+function closeMobileSidebar(){
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (!sidebar || !backdrop) return;
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('open');
+}
+
+// Fecha o menu automaticamente ao clicar em qualquer item de navegação (no celular)
+document.addEventListener('click', (e) => {
+  if (window.innerWidth <= 860 && e.target.closest('.nav-item')) {
+    closeMobileSidebar();
+  }
+});
+
 function formatCurrencyBRL(value){
   if (value === null || value === undefined || value === '') return null;
   return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
