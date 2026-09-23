@@ -11,6 +11,10 @@ let grammarUnlocked = false;
   if (!myProfile) { await signOutAndRedirect(); return; }
   if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
 
+  await syncLanguageFromProfile(myProfile);
+  document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
+  translateStaticChrome();
+
   grammarUnlocked = await isGrammarUnlocked();
   await loadQuestions();
   renderNav();
@@ -30,9 +34,9 @@ async function loadQuestions(){
 
 function renderNav(){
   let html = buildStudentTopNav('daniel', grammarUnlocked);
-  html += `<div class="nav-label">Minhas perguntas</div>`;
+  html += `<div class="nav-label">${t('my_questions_label')}</div>`;
   html += `<div class="nav-item ${activeQuestionId === null ? 'active' : ''}" onclick="renderNewQuestionForm()">
-    <span>+ Nova pergunta</span>
+    <span>${t('new_question_nav')}</span>
   </div>`;
   myQuestions.forEach(q => {
     html += `<div class="nav-item ${q.id === activeQuestionId ? 'active' : ''}" onclick="showQuestion('${q.id}')">
@@ -50,26 +54,23 @@ function renderNewQuestionForm(){
   document.getElementById('main-content').innerHTML = `
     <div class="topline">
       <div>
-        <h1>Pergunte ao Daniel</h1>
+        <h1>${t('nav_daniel')}</h1>
       </div>
     </div>
 
     <div class="lesson-card">
       <p style="margin-top:0;font-size:14.5px;line-height:1.6;">
-        Você não precisa esperar a próxima aula para tirar uma dúvida sobre inglês! Pergunte aqui sobre
-        qualquer coisa — algo que você viu e não entendeu, um branco que você teve, ou algo que veio à
-        cabeça agora mesmo. Esse é seu canal direto comigo. Suas perguntas e respostas ficam arquivadas
-        aqui, pra você consultar sempre que quiser.
+        ${t('ask_daniel_intro')}
       </p>
     </div>
 
     <div class="lesson-card">
-      <h3>Nova pergunta</h3>
-      <label>Assunto</label>
-      <input id="q-subject" placeholder="Ex: Uso do Present Perfect">
-      <label>Sua pergunta</label>
-      <textarea id="q-question" placeholder="Escreva aqui sua dúvida..."></textarea>
-      <button id="q-submit-btn" class="btn-dark-sm" onclick="submitQuestion()">Enviar pergunta</button>
+      <h3>${t('new_question_title')}</h3>
+      <label>${t('subject_label')}</label>
+      <input id="q-subject" placeholder="${t('subject_placeholder')}">
+      <label>${t('question_label')}</label>
+      <textarea id="q-question" placeholder="${t('question_placeholder')}"></textarea>
+      <button id="q-submit-btn" class="btn-dark-sm" onclick="submitQuestion()">${t('send_question_btn')}</button>
       <div id="q-feedback" class="feedback"></div>
     </div>
   `;
@@ -85,12 +86,12 @@ async function submitQuestion(){
   const subject = document.getElementById('q-subject').value.trim();
   const question = document.getElementById('q-question').value.trim();
 
-  if (!subject) { showFeedback('Escreva um assunto para sua pergunta.', false); return; }
-  if (!question) { showFeedback('Escreva sua pergunta.', false); return; }
+  if (!subject) { showFeedback(t('subject_required_error'), false); return; }
+  if (!question) { showFeedback(t('question_required_error'), false); return; }
 
   const btn = document.getElementById('q-submit-btn');
   btn.disabled = true;
-  btn.textContent = 'Enviando...';
+  btn.textContent = t('sending');
 
   const { error: insertError } = await sb.from('daniel_questions').insert({
     student_id: myProfile.id,
@@ -100,8 +101,8 @@ async function submitQuestion(){
 
   if (insertError) {
     btn.disabled = false;
-    btn.textContent = 'Enviar pergunta';
-    showFeedback('Não foi possível registrar sua pergunta. Tente novamente.', false);
+    btn.textContent = t('send_question_btn');
+    showFeedback(t('question_save_error'), false);
     console.error(insertError);
     return;
   }
@@ -115,11 +116,11 @@ async function submitQuestion(){
     .single();
 
   btn.disabled = false;
-  btn.textContent = 'Enviar pergunta';
+  btn.textContent = t('send_question_btn');
 
   if (adminError || !adminProfile) {
     console.error('Erro ao buscar perfil do professor:', adminError);
-    showFeedback('Pergunta salva, mas não foi possível notificar o professor por e-mail.', false);
+    showFeedback(t('notify_error'), false);
   } else {
     const studentName = myProfile.full_name || myProfile.email;
     const emailResult = await sendLessonNotification(
@@ -130,10 +131,10 @@ async function submitQuestion(){
     );
     if (!emailResult.ok) {
       console.error('Erro ao enviar e-mail:', emailResult.err);
-      showFeedback('Pergunta salva, mas não foi possível enviar o e-mail de aviso.', false);
+      showFeedback(t('question_email_send_error'), false);
     } else {
       logActivity(myProfile.id, 'daniel_question', subject);
-      showFeedback('Pergunta enviada! O professor foi avisado por e-mail.', true);
+      showFeedback(t('question_sent_success'), true);
     }
   }
 
@@ -155,27 +156,27 @@ function showQuestion(id){
     <div class="topline">
       <div>
         <h1>${escapeHtml(q.subject)}</h1>
-        <div class="sub">Enviada em ${new Date(q.created_at).toLocaleDateString('pt-BR')}</div>
+        <div class="sub">${t('sent_on', {date: formatDateLocalized(q.created_at)})}</div>
       </div>
     </div>
 
     <div class="lesson-card">
-      <h3>Sua pergunta</h3>
+      <h3>${t('your_question_title')}</h3>
       <p style="margin:0;font-size:14.5px;line-height:1.6;">${escapeHtml(q.question)}</p>
 
       ${q.answer ? `
         <div class="answer-box">
-          <div class="label">Resposta do Daniel</div>
+          <div class="label">${t('daniel_answer_label')}</div>
           <div style="font-size:14.5px;line-height:1.6;">${escapeHtml(q.answer)}</div>
         </div>
       ` : `
-        <div class="waiting-note">Aguardando resposta do professor.</div>
+        <div class="waiting-note">${t('waiting_answer')}</div>
       `}
 
       ${canEdit ? `
         <div class="row" style="margin-top:18px;">
-          <button class="btn-ghost" style="flex:0 0 auto;" onclick="editQuestion('${q.id}')">Editar pergunta</button>
-          <button class="btn-ghost" style="flex:0 0 auto;" onclick="deleteQuestionByStudent('${q.id}')">Excluir pergunta</button>
+          <button class="btn-ghost" style="flex:0 0 auto;" onclick="editQuestion('${q.id}')">${t('edit_question_btn')}</button>
+          <button class="btn-ghost" style="flex:0 0 auto;" onclick="deleteQuestionByStudent('${q.id}')">${t('delete_question_btn')}</button>
         </div>
       ` : ''}
     </div>
@@ -187,17 +188,17 @@ function editQuestion(id){
 
   document.getElementById('main-content').innerHTML = `
     <div class="topline">
-      <div><h1>Editar pergunta</h1></div>
+      <div><h1>${t('edit_question_title')}</h1></div>
     </div>
 
     <div class="lesson-card">
-      <label>Assunto</label>
+      <label>${t('subject_label')}</label>
       <input id="edit-q-subject" value="${escapeHtml(q.subject)}">
-      <label>Sua pergunta</label>
+      <label>${t('question_label')}</label>
       <textarea id="edit-q-question">${escapeHtml(q.question)}</textarea>
       <div class="row">
-        <button class="btn-dark-sm" onclick="saveQuestionEdit('${q.id}')">Salvar alterações</button>
-        <button class="btn-ghost" onclick="showQuestion('${q.id}')">Cancelar</button>
+        <button class="btn-dark-sm" onclick="saveQuestionEdit('${q.id}')">${t('save_changes_btn')}</button>
+        <button class="btn-ghost" onclick="showQuestion('${q.id}')">${t('cancel_btn')}</button>
       </div>
       <div id="edit-feedback" class="feedback"></div>
     </div>
@@ -210,7 +211,7 @@ async function saveQuestionEdit(id){
 
   if (!subject || !question) {
     const el = document.getElementById('edit-feedback');
-    el.textContent = 'Preencha assunto e pergunta.';
+    el.textContent = t('fill_subject_question_error');
     el.className = 'feedback show err';
     return;
   }
@@ -218,7 +219,7 @@ async function saveQuestionEdit(id){
   const { error } = await sb.from('daniel_questions').update({ subject, question }).eq('id', id);
   if (error) {
     const el = document.getElementById('edit-feedback');
-    el.textContent = 'Não foi possível salvar as alterações.';
+    el.textContent = t('edit_save_error');
     el.className = 'feedback show err';
     console.error(error);
     return;
@@ -229,13 +230,13 @@ async function saveQuestionEdit(id){
 }
 
 async function deleteQuestionByStudent(id){
-  if (!confirm('Excluir esta pergunta? Essa ação não pode ser desfeita.')) return;
+  if (!confirm(t('delete_confirm'))) return;
 
   const q = myQuestions.find(item => item.id === id);
   const subject = q ? q.subject : '';
 
   const { error } = await sb.from('daniel_questions').delete().eq('id', id);
-  if (error) { alert('Não foi possível excluir a pergunta.'); console.error(error); return; }
+  if (error) { alert(t('delete_error_alert')); console.error(error); return; }
 
   // Avisa o professor por e-mail sobre a exclusão
   const { data: adminProfile } = await sb.from('profiles').select('email, full_name').eq('role', 'admin').limit(1).single();

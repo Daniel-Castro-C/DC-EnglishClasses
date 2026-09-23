@@ -8,6 +8,10 @@ let myProfile = null;
   if (!myProfile) { await signOutAndRedirect(); return; }
   if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
 
+  await syncLanguageFromProfile(myProfile);
+  document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
+  translateStaticChrome();
+
   document.getElementById('nav-container').innerHTML = buildStudentTopNav('enviar', await isGrammarUnlocked());
   render();
 })();
@@ -16,34 +20,34 @@ function render(){
   document.getElementById('main-content').innerHTML = `
     <div class="topline">
       <div>
-        <h1>Enviar material para uma aula</h1>
-        <div class="sub">Quer usar algo específico numa próxima aula? Envie aqui e o professor será avisado.</div>
+        <h1>${t('send_material_title')}</h1>
+        <div class="sub">${t('send_material_sub')}</div>
       </div>
     </div>
 
     <div class="lesson-card">
-      <h3>Novo pedido de material</h3>
+      <h3>${t('new_request_title')}</h3>
 
-      <label>Para qual data você quer usar este material?</label>
+      <label>${t('request_date_label')}</label>
       <input id="req-date" type="date">
 
-      <label>Arquivo (opcional)</label>
+      <label>${t('file_label')}</label>
       <input id="req-file" type="file">
-      <div class="small-note" style="margin-bottom:16px;">Aceita PPT, PDF, Word, imagens, etc.</div>
+      <div class="small-note" style="margin-bottom:16px;">${t('file_hint')}</div>
 
-      <label>Ou, em vez de um arquivo, um link (opcional)</label>
-      <input id="req-link" type="url" placeholder="https://... (ex: link de um artigo ou vídeo)">
+      <label>${t('link_label')}</label>
+      <input id="req-link" type="url" placeholder="${t('link_placeholder')}">
 
-      <label>Como você gostaria de usar esse material?</label>
-      <textarea id="req-notes" placeholder="Conte pra gente como imagina usar esse material na aula — por exemplo: simular uma apresentação, praticar vocabulário, treinar leitura em voz alta, conversar sobre o assunto, tirar dúvidas específicas, etc."></textarea>
+      <label>${t('usage_label')}</label>
+      <textarea id="req-notes" placeholder="${t('usage_placeholder')}"></textarea>
 
-      <button id="req-submit-btn" class="btn-dark-sm" onclick="submitRequest()">Avisar ao professor</button>
+      <button id="req-submit-btn" class="btn-dark-sm" onclick="submitRequest()">${t('notify_btn')}</button>
       <div id="req-feedback" class="feedback"></div>
     </div>
 
     <div class="lesson-card">
-      <h3>Meus pedidos enviados</h3>
-      <div id="my-requests-list"><div class="empty-state">Carregando...</div></div>
+      <h3>${t('my_requests_title')}</h3>
+      <div id="my-requests-list"><div class="empty-state">${t('loading')}</div></div>
     </div>
   `;
 
@@ -63,12 +67,12 @@ async function submitRequest(){
   const fileInput = document.getElementById('req-file');
   const file = fileInput.files[0] || null;
 
-  if (!date) { showFeedback('Escolha a data em que quer usar o material.', false); return; }
-  if (!file && !link) { showFeedback('Envie um arquivo ou informe um link.', false); return; }
+  if (!date) { showFeedback(t('date_required_error'), false); return; }
+  if (!file && !link) { showFeedback(t('file_or_link_required_error'), false); return; }
 
   const btn = document.getElementById('req-submit-btn');
   btn.disabled = true;
-  btn.textContent = 'Enviando...';
+  btn.textContent = t('sending');
 
   let filePath = null;
   let fileName = null;
@@ -80,9 +84,9 @@ async function submitRequest(){
 
     const { error: uploadError } = await sb.storage.from(STORAGE_BUCKET).upload(filePath, file);
     if (uploadError) {
-      showFeedback('Não foi possível enviar o arquivo. Tente novamente.', false);
+      showFeedback(t('file_upload_error'), false);
       btn.disabled = false;
-      btn.textContent = 'Avisar ao professor';
+      btn.textContent = t('notify_btn');
       return;
     }
   }
@@ -97,10 +101,10 @@ async function submitRequest(){
   });
 
   btn.disabled = false;
-  btn.textContent = 'Avisar ao professor';
+  btn.textContent = t('notify_btn');
 
   if (insertError) {
-    showFeedback('Não foi possível registrar seu pedido. Tente novamente.', false);
+    showFeedback(t('request_save_error'), false);
     console.error(insertError);
     return;
   }
@@ -115,7 +119,7 @@ async function submitRequest(){
 
   if (adminError || !adminProfile) {
     console.error('Erro ao buscar perfil do professor:', adminError);
-    showFeedback('Pedido salvo, mas não foi possível encontrar o e-mail do professor para notificar. (Erro: ' + (adminError ? adminError.message : 'perfil não encontrado') + ')', false);
+    showFeedback(t('admin_email_not_found_error', {err: adminError ? adminError.message : 'perfil não encontrado'}), false);
     loadMyRequests();
     return;
   }
@@ -130,13 +134,13 @@ async function submitRequest(){
 
   if (!emailResult.ok) {
     console.error('Erro ao enviar e-mail:', emailResult.err);
-    showFeedback('Pedido salvo, mas não foi possível enviar o e-mail de aviso. (Verifique o console para detalhes)', false);
+    showFeedback(t('request_email_send_error'), false);
     loadMyRequests();
     return;
   }
 
   logActivity(myProfile.id, 'material_request', `Para ${formatDateBR(date)}`);
-  showFeedback('Pedido enviado! O professor foi avisado por e-mail.', true);
+  showFeedback(t('request_sent_success'), true);
   document.getElementById('req-date').value = '';
   document.getElementById('req-file').value = '';
   document.getElementById('req-link').value = '';
@@ -155,28 +159,28 @@ async function loadMyRequests(){
   const list = document.getElementById('my-requests-list');
 
   if (error) {
-    list.innerHTML = `<div class="empty-state">Não foi possível carregar seus pedidos.</div>`;
+    list.innerHTML = `<div class="empty-state">${t('load_requests_error')}</div>`;
     return;
   }
 
   if (!data || data.length === 0) {
-    list.innerHTML = `<div class="empty-state">Você ainda não enviou nenhum pedido de material.</div>`;
+    list.innerHTML = `<div class="empty-state">${t('no_requests')}</div>`;
     return;
   }
 
   list.innerHTML = data.map(r => `
     <div class="resource-row">
-      <div class="resource-icon ic-pdf">${r.file_path ? 'Arq' : 'Link'}</div>
+      <div class="resource-icon ic-pdf">${r.file_path ? t('file_tag') : t('link_tag')}</div>
       <div class="resource-info">
-        <div class="name">Para ${formatDateBR(r.requested_date)}</div>
-        <div class="desc">${escapeHtml(r.notes || 'Sem observações')}</div>
+        <div class="name">${t('for_date', {date: formatDateBR(r.requested_date)})}</div>
+        <div class="desc">${escapeHtml(r.notes || t('no_notes'))}</div>
       </div>
     </div>
   `).join('');
 }
 
 function formatDateBR(isoDate){
-  if (!isoDate) return '(sem data)';
+  if (!isoDate) return t('no_date');
   const [y,m,d] = isoDate.split('-');
-  return `${d}/${m}/${y}`;
+  return (getLang() === 'en') ? `${m}/${d}/${y}` : `${d}/${m}/${y}`;
 }

@@ -8,6 +8,10 @@ let myProfile = null;
   if (!myProfile) { await signOutAndRedirect(); return; }
   if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
 
+  await syncLanguageFromProfile(myProfile);
+  document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
+  translateStaticChrome();
+
   document.getElementById('nav-container').innerHTML = buildStudentTopNav('perfil', await isGrammarUnlocked());
   render();
 })();
@@ -15,58 +19,58 @@ let myProfile = null;
 function render(){
   const avatarSrc = myProfile.avatar_url || '';
   const linkAula = myProfile.permanent_lesson_link;
-  const WEEKDAY_LABELS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+  const WEEKDAY_KEYS = ['weekday_1', 'weekday_2', 'weekday_3', 'weekday_4', 'weekday_5', 'weekday_6', 'weekday_7'];
   const scheduleLabel = (myProfile.lesson_weekday && myProfile.lesson_time)
-    ? `${WEEKDAY_LABELS[myProfile.lesson_weekday - 1]}, ${myProfile.lesson_time.slice(0,5)}`
+    ? `${t(WEEKDAY_KEYS[myProfile.lesson_weekday - 1])}, ${myProfile.lesson_time.slice(0,5)}`
     : '';
 
   document.getElementById('main-content').innerHTML = `
     <div class="topline">
       <div>
-        <h1>Perfil</h1>
-        <div class="sub">Sua foto, seu nome e sua senha</div>
+        <h1>${t('nav_perfil')}</h1>
+        <div class="sub">${t('profile_sub')}</div>
       </div>
     </div>
 
     <div class="lesson-card">
-      <h3>Foto e nome</h3>
+      <h3>${t('photo_name_title')}</h3>
       <div class="avatar-row">
         ${avatarSrc
           ? `<img id="avatar-preview" class="avatar-preview" src="${avatarSrc}" alt="Sua foto">`
           : `<div id="avatar-preview" class="avatar-preview"></div>`}
         <div style="flex:1;">
           <input id="avatar-file" type="file" accept="image/*">
-          <div class="small-note">Escolha uma foto e ela é enviada automaticamente.</div>
+          <div class="small-note">${t('photo_hint')}</div>
         </div>
       </div>
       <div id="avatar-feedback" class="feedback"></div>
 
-      <label style="margin-top:18px;">Nome completo</label>
+      <label style="margin-top:18px;">${t('full_name_label')}</label>
       <input id="full-name-input" value="${escapeHtml(myProfile.full_name || '')}">
-      <button class="btn-dark-sm" onclick="saveName()">Salvar nome</button>
+      <button class="btn-dark-sm" onclick="saveName()">${t('save_name_btn')}</button>
       <div id="name-feedback" class="feedback"></div>
     </div>
 
     <div class="lesson-card">
-      <h3>Link fixo da sua aula</h3>
-      <div class="meta">Este link é definido pelo seu professor e não muda a cada aula.</div>
+      <h3>${t('lesson_link_title')}</h3>
+      <div class="meta">${t('lesson_link_meta')}</div>
       ${linkAula
-        ? `<button class="btn-dark-sm" onclick="window.open('${escapeAttr(linkAula)}', '_blank')">Abrir link da aula</button>`
-        : `<div class="empty-state">Seu professor ainda não configurou este link.</div>`}
+        ? `<button class="btn-dark-sm" onclick="window.open('${escapeAttr(linkAula)}', '_blank')">${t('open_lesson_link')}</button>`
+        : `<div class="empty-state">${t('lesson_link_not_set')}</div>`}
       ${scheduleLabel ? `
         <div style="border-top:1px solid var(--line);margin:18px 0 12px;"></div>
-        <h3 style="margin-bottom:4px;">Dia e horário fixo</h3>
+        <h3 style="margin-bottom:4px;">${t('schedule_title')}</h3>
         <div style="font-size:15px;color:var(--ink);font-weight:600;">${scheduleLabel}</div>
       ` : ''}
     </div>
 
     <div class="lesson-card">
-      <h3>Alterar senha</h3>
-      <label>Nova senha</label>
-      <input id="new-pass-1" type="password" placeholder="Mínimo 6 caracteres">
-      <label>Confirmar nova senha</label>
-      <input id="new-pass-2" type="password" placeholder="Repita a nova senha">
-      <button class="btn-dark-sm" onclick="changePassword()">Salvar nova senha</button>
+      <h3>${t('change_password_title')}</h3>
+      <label>${t('new_password_label')}</label>
+      <input id="new-pass-1" type="password" placeholder="${t('new_password_placeholder')}">
+      <label>${t('confirm_password_label')}</label>
+      <input id="new-pass-2" type="password" placeholder="${t('confirm_password_placeholder')}">
+      <button class="btn-dark-sm" onclick="changePassword()">${t('save_password_btn')}</button>
       <div id="pass-feedback" class="feedback"></div>
     </div>
   `;
@@ -84,7 +88,7 @@ async function uploadAvatar(e){
   const file = e.target.files[0];
   if (!file) return;
 
-  showFeedback('avatar-feedback', 'Enviando foto...', true);
+  showFeedback('avatar-feedback', t('uploading_photo'), true);
 
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const filePath = `${myProfile.id}/avatar.${ext}`;
@@ -94,7 +98,7 @@ async function uploadAvatar(e){
     .upload(filePath, file, { upsert: true });
 
   if (uploadError) {
-    showFeedback('avatar-feedback', 'Não foi possível enviar a foto.', false);
+    showFeedback('avatar-feedback', t('photo_upload_error'), false);
     return;
   }
 
@@ -106,40 +110,40 @@ async function uploadAvatar(e){
     .eq('id', myProfile.id);
 
   if (updateError) {
-    showFeedback('avatar-feedback', 'Foto enviada, mas não foi possível salvar.', false);
+    showFeedback('avatar-feedback', t('photo_save_error'), false);
     return;
   }
 
   myProfile.avatar_url = publicUrl;
   document.getElementById('avatar-preview').outerHTML =
     `<img id="avatar-preview" class="avatar-preview" src="${publicUrl}" alt="Sua foto">`;
-  showFeedback('avatar-feedback', 'Foto atualizada!', true);
+  showFeedback('avatar-feedback', t('photo_updated'), true);
 }
 
 async function saveName(){
   const name = document.getElementById('full-name-input').value.trim();
-  if (!name) { showFeedback('name-feedback', 'Digite um nome.', false); return; }
+  if (!name) { showFeedback('name-feedback', t('name_empty_error'), false); return; }
 
   const { error } = await sb.from('profiles').update({ full_name: name }).eq('id', myProfile.id);
-  if (error) { showFeedback('name-feedback', 'Não foi possível salvar.', false); return; }
+  if (error) { showFeedback('name-feedback', t('name_save_error'), false); return; }
 
   myProfile.full_name = name;
-  showFeedback('name-feedback', 'Nome atualizado!', true);
+  showFeedback('name-feedback', t('name_updated'), true);
 }
 
 async function changePassword(){
   const p1 = document.getElementById('new-pass-1').value;
   const p2 = document.getElementById('new-pass-2').value;
 
-  if (p1.length < 6) { showFeedback('pass-feedback', 'A senha precisa ter pelo menos 6 caracteres.', false); return; }
-  if (p1 !== p2) { showFeedback('pass-feedback', 'As senhas não coincidem.', false); return; }
+  if (p1.length < 6) { showFeedback('pass-feedback', t('password_min_length_error'), false); return; }
+  if (p1 !== p2) { showFeedback('pass-feedback', t('password_mismatch_error'), false); return; }
 
   const { error } = await sb.auth.updateUser({ password: p1 });
-  if (error) { showFeedback('pass-feedback', 'Não foi possível alterar a senha.', false); return; }
+  if (error) { showFeedback('pass-feedback', t('password_change_error'), false); return; }
 
   document.getElementById('new-pass-1').value = '';
   document.getElementById('new-pass-2').value = '';
-  showFeedback('pass-feedback', 'Senha alterada com sucesso!', true);
+  showFeedback('pass-feedback', t('password_changed'), true);
 }
 
 function escapeAttr(str){ return escapeHtml(str); }

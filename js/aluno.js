@@ -27,6 +27,10 @@ const LESSONS_PER_PAGE = 10;
     return;
   }
 
+  await syncLanguageFromProfile(myProfile);
+  document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
+  translateStaticChrome();
+
   grammarUnlocked = await isGrammarUnlocked();
   await loadLessons();
 })();
@@ -40,17 +44,17 @@ async function loadLessons(){
 
   if (error) {
     document.getElementById('main-content').innerHTML =
-      `<div class="empty-state">Não foi possível carregar suas aulas. Tente recarregar a página.</div>`;
+      `<div class="empty-state">${t('load_lessons_error')}</div>`;
     return;
   }
 
   myLessons = data || [];
 
   if (myLessons.length === 0) {
-    document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas', grammarUnlocked) + `<div class="nav-label">Minhas aulas</div>`;
+    document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas', grammarUnlocked) + `<div class="nav-label">${t('nav_aulas')}</div>`;
     document.getElementById('main-content').innerHTML = `
-      <div class="topline"><div><h1>Ainda não há aulas por aqui</h1>
-      <div class="sub">Assim que seu professor cadastrar sua primeira aula, ela aparece aqui.</div></div></div>`;
+      <div class="topline"><div><h1>${t('no_lessons_title')}</h1>
+      <div class="sub">${t('no_lessons_sub')}</div></div></div>`;
     return;
   }
 
@@ -62,8 +66,8 @@ async function loadLessons(){
 
 function renderNav(){
   let html = buildStudentTopNav('aulas', grammarUnlocked);
-  html += `<div class="nav-label">Minhas aulas</div>`;
-  html += `<input id="lesson-search-input" placeholder="Buscar aula..." value="${escapeHtml(lessonSearchTerm)}"
+  html += `<div class="nav-label">${t('nav_aulas')}</div>`;
+  html += `<input id="lesson-search-input" placeholder="${t('search_placeholder')}" value="${escapeHtml(lessonSearchTerm)}"
     oninput="onLessonSearchInput(this.value)"
     style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;font-size:12.5px;border-radius:6px;border:1px solid rgba(255,255,255,0.28);background:rgba(255,255,255,0.06);color:#fff;">`;
   html += `<div id="lessons-list-container"></div>`;
@@ -91,7 +95,7 @@ function renderLessonsList(){
 
   let html = '';
   if (filtered.length === 0) {
-    html = `<div class="small-note" style="padding:4px 6px;">Nenhuma aula encontrada.</div>`;
+    html = `<div class="small-note" style="padding:4px 6px;">${t('no_lessons_found')}</div>`;
   } else {
     pageItems.forEach(l => {
       html += `<div class="nav-item ${l.id === activeLessonId ? 'active' : ''}" onclick="renderLesson('${l.id}')">
@@ -102,10 +106,10 @@ function renderLessonsList(){
 
   if (totalPages > 1) {
     html += `<div style="display:flex;gap:6px;margin-top:10px;padding:0 6px;">`;
-    html += `<button class="sidebar-nav-btn" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(-1)" ${lessonsPage === 0 ? 'disabled' : ''}>← Anterior</button>`;
-    html += `<button class="sidebar-nav-btn" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(1)" ${lessonsPage >= totalPages - 1 ? 'disabled' : ''}>Próxima →</button>`;
+    html += `<button class="sidebar-nav-btn" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(-1)" ${lessonsPage === 0 ? 'disabled' : ''}>${t('prev_page')}</button>`;
+    html += `<button class="sidebar-nav-btn" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(1)" ${lessonsPage >= totalPages - 1 ? 'disabled' : ''}>${t('next_page')}</button>`;
     html += `</div>`;
-    html += `<div class="small-note" style="text-align:center;margin-top:6px;color:#93A3C0;">Página ${lessonsPage + 1} de ${totalPages}</div>`;
+    html += `<div class="small-note" style="text-align:center;margin-top:6px;color:#93A3C0;">${t('page_of', {a: lessonsPage + 1, b: totalPages})}</div>`;
   }
 
   document.getElementById('lessons-list-container').innerHTML = html;
@@ -127,12 +131,12 @@ async function renderLesson(lessonId){
         <h1>${escapeHtml(lesson.title)}</h1>
         <div class="sub">${escapeHtml(lesson.topic || '')}</div>
       </div>
-      <div class="pill">Só você vê esta aula</div>
+      <div class="pill">${t('only_you_pill')}</div>
     </div>
     <div class="lesson-card">
-      <h3>Materiais e acompanhamento</h3>
-      <div class="meta">Tudo o que foi usado e passado nesta aula</div>
-      <div id="resources-list"><div class="empty-state">Carregando materiais...</div></div>
+      <h3>${t('materials_title')}</h3>
+      <div class="meta">${t('materials_meta')}</div>
+      <div id="resources-list"><div class="empty-state">${t('loading_materials')}</div></div>
     </div>
   `;
 
@@ -145,12 +149,12 @@ async function renderLesson(lessonId){
   const list = document.getElementById('resources-list');
 
   if (error) {
-    list.innerHTML = `<div class="empty-state">Não foi possível carregar os materiais desta aula.</div>`;
+    list.innerHTML = `<div class="empty-state">${t('materials_load_error')}</div>`;
     return;
   }
 
   if (!resources || resources.length === 0) {
-    list.innerHTML = `<div class="empty-state">Nenhum material adicionado a esta aula ainda.</div>`;
+    list.innerHTML = `<div class="empty-state">${t('no_materials')}</div>`;
     return;
   }
 
@@ -164,7 +168,7 @@ async function renderLesson(lessonId){
         <div class="name">${escapeHtml(r.name)}</div>
         <div class="desc">${escapeHtml(r.description || '')}</div>
       </div>
-      <button class="resource-action" onclick="downloadResource('${r.file_path}')">Baixar arquivo</button>
+      <button class="resource-action" onclick="downloadResource('${r.file_path}')">${t('download_file')}</button>
     </div>`;
   }).join('');
 }
@@ -178,7 +182,7 @@ async function downloadResource(filePath){
     .createSignedUrl(filePath, 60 * 10, { download: displayName }); // força download em vez de abrir no navegador
 
   if (error || !data) {
-    alert('Não foi possível baixar este arquivo. Tente novamente.');
+    alert(t('download_error_alert'));
     return;
   }
 
@@ -187,4 +191,3 @@ async function downloadResource(filePath){
 
   window.location.href = data.signedUrl;
 }
-
