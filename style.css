@@ -112,6 +112,12 @@ input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border
 .side-brand{display:flex;align-items:center;gap:10px;margin-bottom:30px;}
 .side-brand span{font-size:14px;font-weight:600;color:#EDEDE7;}
 .side-brand small{display:block;font-size:11px;color:#93A3C0;}
+.lang-switcher{margin:0 0 20px;padding:0 0 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.lang-switcher-label{font-size:11px;color:#7E8CA8;margin-bottom:8px;}
+.lang-switcher-flags{display:flex;gap:10px;}
+.lang-flag-btn{width:36px;height:36px;border-radius:8px;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);transition:border-color .15s, background .15s, transform .1s;padding:0;}
+.lang-flag-btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,0.35);}
+.lang-flag-btn.active{border-color:#5B93C4;background:rgba(91,147,196,0.22);}
 .nav-label{font-size:11px;color:#7E8CA8;margin:18px 6px 8px;}
 .nav-item{
   display:flex;

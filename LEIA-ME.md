@@ -415,3 +415,23 @@ menu ☰), junto com `style.css` e `js/common.js`.
   por cima da tela; tocando em qualquer item, ele fecha sozinho.
 - Os cartões da página inicial (Perfil, Minhas aulas, etc.) empilham em uma coluna só no celular, em
   vez de ficarem espremidos lado a lado.
+
+---
+
+## ATUALIZAÇÃO 16 — Dia/horário fixo da aula (e ordenação automática da lista)
+
+### A) Rodar o novo SQL
+Copie e cole o conteúdo do arquivo `supabase-update-12-horario-fixo.sql` no SQL Editor do Supabase → **Run**.
+
+### B) Subir os arquivos no GitHub
+Suba: `js/admin.js`, `js/perfil.js`.
+
+### Como funciona
+- Dentro do Perfil de cada aluno, logo abaixo do "Link fixo da aula", agora tem **"Dia e horário fixo
+  da aula"** — escolha o dia da semana e o horário, e clique em "Salvar dia e horário".
+- A lista de alunos na barra lateral esquerda passa a ficar **ordenada automaticamente**: quem tem aula
+  mais cedo na semana aparece primeiro (ex: segunda 20h vem antes de segunda 21h, que vem antes de
+  terça 18h). Alunos sem dia/horário definido ficam no final da lista.
+- O dia/horário também aparece como uma segunda linha, discreta, embaixo do nome de cada aluno na
+  lista — pra você ver a ordem batendo o olho, sem precisar abrir ninguém.
+- O aluno também vê esse dia/horário no próprio Perfil dele (só visualização, ele não edita).
