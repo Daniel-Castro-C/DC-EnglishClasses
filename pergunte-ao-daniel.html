@@ -12,7 +12,7 @@
   .feedback.err{color:var(--danger);}
   textarea{
     width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:7px;
-    margin-bottom:16px;font-family:inherit;font-size:14px;background:#fff;resize:vertical;min-height:110px;
+    margin-bottom:16px;font-family:inherit;font-size:14px;background:var(--paper-card);color:var(--text);resize:vertical;min-height:110px;
   }
   .answer-box{
     background:var(--sky-soft);border-radius:8px;padding:16px 18px;margin-top:14px;
@@ -27,6 +27,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
+<script>(function(){try{if(localStorage.getItem('portal_theme')==='dark')document.body.classList.add('dark-mode');}catch(e){}})();</script>
 
 <button id="mobile-menu-btn" class="mobile-menu-btn" onclick="toggleMobileSidebar()">☰</button>
 <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
@@ -41,6 +42,8 @@
     </div>
 
     <div id="lang-switcher-container"></div>
+
+    <div id="theme-toggle-container"></div>
 
     <div id="nav-container"></div>
 

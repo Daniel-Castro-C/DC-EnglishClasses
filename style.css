@@ -70,7 +70,8 @@ input, select{
   margin-bottom:16px;
   font-family:inherit;
   font-size:14px;
-  background:#fff;
+  background:var(--paper-card);
+  color:var(--text);
 }
 input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border-color:var(--sky);}
 .btn-primary{
@@ -115,9 +116,28 @@ input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border
 .lang-switcher{margin:0 0 20px;padding:0 0 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
 .lang-switcher-label{font-size:11px;color:#7E8CA8;margin-bottom:8px;}
 .lang-switcher-flags{display:flex;gap:10px;}
-.lang-flag-btn{width:36px;height:36px;border-radius:8px;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);transition:border-color .15s, background .15s, transform .1s;padding:0;}
+.lang-flag-btn{width:42px;height:30px;border-radius:6px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);transition:border-color .15s, background .15s, transform .1s;padding:0;overflow:hidden;}
+.lang-flag-btn svg{width:100%;height:100%;display:block;border-radius:4px;}
 .lang-flag-btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,0.35);}
 .lang-flag-btn.active{border-color:#5B93C4;background:rgba(91,147,196,0.22);}
+
+.theme-toggle-btn{
+  display:flex;align-items:center;gap:8px;width:100%;
+  padding:9px 10px;margin-bottom:18px;border-radius:7px;
+  background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.14);
+  color:#D6DCE8;font-family:inherit;font-size:12.5px;cursor:pointer;
+  transition:border-color .15s, background .15s;
+}
+.theme-toggle-btn:hover{border-color:rgba(255,255,255,0.35);}
+.theme-toggle-btn svg{flex-shrink:0;color:#CBD6E8;}
+
+/* ---------- MURAL DE CONQUISTAS (badges por marco de aulas) ---------- */
+.achievements-wall{margin:0 0 32px;}
+.achievements-wall-title{font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:600;}
+.achievements-row{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;}
+.badge-icon{width:60px;height:auto;display:block;transition:transform .15s;}
+.badge-icon.badge-current{width:92px;}
+.badge-icon.badge-locked{filter:grayscale(100%);opacity:.32;}
 .nav-label{font-size:11px;color:#7E8CA8;margin:18px 6px 8px;}
 .nav-item{
   display:flex;
@@ -202,7 +222,7 @@ input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border
 .resource-info{flex:1;min-width:0;}
 .resource-info .name{font-size:14px;font-weight:600;color:var(--text);}
 .resource-info .desc{font-size:12.5px;color:var(--text-soft);}
-.resource-action{font-size:13px;color:var(--ink);border:1px solid var(--line);padding:7px 14px;border-radius:6px;background:#fff;cursor:pointer;white-space:nowrap;}
+.resource-action{font-size:13px;color:var(--ink);border:1px solid var(--line);padding:7px 14px;border-radius:6px;background:var(--paper-card);cursor:pointer;white-space:nowrap;}
 .resource-action:hover{border-color:var(--ink);}
 
 .students-list{display:flex;flex-direction:column;gap:10px;}
@@ -235,8 +255,23 @@ input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border
 
 textarea{
   width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:7px;
-  margin-bottom:16px;font-family:inherit;font-size:14px;background:#fff;resize:vertical;min-height:90px;
+  margin-bottom:16px;font-family:inherit;font-size:14px;background:var(--paper-card);color:var(--text);resize:vertical;min-height:90px;
 }
+
+/* ---------- MODO ESCURO ---------- */
+body.dark-mode{
+  --paper:#0E1524;
+  --paper-card:#182238;
+  --text:#E7ECF5;
+  --text-soft:#93A3C0;
+  --line:#2B3550;
+}
+body.dark-mode .btn-ghost{color:var(--text);}
+body.dark-mode .resource-action{color:var(--text);}
+body.dark-mode .home-card:hover,
+body.dark-mode .level-card:hover{border-color:var(--sky);}
+body.dark-mode ::placeholder{color:#5B6B8C;opacity:1;}
+body.dark-mode input:focus, body.dark-mode select:focus{outline-color:var(--sky);}
 .feedback{font-size:13px;margin-top:8px;display:none;}
 .feedback.show{display:block;}
 .feedback.ok{color:var(--sage);}
