@@ -495,16 +495,25 @@ async function changeTheme(theme, profileId){
   }
 }
 
+// Clique no botão de tema: inverte o tema atual e redesenha o próprio botão (senão o
+// onclick antigo ficaria "preso" apontando sempre pro mesmo tema, exigindo logout/login
+// pra funcionar de novo)
+async function toggleTheme(profileId){
+  const next = getTheme() === 'dark' ? 'light' : 'dark';
+  await changeTheme(next, profileId);
+  const container = document.getElementById('theme-toggle-container');
+  if (container) container.innerHTML = buildThemeToggle(profileId);
+}
+
 // Constrói o botão de alternância de tema (sol/lua) mostrado na barra lateral
 function buildThemeToggle(profileId){
   const isDark = getTheme() === 'dark';
-  const nextTheme = isDark ? 'light' : 'dark';
   const label = isDark ? t('theme_toggle_to_light') : t('theme_toggle_to_dark');
   const icon = isDark
     ? `<svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M20 14.5A8.5 8.5 0 1110 3.2a7 7 0 0010 11.3z" fill="currentColor"/></svg>`
     : `<svg viewBox="0 0 24 24" width="15" height="15" fill="none"><circle cx="12" cy="12" r="5" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 1.5v3M12 19.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1.5 12h3M19.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></g></svg>`;
   return `
-    <button type="button" class="theme-toggle-btn" onclick="changeTheme('${nextTheme}', '${profileId}')">
+    <button type="button" class="theme-toggle-btn" onclick="toggleTheme('${profileId}')">
       ${icon}<span>${label}</span>
     </button>
   `;
