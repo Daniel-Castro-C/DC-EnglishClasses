@@ -31,6 +31,9 @@ const LESSONS_PER_PAGE = 10;
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
   translateStaticChrome();
 
+  await syncThemeFromProfile(myProfile);
+  document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
+
   grammarUnlocked = await isGrammarUnlocked();
   await loadLessons();
 })();

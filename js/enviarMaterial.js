@@ -12,6 +12,9 @@ let myProfile = null;
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
   translateStaticChrome();
 
+  await syncThemeFromProfile(myProfile);
+  document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
+
   document.getElementById('nav-container').innerHTML = buildStudentTopNav('enviar', await isGrammarUnlocked());
   render();
 })();

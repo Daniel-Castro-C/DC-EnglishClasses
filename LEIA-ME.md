@@ -435,3 +435,54 @@ Suba: `js/admin.js`, `js/perfil.js`.
 - O dia/horário também aparece como uma segunda linha, discreta, embaixo do nome de cada aluno na
   lista — pra você ver a ordem batendo o olho, sem precisar abrir ninguém.
 - O aluno também vê esse dia/horário no próprio Perfil dele (só visualização, ele não edita).
+
+---
+
+## ATUALIZAÇÃO 17 — Termo do dia, guia de boas-vindas, modo escuro e mural de conquistas
+
+### A) Rodar o novo SQL
+Copie e cole o conteúdo do arquivo `supabase-update-14-termo-onboarding-tema-badges.sql` no SQL Editor
+do Supabase → **Run**. (Cria a tabela do Termo do dia já com os 365 termos cadastrados, e adiciona duas
+colunas novas no perfil: `has_seen_onboarding` e `preferred_theme`.)
+
+### B) Subir os arquivos no GitHub
+- **Novos**: a pasta `badges/` inteira (4 imagens: `badge-10.png`, `badge-30.png`, `badge-50.png`,
+  `badge-100.png`) e o arquivo `guia-portal-do-aluno.pdf` (na raiz do projeto, junto com o `index.html`).
+- **Atualizados**: `style.css`, `js/common.js`, `js/admin.js`, `js/perfil.js`, `js/aluno.js`,
+  `js/enviarMaterial.js`, `js/guiasGramatica.js`, `js/perguntaAoDaniel.js`, `home.html`, `perfil.html`,
+  `aluno.html`, `enviar-material.html`, `guias-gramatica.html`, `pergunte-ao-daniel.html`.
+
+### Como funciona agora
+
+**1. Termo do dia**
+- Lá embaixo da página inicial (Início), sempre por último, aparece um card com um termo/expressão em
+  inglês do dia, com definição e uma frase de exemplo — sempre em inglês, mesmo se o aluno estiver com
+  o portal em português (só o título do card acompanha o idioma).
+- São 365 termos cadastrados, um por dia. Quando os 365 acabam, o ciclo reinicia do primeiro
+  automaticamente — não precisa fazer nada.
+
+**2. Guia de boas-vindas (onboarding)**
+- No primeiro acesso de cada aluno (e só nesse primeiro acesso, em qualquer aparelho), aparece um
+  pop-up de boas-vindas com um botão para baixar o guia em PDF do portal.
+- Depois que o aluno fecha ou baixa, o pop-up nunca mais aparece pra ele.
+
+**3. Modo escuro**
+- Nas páginas internas (depois do login), tem um botão na barra lateral pra alternar entre claro/escuro.
+- A escolha fica salva no perfil do aluno — se ele trocar de celular pra computador, o tema escolhido
+  continua o mesmo.
+- A tela de login e as telas de recuperação de senha continuam sempre no modo claro.
+
+**4. Mural de conquistas**
+- Na página inicial, logo abaixo do nome do aluno, aparece uma fileira de emblemas: os já conquistados
+  aparecem coloridos (o mais recente, em destaque, maior), e só o **próximo** emblema ainda não
+  conquistado aparece, em cinza — sem mostrar quantas aulas faltam.
+- Os marcos são 10, 30, 50 e 100 aulas — calculado automaticamente a partir da quantidade de aulas já
+  cadastradas, então já funciona retroativo pra quem já tem aulas no sistema, sem precisar de nenhum
+  ajuste manual.
+- Você também vê o mesmo mural no seu painel, dentro do Perfil de cada aluno.
+
+### Correção: bandeiras do seletor de idioma
+As bandeiras 🇧🇷/🇺🇸 do seletor de idioma agora são desenhadas (SVG) em vez de emoji — em computadores
+com Windows, o emoji de bandeira não é suportado e aparecia como as letras "BR"/"US" dentro de uma
+caixinha, em vez da bandeira. Com essa mudança, aparece igual em qualquer aparelho.
+

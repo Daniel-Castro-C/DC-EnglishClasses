@@ -648,6 +648,11 @@ function renderPerfilTab(){
   const s = currentStudent;
   document.getElementById('tab-content').innerHTML = `
     <div class="box">
+      <h3>Mural de conquistas</h3>
+      ${buildAchievementsSection(currentLessons.length, { title: '' }) || `<div class="small-note" style="margin-top:0;">Ainda sem emblemas — aparece aqui assim que o aluno completar 10 aulas.</div>`}
+    </div>
+
+    <div class="box">
       <h3>Perfil do aluno</h3>
       <div class="row" style="align-items:center;">
         ${s.avatar_url

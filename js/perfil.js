@@ -12,6 +12,9 @@ let myProfile = null;
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
   translateStaticChrome();
 
+  await syncThemeFromProfile(myProfile);
+  document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
+
   document.getElementById('nav-container').innerHTML = buildStudentTopNav('perfil', await isGrammarUnlocked());
   render();
 })();
@@ -60,7 +63,7 @@ function render(){
       ${scheduleLabel ? `
         <div style="border-top:1px solid var(--line);margin:18px 0 12px;"></div>
         <h3 style="margin-bottom:4px;">${t('schedule_title')}</h3>
-        <div style="font-size:15px;color:var(--ink);font-weight:600;">${scheduleLabel}</div>
+        <div style="font-size:15px;color:var(--text);font-weight:600;">${scheduleLabel}</div>
       ` : ''}
     </div>
 

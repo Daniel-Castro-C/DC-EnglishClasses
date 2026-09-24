@@ -208,6 +208,23 @@ const I18N = {
     edit_save_error: 'Não foi possível salvar as alterações.',
     delete_confirm: 'Excluir esta pergunta? Essa ação não pode ser desfeita.',
     delete_error_alert: 'Não foi possível excluir a pergunta.',
+
+    // modo escuro
+    theme_toggle_to_dark: 'Modo escuro',
+    theme_toggle_to_light: 'Modo claro',
+
+    // mural de conquistas
+    achievements_title: 'Mural de conquistas',
+
+    // termo do dia
+    word_of_day_title: 'Termo do dia',
+
+    // onboarding (pop-up de boas-vindas)
+    onboarding_title: 'Seja bem-vindo(a) à D.C English Classes!',
+    onboarding_p1: 'Preparamos um guia rápido para você conhecer todos os cantos do portal — login, materiais de aula, como tirar dúvidas comigo e muito mais.',
+    onboarding_p2: 'Baixe e guarde para consultar sempre que precisar.',
+    onboarding_download_btn: 'Baixar guia em PDF',
+    onboarding_close_btn: 'Já vi, pode fechar',
   },
   en: {
     lang_choose: 'Choose the language',
@@ -351,6 +368,19 @@ const I18N = {
     edit_save_error: 'Couldn\'t save the changes.',
     delete_confirm: 'Delete this question? This action cannot be undone.',
     delete_error_alert: 'Couldn\'t delete the question.',
+
+    theme_toggle_to_dark: 'Dark mode',
+    theme_toggle_to_light: 'Light mode',
+
+    achievements_title: 'Achievement wall',
+
+    word_of_day_title: 'Word of the day',
+
+    onboarding_title: 'Welcome to D.C English Classes!',
+    onboarding_p1: 'We put together a quick guide so you can get to know every corner of the portal — logging in, lesson materials, how to ask me questions, and more.',
+    onboarding_p2: 'Download it and keep it handy whenever you need it.',
+    onboarding_download_btn: 'Download the PDF guide',
+    onboarding_close_btn: 'Got it, close this',
   }
 };
 
@@ -404,16 +434,152 @@ async function changeLanguage(lang, profileId){
   window.location.reload();
 }
 
-// Constrói o seletor de idioma (bandeiras 🇧🇷 / 🇺🇸) mostrado no topo da barra lateral
+// Ícones de bandeira em SVG (não usamos mais emoji: no Windows, emoji de bandeira
+// não renderiza como imagem e cai para o texto "BR"/"US" dentro de uma caixa).
+const FLAG_SVG_BR = `<svg viewBox="0 0 30 21" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="30" height="21" fill="#0C9B4A"/><polygon points="15,3 27,10.5 15,18 3,10.5" fill="#FCDA00"/><circle cx="15" cy="10.5" r="5" fill="#1B4C9C"/></svg>`;
+const FLAG_SVG_US = `<svg viewBox="0 0 30 21" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="30" height="21" fill="#fff"/><g fill="#B22234"><rect y="0" width="30" height="1.6"/><rect y="3.2" width="30" height="1.6"/><rect y="6.4" width="30" height="1.6"/><rect y="9.6" width="30" height="1.6"/><rect y="12.8" width="30" height="1.6"/><rect y="16" width="30" height="1.6"/><rect y="19.2" width="30" height="1.6"/></g><rect width="13" height="11.2" fill="#3C3B6E"/></svg>`;
+
+// Constrói o seletor de idioma (bandeiras BR / US) mostrado no topo da barra lateral
 function buildLanguageSwitcher(profileId){
   const lang = getLang();
   return `
     <div class="lang-switcher">
       <div class="lang-switcher-label">${t('lang_choose')}</div>
       <div class="lang-switcher-flags">
-        <button type="button" class="lang-flag-btn ${lang === 'pt' ? 'active' : ''}" title="Português" aria-label="Português" onclick="changeLanguage('pt', '${profileId}')">🇧🇷</button>
-        <button type="button" class="lang-flag-btn ${lang === 'en' ? 'active' : ''}" title="English" aria-label="English" onclick="changeLanguage('en', '${profileId}')">🇺🇸</button>
+        <button type="button" class="lang-flag-btn ${lang === 'pt' ? 'active' : ''}" title="Português" aria-label="Português" onclick="changeLanguage('pt', '${profileId}')">${FLAG_SVG_BR}</button>
+        <button type="button" class="lang-flag-btn ${lang === 'en' ? 'active' : ''}" title="English" aria-label="English" onclick="changeLanguage('en', '${profileId}')">${FLAG_SVG_US}</button>
       </div>
+    </div>
+  `;
+}
+
+// ==========================================================
+// ---------- Modo escuro (tema) ----------
+// ==========================================================
+const THEME_STORAGE_KEY = 'portal_theme';
+
+// Retorna o tema atualmente ativo (cache local no navegador)
+function getTheme(){
+  return localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+}
+
+function setThemeLocal(theme){
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
+
+// Aplica a classe do tema no <body> (chame de novo sempre que o tema mudar)
+function applyTheme(){
+  document.body.classList.toggle('dark-mode', getTheme() === 'dark');
+}
+
+// No carregamento da página, sincroniza o cache local com o tema salvo no perfil do aluno
+// (o perfil no banco é a fonte de verdade — assim o tema "segue" o aluno em qualquer aparelho)
+async function syncThemeFromProfile(profile){
+  if (!profile) { applyTheme(); return getTheme(); }
+  if (profile.preferred_theme === 'light' || profile.preferred_theme === 'dark') {
+    if (profile.preferred_theme !== getTheme()) setThemeLocal(profile.preferred_theme);
+  } else {
+    try { await sb.from('profiles').update({ preferred_theme: getTheme() }).eq('id', profile.id); } catch (e) {}
+  }
+  applyTheme();
+  return getTheme();
+}
+
+// Alterna o tema do portal: salva local + no perfil do aluno (persiste pro próximo acesso)
+async function changeTheme(theme, profileId){
+  if (theme === getTheme()) return;
+  setThemeLocal(theme);
+  applyTheme();
+  if (profileId) {
+    try { await sb.from('profiles').update({ preferred_theme: theme }).eq('id', profileId); } catch (e) { console.error('Erro ao salvar tema no perfil:', e); }
+  }
+}
+
+// Constrói o botão de alternância de tema (sol/lua) mostrado na barra lateral
+function buildThemeToggle(profileId){
+  const isDark = getTheme() === 'dark';
+  const nextTheme = isDark ? 'light' : 'dark';
+  const label = isDark ? t('theme_toggle_to_light') : t('theme_toggle_to_dark');
+  const icon = isDark
+    ? `<svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M20 14.5A8.5 8.5 0 1110 3.2a7 7 0 0010 11.3z" fill="currentColor"/></svg>`
+    : `<svg viewBox="0 0 24 24" width="15" height="15" fill="none"><circle cx="12" cy="12" r="5" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 1.5v3M12 19.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1.5 12h3M19.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></g></svg>`;
+  return `
+    <button type="button" class="theme-toggle-btn" onclick="changeTheme('${nextTheme}', '${profileId}')">
+      ${icon}<span>${label}</span>
+    </button>
+  `;
+}
+
+// ==========================================================
+// ---------- Mural de conquistas (badges por marco de aulas) ----------
+// ==========================================================
+const BADGE_MILESTONES = [
+  { threshold: 10,  file: 'badges/badge-10.png',  alt: '10 classes badge' },
+  { threshold: 30,  file: 'badges/badge-30.png',  alt: '30 classes badge' },
+  { threshold: 50,  file: 'badges/badge-50.png',  alt: '50 classes badge' },
+  { threshold: 100, file: 'badges/badge-100.png', alt: '100 classes badge' },
+];
+
+// Monta o HTML do mural de conquistas a partir da quantidade de aulas do aluno.
+// Emblemas já conquistados aparecem coloridos (o mais recente, maior); só o PRÓXIMO
+// emblema ainda não conquistado aparece, em cinza (sem número de progresso).
+// title: permite sobrescrever o texto do título (usado no painel do professor, que fica só em PT).
+function buildAchievementsSection(lessonCount, opts){
+  opts = opts || {};
+  const count = Number(lessonCount) || 0;
+  const earned = BADGE_MILESTONES.filter(m => count >= m.threshold);
+  const next = BADGE_MILESTONES[earned.length] || null;
+  const title = opts.title !== undefined ? opts.title : t('achievements_title');
+
+  if (earned.length === 0 && !next) return '';
+
+  let icons = '';
+  earned.forEach((m, i) => {
+    const isCurrent = i === earned.length - 1;
+    icons += `<img class="badge-icon ${isCurrent ? 'badge-current' : ''}" src="${m.file}" alt="${m.alt}">`;
+  });
+  if (next) {
+    icons += `<img class="badge-icon badge-locked" src="${next.file}" alt="${next.alt}">`;
+  }
+
+  return `
+    <div class="achievements-wall">
+      ${title ? `<div class="achievements-wall-title">${title}</div>` : ''}
+      <div class="achievements-row">${icons}</div>
+    </div>
+  `;
+}
+
+// ==========================================================
+// ---------- Termo do dia ----------
+// ==========================================================
+// Dia 1 do ciclo de 365 termos = 2026-09-25. Depois do dia 365, volta pro dia 1 (ciclo eterno).
+const WORD_OF_DAY_EPOCH_UTC = Date.UTC(2026, 8, 25); // mês 0-indexado: 8 = setembro
+
+async function getTodayWordOfDay(){
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.floor((todayUTC - WORD_OF_DAY_EPOCH_UTC) / 86400000);
+  const dayIndex = ((diffDays % 365) + 365) % 365 + 1;
+  try {
+    const { data, error } = await sb.from('word_of_day').select('*').eq('day_index', dayIndex).single();
+    if (error || !data) return null;
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+// O termo, a definição e a frase de exemplo NUNCA são traduzidos (ficam sempre em inglês,
+// mesmo com o portal em português) — só o título do card segue o idioma escolhido.
+function buildWordOfDayCard(entry){
+  if (!entry) return '';
+  return `
+    <div class="lesson-card word-of-day-card">
+      <h3>${t('word_of_day_title')}</h3>
+      <div class="word-of-day-term">${escapeHtml(entry.term)}</div>
+      <div class="word-of-day-definition">${escapeHtml(entry.definition)}</div>
+      <div class="word-of-day-example">&ldquo;${escapeHtml(entry.example)}&rdquo;</div>
     </div>
   `;
 }
