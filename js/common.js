@@ -225,6 +225,25 @@ const I18N = {
     onboarding_p2: 'Baixe e guarde para consultar sempre que precisar.',
     onboarding_download_btn: 'Baixar guia em PDF',
     onboarding_close_btn: 'Já vi, pode fechar',
+
+    // preview de arquivo
+    preview_file: 'Visualizar',
+
+    // status de estudo (Guias de Gramática)
+    mark_studied: 'Já estudei',
+    mark_study_more: 'Estudar mais',
+
+    // busca nos Guias de Gramática (todos os níveis)
+    grammar_search_placeholder: 'Buscar em todos os níveis...',
+    grammar_search_no_results: 'Nenhum material encontrado.',
+    grammar_search_results_label: 'Resultados da busca',
+
+    // filtro por status de estudo
+    filter_all: 'Todos',
+
+    // "Enviar dúvida sobre esse conteúdo"
+    ask_about_material: 'Enviar dúvida sobre este conteúdo',
+    ask_about_prefix: 'Dúvida sobre',
   },
   en: {
     lang_choose: 'Choose the language',
@@ -381,6 +400,22 @@ const I18N = {
     onboarding_p2: 'Download it and keep it handy whenever you need it.',
     onboarding_download_btn: 'Download the PDF guide',
     onboarding_close_btn: 'Got it, close this',
+
+    preview_file: 'Preview',
+
+    mark_studied: 'I studied this',
+    mark_study_more: 'Study more',
+
+    grammar_search_placeholder: 'Search all levels...',
+    grammar_search_no_results: 'No material found.',
+    grammar_search_results_label: 'Search results',
+
+    // filtro por status de estudo
+    filter_all: 'All',
+
+    // "Ask a question about this content"
+    ask_about_material: 'Send a question about this content',
+    ask_about_prefix: 'Question about',
   }
 };
 
@@ -610,8 +645,12 @@ function formatDateLocalized(dateObjOrIso){
   return d.toLocaleDateString(getLang() === 'en' ? 'en-US' : 'pt-BR');
 }
 
+// Ícone de sino (SVG) usado para indicar notificações não lidas de um módulo
+const NOTIF_BELL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" style="flex-shrink:0;" aria-hidden="true"><path d="M12 3a5 5 0 00-5 5v3.5c0 .6-.2 1.2-.6 1.7L5 15h14l-1.4-1.8c-.4-.5-.6-1.1-.6-1.7V8a5 5 0 00-5-5z" fill="#C98A2E"/><path d="M9.5 17.5a2.5 2.5 0 005 0" stroke="#C98A2E" stroke-width="1.4" stroke-linecap="round"/></svg>`;
+
 // Constrói o menu principal (topo da barra lateral) usado em todas as páginas do aluno
-function buildStudentTopNav(activeKey, showGrammarGuides){
+function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts){
+  notifCounts = notifCounts || {};
   const items = [
     { key: 'home',      label: t('nav_home'),      href: 'home.html' },
     { key: 'perfil',    label: t('nav_perfil'),    href: 'perfil.html' },
@@ -627,7 +666,48 @@ function buildStudentTopNav(activeKey, showGrammarGuides){
     const active = it.key === activeKey ? 'active' : '';
     html += `<div class="nav-item ${active}" onclick="window.location.href='${it.href}'">
       <span>${it.label}</span>
+      ${notifCounts[it.key] ? NOTIF_BELL_SVG : ''}
     </div>`;
   });
   return html;
+}
+
+// ==========================================================
+// ---------- Notificações dentro do portal ----------
+// ==========================================================
+// Retorna um objeto tipo {aulas: 2, daniel: 1} com a quantidade de notificações
+// não lidas por módulo (chaves batem com as usadas em buildStudentTopNav)
+async function getNotificationCounts(studentId){
+  const counts = {};
+  try {
+    const { data } = await sb.from('notifications').select('type').eq('student_id', studentId).eq('read', false);
+    (data || []).forEach(n => {
+      const key = n.type === 'new_lesson' ? 'aulas' : (n.type === 'daniel_answered' ? 'daniel' : null);
+      if (key) counts[key] = (counts[key] || 0) + 1;
+    });
+  } catch (e) { console.error('Erro ao buscar notificações:', e); }
+  return counts;
+}
+
+// Marca como lidas todas as notificações de um tipo (chamado quando o aluno visita a página correspondente)
+async function markNotificationsRead(studentId, type){
+  try { await sb.from('notifications').update({ read: true }).eq('student_id', studentId).eq('type', type).eq('read', false); } catch (e) {}
+}
+
+// ==========================================================
+// ---------- Preview de PDF antes de baixar ----------
+// ==========================================================
+function isPdfPath(path){
+  return /\.pdf$/i.test(path || '');
+}
+
+// Abre o arquivo numa nova aba (signed URL sem forçar download, diferente do botão "Baixar")
+async function previewFile(filePath){
+  try {
+    const { data, error } = await sb.storage.from(STORAGE_BUCKET).createSignedUrl(filePath, 60 * 10);
+    if (error || !data) { alert(t('download_error_alert')); return; }
+    window.open(data.signedUrl, '_blank');
+  } catch (e) {
+    alert(t('download_error_alert'));
+  }
 }

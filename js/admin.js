@@ -653,6 +653,11 @@ function renderPerfilTab(){
     </div>
 
     <div class="box">
+      <h3>Status de estudo — Guias de Gramática</h3>
+      <div id="grammar-status-box"><div class="small-note" style="margin-top:0;">Carregando...</div></div>
+    </div>
+
+    <div class="box">
       <h3>Perfil do aluno</h3>
       <div class="row" style="align-items:center;">
         ${s.avatar_url
@@ -709,6 +714,45 @@ function renderPerfilTab(){
   `;
 
   document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
+
+  renderGrammarStatusBox(s.id);
+}
+
+async function renderGrammarStatusBox(studentId){
+  const box = document.getElementById('grammar-status-box');
+  if (!box) return;
+
+  const { data, error } = await sb
+    .from('grammar_material_status')
+    .select('status, grammar_materials(title, level, sublevel)')
+    .eq('student_id', studentId);
+
+  if (error) { box.innerHTML = `<div class="small-note" style="margin-top:0;">Não foi possível carregar.</div>`; return; }
+
+  const studied = (data || []).filter(r => r.status === 'estudado' && r.grammar_materials);
+  const more = (data || []).filter(r => r.status === 'estudar_mais' && r.grammar_materials);
+
+  if (studied.length === 0 && more.length === 0) {
+    box.innerHTML = `<div class="small-note" style="margin-top:0;">O aluno ainda não marcou nenhum material.</div>`;
+    return;
+  }
+
+  const listHtml = (rows, emptyMsg) => rows.length
+    ? `<ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.7;">${rows.map(r => `<li>${escapeHtml(r.grammar_materials.title)} <span class="small-note" style="display:inline;">(${GUIAS_LEVEL_LABELS[r.grammar_materials.level] || r.grammar_materials.level})</span></li>`).join('')}</ul>`
+    : `<div class="small-note" style="margin-top:0;">${emptyMsg}</div>`;
+
+  box.innerHTML = `
+    <div class="row" style="align-items:flex-start;">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--sage);margin-bottom:6px;">✓ Já estudou</div>
+        ${listHtml(studied, 'Nenhum ainda.')}
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:6px;">↻ Precisa estudar mais</div>
+        ${listHtml(more, 'Nenhum ainda.')}
+      </div>
+    </div>
+  `;
 }
 
 let danielSubTab = 'pending'; // 'pending' | 'answered'
@@ -818,6 +862,9 @@ async function answerQuestionModule(questionId, subject, studentId){
     .eq('id', questionId);
 
   if (error) { alert('Não foi possível salvar a resposta.'); console.error(error); return; }
+
+  // Avisa o aluno dentro do próprio portal (sininho ao lado de "Pergunte ao Daniel")
+  try { await sb.from('notifications').insert({ student_id: studentId, type: 'daniel_answered' }); } catch (e) { console.error('Erro ao criar notificação:', e); }
 
   const { data: studentProfile } = await sb.from('profiles').select('email, full_name').eq('id', studentId).single();
 
@@ -945,7 +992,7 @@ async function renderPedidosTab(){
       </div>
       ${r.notes ? `<p style="font-size:14px;margin:10px 0;">${escapeHtml(r.notes)}</p>` : ''}
       ${r.external_link ? `<div class="resource-row"><div class="resource-icon ic-pdf">Link</div><div class="resource-info"><div class="name">Link enviado pelo aluno</div></div><button class="resource-action" onclick="window.open('${escapeAttr(r.external_link)}','_blank')">Abrir link</button></div>` : ''}
-      ${r.file_path ? `<div class="resource-row"><div class="resource-icon ic-pdf">Arq</div><div class="resource-info"><div class="name">${escapeHtml(r.file_name || 'Arquivo enviado')}</div></div><button class="resource-action" onclick="downloadRequestFile('${r.file_path}')">Baixar</button></div>` : ''}
+      ${r.file_path ? `<div class="resource-row"><div class="resource-icon ic-pdf">Arq</div><div class="resource-info"><div class="name">${escapeHtml(r.file_name || 'Arquivo enviado')}</div></div>${isPdfPath(r.file_path) ? `<button class="resource-action" onclick="previewFile('${r.file_path}')">Visualizar</button>` : ''}<button class="resource-action" onclick="downloadRequestFile('${r.file_path}')">Baixar</button></div>` : ''}
     </div>
   `).join('');
 
@@ -1246,6 +1293,9 @@ async function createLesson(){
   });
 
   if (error) { alert('Não foi possível salvar a aula.'); console.error(error); return; }
+
+  // Avisa o aluno dentro do próprio portal (sininho ao lado de "Minhas aulas")
+  try { await sb.from('notifications').insert({ student_id: currentStudent.id, type: 'new_lesson' }); } catch (e) { console.error('Erro ao criar notificação:', e); }
 
   await loadLessonsFor(currentStudent.id);
   renderStudentDetail();

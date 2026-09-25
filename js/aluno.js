@@ -12,6 +12,7 @@ let grammarUnlocked = false;
 let lessonsPage = 0;
 let lessonSearchTerm = '';
 let currentResources = [];
+let notifCounts = {};
 const LESSONS_PER_PAGE = 10;
 
 (async function init(){
@@ -35,6 +36,12 @@ const LESSONS_PER_PAGE = 10;
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
 
   grammarUnlocked = await isGrammarUnlocked();
+
+  // O aluno já está vendo "Minhas aulas" agora, então qualquer notificação de aula nova
+  // pode ser marcada como lida (o sininho não aparece mais nesta ou em outras páginas).
+  await markNotificationsRead(myProfile.id, 'new_lesson');
+  notifCounts = await getNotificationCounts(myProfile.id);
+
   await loadLessons();
 })();
 
@@ -54,7 +61,7 @@ async function loadLessons(){
   myLessons = data || [];
 
   if (myLessons.length === 0) {
-    document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas', grammarUnlocked) + `<div class="nav-label">${t('nav_aulas')}</div>`;
+    document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas', grammarUnlocked, notifCounts) + `<div class="nav-label">${t('nav_aulas')}</div>`;
     document.getElementById('main-content').innerHTML = `
       <div class="topline"><div><h1>${t('no_lessons_title')}</h1>
       <div class="sub">${t('no_lessons_sub')}</div></div></div>`;
@@ -68,7 +75,7 @@ async function loadLessons(){
 }
 
 function renderNav(){
-  let html = buildStudentTopNav('aulas', grammarUnlocked);
+  let html = buildStudentTopNav('aulas', grammarUnlocked, notifCounts);
   html += `<div class="nav-label">${t('nav_aulas')}</div>`;
   html += `<input id="lesson-search-input" placeholder="${t('search_placeholder')}" value="${escapeHtml(lessonSearchTerm)}"
     oninput="onLessonSearchInput(this.value)"
@@ -171,6 +178,7 @@ async function renderLesson(lessonId){
         <div class="name">${escapeHtml(r.name)}</div>
         <div class="desc">${escapeHtml(r.description || '')}</div>
       </div>
+      ${isPdfPath(r.file_path) ? `<button class="resource-action" onclick="previewFile('${r.file_path}')">${t('preview_file')}</button>` : ''}
       <button class="resource-action" onclick="downloadResource('${r.file_path}')">${t('download_file')}</button>
     </div>`;
   }).join('');

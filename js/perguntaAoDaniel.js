@@ -2,6 +2,8 @@ let myProfile = null;
 let myQuestions = [];
 let activeQuestionId = null; // null = formulário de nova pergunta
 let grammarUnlocked = false;
+let notifCounts = {};
+let prefilledSubject = ''; // vem do botão "Enviar dúvida sobre este conteúdo" nos Guias de Gramática
 
 (async function init(){
   const session = await requireSession();
@@ -11,6 +13,12 @@ let grammarUnlocked = false;
   if (!myProfile) { await signOutAndRedirect(); return; }
   if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
 
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const subj = params.get('subject');
+    if (subj) prefilledSubject = subj;
+  } catch (e) {}
+
   await syncLanguageFromProfile(myProfile);
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
   translateStaticChrome();
@@ -19,6 +27,11 @@ let grammarUnlocked = false;
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
 
   grammarUnlocked = await isGrammarUnlocked();
+
+  // Aluno já está vendo "Pergunte ao Daniel" agora, então o aviso de pergunta respondida some.
+  await markNotificationsRead(myProfile.id, 'daniel_answered');
+  notifCounts = await getNotificationCounts(myProfile.id);
+
   await loadQuestions();
   renderNav();
   renderNewQuestionForm();
@@ -36,7 +49,7 @@ async function loadQuestions(){
 }
 
 function renderNav(){
-  let html = buildStudentTopNav('daniel', grammarUnlocked);
+  let html = buildStudentTopNav('daniel', grammarUnlocked, notifCounts);
   html += `<div class="nav-label">${t('my_questions_label')}</div>`;
   html += `<div class="nav-item ${activeQuestionId === null ? 'active' : ''}" onclick="renderNewQuestionForm()">
     <span>${t('new_question_nav')}</span>
@@ -54,6 +67,9 @@ function renderNewQuestionForm(){
   activeQuestionId = null;
   renderNav();
 
+  const subjectValue = prefilledSubject;
+  prefilledSubject = ''; // usa o preenchimento só uma vez
+
   document.getElementById('main-content').innerHTML = `
     <div class="topline">
       <div>
@@ -70,7 +86,7 @@ function renderNewQuestionForm(){
     <div class="lesson-card">
       <h3>${t('new_question_title')}</h3>
       <label>${t('subject_label')}</label>
-      <input id="q-subject" placeholder="${t('subject_placeholder')}">
+      <input id="q-subject" placeholder="${t('subject_placeholder')}" value="${escapeHtml(subjectValue)}">
       <label>${t('question_label')}</label>
       <textarea id="q-question" placeholder="${t('question_placeholder')}"></textarea>
       <button id="q-submit-btn" class="btn-dark-sm" onclick="submitQuestion()">${t('send_question_btn')}</button>
