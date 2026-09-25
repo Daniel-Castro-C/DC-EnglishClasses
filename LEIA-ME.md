@@ -486,3 +486,52 @@ As bandeiras 🇧🇷/🇺🇸 do seletor de idioma agora são desenhadas (SVG) 
 com Windows, o emoji de bandeira não é suportado e aparecia como as letras "BR"/"US" dentro de uma
 caixinha, em vez da bandeira. Com essa mudança, aparece igual em qualquer aparelho.
 
+---
+
+## ATUALIZAÇÃO 18 — Notificações no portal, status de estudo, busca cross-nível e preview de PDF
+
+### A) Rodar o novo SQL
+Copie e cole o conteúdo do arquivo `supabase-update-15-notificacoes-status-estudo.sql` no SQL Editor
+do Supabase → **Run**. (Cria as tabelas de notificações e de status de estudo dos Guias de Gramática.)
+
+### B) Subir os arquivos no GitHub
+Atualizados: `style.css`, `js/common.js`, `js/admin.js`, `js/aluno.js`, `js/guiasGramatica.js`,
+`js/perguntaAoDaniel.js`, `js/perfil.js`, `js/enviarMaterial.js`, `home.html`.
+
+### Como funciona agora
+
+**1. Notificações dentro do portal**
+- Quando você cadastra uma aula nova, ou responde uma pergunta em "Pergunte ao Daniel", o aluno passa a
+  ver um sininho ao lado do item correspondente no menu ("Minhas aulas" ou "Pergunte ao Daniel").
+- O sininho some sozinho assim que o aluno visita aquela página — não precisa fazer nada manualmente.
+- O e-mail continua sendo enviado normalmente nos dois casos, como já acontecia — a notificação no
+  portal é só um reforço a mais, não substitui o e-mail.
+
+**2. "Já estudei" / "Estudar mais" nos Guias de Gramática**
+- Cada material agora tem dois botões: **"Já estudei"** e **"Estudar mais"**. Clicando em um, ele fica
+  destacado (verde para "Já estudei", laranja para "Estudar mais"). Clicar de novo no mesmo botão
+  desmarca. Um material nunca visitado fica sem marcação nenhuma.
+- Logo acima da lista de materiais (tanto dentro de um nível quanto nos resultados de busca), tem um
+  filtro **Todos / Já estudei / Estudar mais** — o aluno pode filtrar pra ver só o que já revisou ou só
+  o que ainda precisa reforçar.
+- No seu painel, dentro do **Perfil de cada aluno**, uma nova caixa "Status de estudo — Guias de
+  Gramática" mostra as duas listas (o que ele já marcou como estudado e o que marcou como "estudar
+  mais"), pra você acompanhar o progresso de revisão de cada aluno.
+
+**3. Busca nos Guias de Gramática (todos os níveis de uma vez)**
+- Na tela inicial de "Guias de Gramática" (antes de escolher um nível), agora tem um campo de busca que
+  procura em Básico, Intermediário e Avançado ao mesmo tempo — sem precisar entrar em cada nível.
+  Os resultados mostram uma etiqueta indicando de qual nível é cada material.
+
+**4. Preview de PDF antes de baixar**
+- Sempre que o arquivo for um PDF, aparece um botão **"Visualizar"** ao lado do "Baixar" — abre o PDF
+  numa aba nova do navegador, sem precisar baixar pra conferir o conteúdo. Vale para os materiais de
+  aula (Minhas aulas), os materiais de Guias de Gramática, e os arquivos que o aluno envia em "Enviar
+  material" (visível pra você, no painel). Arquivos que não são PDF (PPT, Word, imagens) continuam só
+  com o botão de baixar, já que o navegador não tem como pré-visualizar esses formatos.
+
+**5. "Enviar dúvida sobre este conteúdo"**
+- Em cada material de gramática, um novo botão leva direto pra "Pergunte ao Daniel", já com o assunto
+  preenchido como "Dúvida sobre [nome do material]" — o aluno só completa a pergunta e envia. Fica
+  arquivada junto com as outras perguntas normalmente, e quando você responde, o aluno recebe o
+  e-mail de sempre **e** também o sininho de notificação no portal.

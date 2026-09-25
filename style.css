@@ -270,9 +270,17 @@ body.dark-mode .btn-ghost{color:var(--text);}
 body.dark-mode .resource-action{color:var(--text);}
 body.dark-mode .home-card:hover,
 body.dark-mode .level-card:hover{border-color:var(--sky);}
+body.dark-mode .role-switch button.active{color:var(--text);border-bottom-color:var(--sky);}
 body.dark-mode ::placeholder{color:#5B6B8C;opacity:1;}
 body.dark-mode input:focus, body.dark-mode select:focus{outline-color:var(--sky);}
-.feedback{font-size:13px;margin-top:8px;display:none;}
+/* ---------- STATUS DE ESTUDO (Guias de Gramática: "Já estudei" / "Estudar mais") ---------- */
+.study-status-row{display:flex;gap:8px;padding:0 0 12px 44px;flex-wrap:wrap;}
+.study-btn{font-size:12px;padding:5px 11px;border-radius:6px;border:1px solid var(--line);background:var(--paper-card);color:var(--text-soft);cursor:pointer;font-family:inherit;transition:border-color .15s, background .15s, color .15s;}
+.study-btn:hover{border-color:var(--sky);}
+.study-btn.active-good{background:var(--sage);color:#fff;border-color:var(--sage);}
+.study-btn.active-warn{background:var(--amber);color:#fff;border-color:var(--amber);}
+.grammar-material-item{border-top:1px solid var(--line);}
+.grammar-material-item:first-child{border-top:none;}
 .feedback.show{display:block;}
 .feedback.ok{color:var(--sage);}
 .feedback.err{color:var(--danger);}

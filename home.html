@@ -126,7 +126,8 @@
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(profile.id);
 
   const grammarUnlocked = await isGrammarUnlocked();
-  document.getElementById('nav-container').innerHTML = buildStudentTopNav('home', grammarUnlocked);
+  const notifCounts = await getNotificationCounts(profile.id);
+  document.getElementById('nav-container').innerHTML = buildStudentTopNav('home', grammarUnlocked, notifCounts);
 
   const firstName = (profile.full_name || profile.email || '').split(' ')[0];
   const avatar = profile.avatar_url
