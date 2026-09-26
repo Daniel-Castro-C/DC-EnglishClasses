@@ -625,8 +625,9 @@ async function getTodayWordOfDay(){
 function buildWordOfDayCard(entry){
   if (!entry) return '';
   return `
-    <div class="lesson-card word-of-day-card">
-      <h3>${t('word_of_day_title')}</h3>
+    <div class="word-of-day-card">
+      <div class="word-of-day-circle"></div>
+      <div class="word-of-day-label">${t('word_of_day_title')}</div>
       <div class="word-of-day-term">${escapeHtml(entry.term)}</div>
       <div class="word-of-day-definition">${escapeHtml(entry.definition)}</div>
       <div class="word-of-day-example">&ldquo;${escapeHtml(entry.example)}&rdquo;</div>

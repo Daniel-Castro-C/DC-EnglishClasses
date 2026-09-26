@@ -587,17 +587,7 @@ function renderStudentDetail(){
   const s = currentStudent;
 
   const lessonsHtml = currentLessons.map(l => {
-    const rows = (l.resources || []).map(r => {
-      const [cls, label] = ICONS[r.type] || ['ic-pdf','?'];
-      return `<div class="resource-row">
-        <div class="resource-icon ${cls}">${label}</div>
-        <div class="resource-info">
-          <div class="name">${escapeHtml(r.name)}</div>
-          <div class="desc">${escapeHtml(r.description || '')}</div>
-        </div>
-        <button class="resource-action" onclick="deleteResource('${r.id}','${r.file_path}')">Excluir</button>
-      </div>`;
-    }).join('') || `<div class="empty-state">Nenhum material nesta aula ainda.</div>`;
+    const rows = (l.resources || []).map(r => resourceRowWithEditHtml(l, r)).join('') || `<div class="empty-state">Nenhum material nesta aula ainda.</div>`;
 
     return `<div class="lesson-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -1137,6 +1127,11 @@ async function uploadResources(){
     ? `${successCount} material(is) enviado(s) com sucesso!`
     : `${successCount} enviado(s), ${failCount} falharam. Verifique o console para detalhes.`;
 
+  // Avisa o aluno dentro do próprio portal (sininho ao lado de "Minhas aulas")
+  if (successCount > 0) {
+    try { await sb.from('notifications').insert({ student_id: currentStudent.id, type: 'new_lesson' }); } catch (e) { console.error('Erro ao criar notificação:', e); }
+  }
+
   await loadLessonsFor(currentStudent.id);
   renderStudentDetail();
 }
@@ -1305,6 +1300,84 @@ async function deleteLesson(lessonId){
   if (!confirm('Excluir esta aula e todos os materiais dela?')) return;
   const { error } = await sb.from('lessons').delete().eq('id', lessonId);
   if (error) { alert('Não foi possível excluir.'); return; }
+  await loadLessonsFor(currentStudent.id);
+  renderStudentDetail();
+}
+
+function resourceRowWithEditHtml(l, r){
+  const [cls, label] = ICONS[r.type] || ['ic-pdf','?'];
+  return `<div class="resource-row">
+    <div class="resource-icon ${cls}">${label}</div>
+    <div class="resource-info">
+      <div class="name">${escapeHtml(r.name)}</div>
+      <div class="desc">${escapeHtml(r.description || '')}</div>
+    </div>
+    <button class="btn-ghost" onclick="toggleEditResource('${r.id}')">Editar</button>
+    <button class="resource-action" onclick="deleteResource('${r.id}','${r.file_path}')">Excluir</button>
+  </div>
+  <div id="resource-edit-${r.id}" class="box" style="display:none;margin:0 0 16px;">
+    <div class="row">
+      <input id="resource-edit-name-${r.id}" value="${escapeAttr(r.name)}" placeholder="Nome do material">
+    </div>
+    <div class="row">
+      <input id="resource-edit-file-${r.id}" type="file">
+    </div>
+    <div class="small-note" style="margin-top:0;">Deixe o campo de arquivo em branco para manter o arquivo já enviado — só o nome será atualizado.</div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn-dark-sm" onclick="saveResourceEdit('${r.id}','${r.file_path}','${l.id}')">Salvar alterações</button>
+      <button class="btn-ghost" onclick="toggleEditResource('${r.id}')">Cancelar</button>
+    </div>
+    <div id="resource-edit-feedback-${r.id}" class="feedback"></div>
+  </div>`;
+}
+
+function toggleEditResource(resourceId){
+  const el = document.getElementById(`resource-edit-${resourceId}`);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveResourceEdit(resourceId, oldFilePath, lessonId){
+  const nameInput = document.getElementById(`resource-edit-name-${resourceId}`);
+  const fileInput = document.getElementById(`resource-edit-file-${resourceId}`);
+  const feedbackEl = document.getElementById(`resource-edit-feedback-${resourceId}`);
+  const newName = nameInput.value.trim();
+
+  if (!newName) {
+    feedbackEl.className = 'feedback show err';
+    feedbackEl.textContent = 'Dê um nome para o material.';
+    return;
+  }
+
+  const updates = { name: newName };
+  const newFile = fileInput.files[0];
+
+  if (newFile) {
+    const safeFileName = newFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const newFilePath = `${currentStudent.id}/${lessonId}/${Date.now()}_${safeFileName}`;
+    const { error: uploadError } = await sb.storage.from(STORAGE_BUCKET).upload(newFilePath, newFile);
+    if (uploadError) {
+      feedbackEl.className = 'feedback show err';
+      feedbackEl.textContent = 'Não foi possível enviar o novo arquivo.';
+      console.error(uploadError);
+      return;
+    }
+    updates.file_path = newFilePath;
+  }
+
+  const { error } = await sb.from('resources').update(updates).eq('id', resourceId);
+  if (error) {
+    feedbackEl.className = 'feedback show err';
+    feedbackEl.textContent = 'Não foi possível salvar as alterações.';
+    console.error(error);
+    return;
+  }
+
+  // Só remove o arquivo antigo depois que o novo já está salvo com sucesso
+  if (newFile && oldFilePath) {
+    await sb.storage.from(STORAGE_BUCKET).remove([oldFilePath]);
+  }
+
   await loadLessonsFor(currentStudent.id);
   renderStudentDetail();
 }
