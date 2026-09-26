@@ -33,10 +33,19 @@
 
   /* Termo do dia — este card deve SEMPRE ficar por último na página; qualquer novo
      card/módulo futuro deve ser inserido antes de #word-of-day-container no JS abaixo. */
-  .word-of-day-card{margin-top:8px;}
-  .word-of-day-term{font-family:'Baskerville Old Face','Libre Baskerville',Georgia,serif;font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:capitalize;}
-  .word-of-day-definition{font-size:14px;color:var(--text-soft);margin-bottom:10px;line-height:1.5;}
-  .word-of-day-example{font-size:14px;font-style:italic;color:var(--text-soft);line-height:1.5;}
+  .word-of-day-card{
+    margin-top:8px;
+    background:linear-gradient(160deg, var(--ink) 0%, var(--ink-dark) 100%);
+    border-radius:14px;
+    padding:28px 30px;
+    position:relative;
+    overflow:hidden;
+  }
+  .word-of-day-circle{content:"";position:absolute;right:-46px;top:-46px;width:150px;height:150px;border:1px solid rgba(127,168,217,0.25);border-radius:50%;pointer-events:none;}
+  .word-of-day-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#8FA0BF;margin-bottom:12px;font-weight:600;position:relative;}
+  .word-of-day-term{font-family:'Baskerville Old Face','Libre Baskerville',Georgia,serif;font-size:26px;font-weight:700;color:#F1F0EA;margin-bottom:8px;text-transform:capitalize;position:relative;}
+  .word-of-day-definition{font-size:14px;color:#AEBBD2;margin-bottom:10px;line-height:1.55;position:relative;max-width:520px;}
+  .word-of-day-example{font-size:14px;font-style:italic;color:#7FA8D9;line-height:1.55;position:relative;max-width:520px;}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16213E">
