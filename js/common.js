@@ -17,17 +17,21 @@ async function logActivity(studentId, action, details){
 function toggleMobileSidebar(){
   const sidebar = document.querySelector('.sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
+  const menuBtn = document.getElementById('mobile-menu-btn');
   if (!sidebar || !backdrop) return;
   sidebar.classList.toggle('open');
   backdrop.classList.toggle('open');
+  if (menuBtn) menuBtn.classList.toggle('hide-while-open');
 }
 
 function closeMobileSidebar(){
   const sidebar = document.querySelector('.sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
+  const menuBtn = document.getElementById('mobile-menu-btn');
   if (!sidebar || !backdrop) return;
   sidebar.classList.remove('open');
   backdrop.classList.remove('open');
+  if (menuBtn) menuBtn.classList.remove('hide-while-open');
 }
 
 // Fecha o menu automaticamente ao clicar em qualquer item de navegação (no celular)
@@ -562,6 +566,8 @@ const BADGE_MILESTONES = [
   { threshold: 30,  file: 'badges/badge-30.png',  alt: '30 classes badge' },
   { threshold: 50,  file: 'badges/badge-50.png',  alt: '50 classes badge' },
   { threshold: 100, file: 'badges/badge-100.png', alt: '100 classes badge' },
+  { threshold: 150, file: 'badges/badge-150.png', alt: '150 classes badge' },
+  { threshold: 200, file: 'badges/badge-200.png', alt: '200 classes badge' },
 ];
 
 // Monta o HTML do mural de conquistas a partir da quantidade de aulas do aluno.
