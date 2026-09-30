@@ -49,8 +49,7 @@ async function loadLessons(){
   const { data, error } = await sb
     .from('lessons')
     .select('*')
-    .eq('student_id', myProfile.id)
-    .order('created_at', { ascending: false });
+    .eq('student_id', myProfile.id);
 
   if (error) {
     document.getElementById('main-content').innerHTML =
@@ -58,7 +57,7 @@ async function loadLessons(){
     return;
   }
 
-  myLessons = data || [];
+  myLessons = sortLessonsByDate(data || [], false);
 
   if (myLessons.length === 0) {
     document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas', grammarUnlocked, notifCounts) + `<div class="nav-label">${t('nav_aulas')}</div>`;

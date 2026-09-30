@@ -576,11 +576,10 @@ async function loadLessonsFor(studentId){
   const { data, error } = await sb
     .from('lessons')
     .select('*, resources(*)')
-    .eq('student_id', studentId)
-    .order('created_at', { ascending: false });
+    .eq('student_id', studentId);
 
   if (error) { console.error(error); currentLessons = []; return; }
-  currentLessons = data || [];
+  currentLessons = sortLessonsByDate(data || [], false);
 }
 
 function renderStudentDetail(){

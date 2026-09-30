@@ -704,6 +704,20 @@ async function markNotificationsRead(studentId, type){
 // ==========================================================
 // ---------- Preview de PDF antes de baixar ----------
 // ==========================================================
+// Ordena aulas pela data da aula (lesson_date) — não pela data de cadastro (created_at).
+// Quando a aula não tem data preenchida, usa a data de cadastro como reserva, só pra ela
+// não sumir da lista. Assim a ordem reflete a sequência real das aulas, mesmo que você
+// tenha cadastrado uma aula antiga depois de aulas mais novas por engano.
+function sortLessonsByDate(lessons, ascending){
+  return [...lessons].sort((a, b) => {
+    const da = a.lesson_date || a.created_at;
+    const db = b.lesson_date || b.created_at;
+    if (da < db) return ascending ? -1 : 1;
+    if (da > db) return ascending ? 1 : -1;
+    return 0;
+  });
+}
+
 function isPdfPath(path){
   return /\.pdf$/i.test(path || '');
 }
