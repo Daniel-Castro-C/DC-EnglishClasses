@@ -732,3 +732,4 @@ async function previewFile(filePath){
     alert(t('download_error_alert'));
   }
 }
+   document.write('<script src="js/recursos-module.js"><\/script>');
