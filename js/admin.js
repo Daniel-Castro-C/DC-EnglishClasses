@@ -1004,6 +1004,13 @@ async function downloadRequestFile(filePath){
   window.location.href = data.signedUrl;
 }
 
+async function downloadLessonResource(filePath){
+  const displayName = filePath.split('/').pop().replace(/^\d+_/, '');
+  const { data, error } = await sb.storage.from(STORAGE_BUCKET).createSignedUrl(filePath, 60 * 10, { download: displayName });
+  if (error || !data) { alert('Não foi possível baixar este arquivo.'); return; }
+  window.location.href = data.signedUrl;
+}
+
 let resourceRowCount = 0;
 
 function renderNovaAulaTab(){
@@ -1311,6 +1318,8 @@ function resourceRowWithEditHtml(l, r){
       <div class="name">${escapeHtml(r.name)}</div>
       <div class="desc">${escapeHtml(r.description || '')}</div>
     </div>
+    ${isPdfPath(r.file_path) ? `<button class="resource-action" onclick="previewFile('${r.file_path}')">Visualizar</button>` : ''}
+    <button class="resource-action" onclick="downloadLessonResource('${r.file_path}')">Baixar</button>
     <button class="btn-ghost" onclick="toggleEditResource('${r.id}')">Editar</button>
     <button class="resource-action" onclick="deleteResource('${r.id}','${r.file_path}')">Excluir</button>
   </div>
