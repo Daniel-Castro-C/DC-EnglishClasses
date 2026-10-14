@@ -92,16 +92,13 @@ async function handleLogin(){
     return;
   }
 
+  // O registro de "Acessou o portal" agora é feito dentro de getMyProfile (supabaseClient.js)
   const profile = await getMyProfile(data.user.id);
   if (!profile) {
     btn.disabled = false;
     btn.textContent = 'Entrar';
     showError('Não encontramos seu perfil. Fale com o professor.');
     return;
-  }
-
-  if (profile.role === 'student') {
-    logActivity(profile.id, 'login', null); // não bloqueia o redirecionamento
   }
 
   window.location.href = profile.role === 'admin' ? 'admin.html' : 'home.html';
