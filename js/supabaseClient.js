@@ -34,6 +34,20 @@ async function getMyProfile(userId) {
     console.error("Erro ao buscar perfil:", error);
     return null;
   }
+
+  // Registra o acesso do aluno (mesmo quando a sessão já estava ativa),
+  // no máximo uma vez a cada 30 minutos por aparelho.
+  if (data && data.role === 'student' && typeof logActivity === 'function') {
+    try {
+      const key = 'last_access_log_' + data.id;
+      const last = Number(localStorage.getItem(key) || 0);
+      if (Date.now() - last > 30 * 60 * 1000) {
+        localStorage.setItem(key, String(Date.now()));
+        logActivity(data.id, 'login', null);
+      }
+    } catch (e) {}
+  }
+
   return data;
 }
 
