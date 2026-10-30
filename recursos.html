@@ -9,6 +9,29 @@
   .vocab-term{font-family:'Baskerville Old Face','Libre Baskerville',Georgia,serif;font-size:21px;font-weight:700;text-transform:capitalize;margin:0 0 6px;}
   .vocab-def{font-size:14px;color:var(--text);line-height:1.55;margin-bottom:6px;}
   .vocab-ex{font-size:14px;font-style:italic;color:var(--sky);line-height:1.55;margin-bottom:14px;}
+
+  /* ---------- Aprimorando a Escrita ---------- */
+  .feedback{font-size:13px;margin-top:12px;display:none;}
+  .feedback.show{display:block;}
+  .howto ol{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:1.7;color:var(--text);}
+  .howto li{margin-bottom:6px;}
+  .howto .tip{margin:12px 0 0;font-size:13px;color:var(--text-soft);line-height:1.6;}
+  .warn-box{background:#FBF3E2;border:1px solid #C98A2E;border-radius:10px;padding:14px 18px;margin-bottom:18px;}
+  .warn-box h4{margin:0 0 6px;font-size:14px;color:#8A6410;font-family:'IBM Plex Sans',sans-serif;}
+  .warn-box p{margin:0;font-size:13.5px;line-height:1.6;color:#5C4510;}
+  body.dark-mode .warn-box{background:#2A2418;border-color:#8A6410;}
+  body.dark-mode .warn-box h4{color:#E2B35A;}
+  body.dark-mode .warn-box p{color:#D8C9A5;}
+  #texto-input{min-height:260px;font-size:15px;line-height:1.6;margin-bottom:6px;}
+  .texto-counter{font-size:12px;color:var(--text-soft);margin-bottom:14px;}
+  .texto-counter.over{color:var(--danger);font-weight:600;}
+  .status-pill{font-size:11.5px;padding:3px 10px;border-radius:100px;color:#fff;white-space:nowrap;flex-shrink:0;}
+  .status-pill.pending{background:var(--amber);}
+  .status-pill.done{background:var(--sage);}
+  .sub-summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .sub-summary .sub-title{font-size:14px;font-weight:600;min-width:0;}
+  .sub-summary .sub-date{font-size:12px;color:var(--text-soft);font-weight:400;display:block;margin-top:2px;}
+  .sub-text{white-space:pre-wrap;font-size:14.5px;line-height:1.65;margin:14px 0 0;color:var(--text);}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16213E">
@@ -48,7 +71,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="js/supabaseClient.js"></script>
+<script src="js/emailConfig.js"></script>
 <script src="js/common.js"></script>
 <script src="js/recursos.js"></script>
 <a href="https://wa.me/5527997411768" target="_blank" rel="noopener" class="whatsapp-fab">
