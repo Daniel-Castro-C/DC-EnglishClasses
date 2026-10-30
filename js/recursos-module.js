@@ -376,3 +376,6 @@
     if (el) { el.focus(); el.setSelectionRange(val.length, val.length); }
   };
 })();
+
+// Carrega o módulo "Textos para correção" (sininho do aluno + tela do professor)
+document.write('<script src="js/textos-module.js"><\/script>');
