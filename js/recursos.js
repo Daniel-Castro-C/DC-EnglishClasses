@@ -48,7 +48,6 @@ Object.assign(I18N.en, {
   texto_howto_2: 'Click "Send for correction". I receive your text by email and here in the portal.',
   texto_howto_3: 'When the correction is ready, you get a notice here in the portal and by email, and the correction file shows up in the "My submitted texts" list.',
   texto_howto_4: 'In the correction, I mark what needs to be reviewed (spelling, punctuation, grammar, clarity...) without giving the ready answer. Your challenge is to find the mistake, rewrite the text and, if you want, send it again.',
-  texto_tip: 'Tip: write about real situations — a work email, a message to a colleague, a paragraph about the lesson topic. Short texts are very welcome!',
   texto_warning_title: 'Important: don\'t use correctors or artificial intelligence before sending',
   texto_warning: 'Please don\'t use automatic correctors or artificial intelligence tools (ChatGPT, Gemini, Copilot, Grammarly, Word\'s spell checker, etc.) to fix your text before sending it. That way the correction shows your real mistakes and I can help you with what really needs attention. Making mistakes is part of learning!',
   texto_form_title: 'Your text',
