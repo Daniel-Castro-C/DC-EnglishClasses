@@ -198,7 +198,6 @@ async function showTexto(){
         <li>${t('texto_howto_3')}</li>
         <li>${t('texto_howto_4')}</li>
       </ol>
-      <p class="tip">${t('texto_tip')}</p>
     </div>
 
     <div class="warn-box">
