@@ -1019,7 +1019,7 @@ let resourceRowCount = 0;
 function suggestedLessonTitle(){
   // Sugestão editável: o professor pode usar qualquer título.
   const lessonNumbers = currentLessons.map(l => {
-    const match = (l.title || '').match(/(?:Aula|Class)\\s*#?\\s*(\\d+)/i);
+    const match = (l.title || '').match(/(?:Aula|Class)\s*#?\s*(\d+)/i);
     return match ? Number(match[1]) : 0;
   });
   const next = Math.max(currentLessons.length, ...lessonNumbers, 0) + 1;
