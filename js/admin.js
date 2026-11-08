@@ -73,7 +73,10 @@ async function refreshPendingCounts(){
 }
 
 function renderNav(){
-  let html = `<div class="nav-item ${currentView === 'comunicados' ? 'active' : ''}" onclick="openComunicados()">
+  let html = `<div class="nav-item ${currentView === 'home' ? 'active' : ''}" onclick="renderHome()">
+    <span>Home</span>
+  </div>`;
+  html += `<div class="nav-item ${currentView === 'comunicados' ? 'active' : ''}" onclick="openComunicados()">
     <span>Comunicados</span>
   </div>`;
   html += `<div class="nav-item ${currentView === 'guias' ? 'active' : ''}" onclick="openGuias()">
@@ -107,50 +110,118 @@ function renderNav(){
   document.getElementById('nav-container').innerHTML = html;
 }
 
-function renderHome(){
+// São Paulo timezone: today and weekly schedule reflect the school's local calendar.
+function adminToday(){
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo', weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const day = { Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6, Sun:7 }[values.weekday];
+  return { day, date: `${values.year}-${values.month}-${values.day}` };
+}
+
+function studentDashboardLabel(student){
+  return escapeHtml(student.full_name || student.email || 'Aluno sem nome');
+}
+
+async function loadReportPendencies(){
+  // Busca todas as aulas, não apenas as 1.000 primeiras retornadas pelo Supabase.
+  const pending = [];
+  const studentById = new Map(students.map(student => [student.id, student]));
+  const batchSize = 500;
+  for (let offset = 0; ; offset += batchSize) {
+    const { data, error } = await sb.from('lessons')
+      .select('id, student_id, lesson_date, title, report_pending_dismissed, resources(type)')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + batchSize - 1);
+    if (error) throw error;
+    const batch = data || [];
+    for (const lesson of batch) {
+      if (lesson.report_pending_dismissed || (lesson.resources || []).some(resource => resource.type === 'rep')) continue;
+      const student = studentById.get(lesson.student_id);
+      pending.push({
+        lesson,
+        studentName: student ? (student.full_name || student.email || 'Aluno sem nome') : 'Aluno não encontrado'
+      });
+    }
+    if (batch.length < batchSize) break;
+  }
+  return pending.sort((a,b) =>
+    (b.lesson.lesson_date || '').localeCompare(a.lesson.lesson_date || '') ||
+    a.studentName.localeCompare(b.studentName, 'pt-BR'));
+}
+
+async function renderHome(){
   currentStudent = null;
   currentView = 'home';
   renderNav();
-  document.getElementById('main-content').innerHTML = `
+  const today = adminToday();
+  const classes = students.filter(s => Number(s.lesson_weekday) === today.day && s.lesson_time)
+    .sort((a,b) => a.lesson_time.localeCompare(b.lesson_time));
+  const main = document.getElementById('main-content');
+  main.innerHTML = `
     <div class="topline">
-      <div>
-        <h1>Seus alunos</h1>
-        <div class="sub">Cada aluno enxerga apenas as próprias aulas ao entrar</div>
-      </div>
+      <div><h1>Home</h1><div class="sub">Aulas de hoje e relatórios de desempenho pendentes.</div></div>
     </div>
-    ${students.length === 0 ? `
-      <div class="box">
-        <h3>Nenhum aluno cadastrado ainda</h3>
-        <div class="small-note">
-          Para adicionar um aluno: vá no painel do Supabase → <b>Authentication → Add user</b>,
-          crie o e-mail e senha dele. Ele aparece aqui automaticamente assim que fizer o primeiro login,
-          ou você pode recarregar esta página depois de criá-lo.
-        </div>
-      </div>
-    ` : `
-      <div class="students-list">
-        ${students.map(s => `
-          <div class="student-row">
-            <div>
-              <div class="name">${escapeHtml(s.full_name || '(sem nome definido)')}</div>
-              <div class="lessons-count">${escapeHtml(s.email)}</div>
-            </div>
-            <button class="btn-ghost" onclick="openStudent('${s.id}')">Ver aulas</button>
-          </div>
-        `).join('')}
-      </div>
-      <div class="box">
-        <h3>Adicionar novo aluno</h3>
-        <div class="small-note">
-          Vá no painel do Supabase → <b>Authentication → Add user</b> → cadastre e-mail e senha.
-          Depois volte aqui e clique em "Atualizar lista" abaixo.
-        </div>
-        <div style="margin-top:12px;">
-          <button class="btn-dark-sm" onclick="refreshStudents()">Atualizar lista</button>
-        </div>
-      </div>
-    `}
+    <div class="admin-dashboard-grid">
+      <section class="box">
+        <h3>Aulas de hoje</h3>
+        <div class="admin-dashboard-number">${classes.length}</div>
+        ${classes.length ? classes.map(student => `
+          <button class="admin-dashboard-line" onclick="openStudent('${student.id}')">
+            <span>${studentDashboardLabel(student)}</span><strong>${escapeHtml(student.lesson_time.slice(0,5))}</strong>
+          </button>`).join('') : '<div class="small-note">Nenhuma aula com horário fixo cadastrada para hoje.</div>'}
+      </section>
+      <section class="box">
+        <h3>Pendências</h3>
+        <div class="admin-dashboard-number" id="report-pending-count">—</div>
+        <div id="report-pending-list" aria-live="polite"><div class="small-note">Verificando relatórios de desempenho...</div></div>
+      </section>
+    </div>
   `;
+  try {
+    const pendencies = await loadReportPendencies();
+    // Evita sobrescrever outra tela se o usuário navegar durante o carregamento.
+    if (currentView !== 'home' || !document.getElementById('report-pending-list')) return;
+    document.getElementById('report-pending-count').textContent = String(pendencies.length);
+    document.getElementById('report-pending-list').innerHTML = pendencies.length
+      ? pendencies.map(({lesson, studentName}) => `
+        <div class="admin-dashboard-line">
+          <span><strong>${escapeHtml(studentName)}</strong> sem relatório de desempenho para a aula do dia
+          ${lesson.lesson_date ? escapeHtml(formatDate(lesson.lesson_date)) : 'não informado'}
+          ${lesson.lesson_date ? '' : `(${escapeHtml(lesson.title)})`}</span>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
+            <button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
+            <button class="resource-action" onclick="dismissReportPending('${lesson.id}')" aria-label="Descartar pendência da aula ${escapeAttr(lesson.title)}">Descartar pendência</button>
+          </div>
+        </div>`).join('')
+      : '<div class="small-note">Todas as aulas cadastradas possuem relatório de desempenho.</div>';
+  } catch(error) {
+    console.error('Falha ao consultar pendências de relatórios:', error);
+    if (currentView !== 'home') return;
+    const count = document.getElementById('report-pending-count');
+    const list = document.getElementById('report-pending-list');
+    if (count) count.textContent = '—';
+    if (list) list.innerHTML = '<div class="small-note">Não foi possível carregar as pendências. Abra a Home novamente para tentar.</div>';
+  }
+}
+
+async function dismissReportPending(lessonId){
+  if (!confirm('Descartar esta pendência? A aula e os materiais serão mantidos. Esta pendência não aparecerá novamente na Home.')) return;
+  const { error } = await sb.from('lessons')
+    .update({ report_pending_dismissed: true })
+    .eq('id', lessonId);
+  if (error) {
+    console.error('Não foi possível descartar a pendência:', error);
+    alert('Não foi possível descartar a pendência. Tente novamente.');
+    return;
+  }
+  if (currentView === 'home') await renderHome();
+}
+
+async function openPendingReport(studentId, lessonId){
+  await openStudent(studentId);
+  openAddMaterialToLesson(lessonId);
 }
 
 let guiasCurrentLevel = 'basico';
