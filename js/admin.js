@@ -15,6 +15,8 @@ let currentTab = 'geral';
 let currentView = 'home'; // 'home' | 'comunicados' | 'student'
 let danielPendingTotal = 0;
 let pendingCountsByStudent = {};
+// Arquivos selecionados em diferentes pastas antes de cadastrar a aula.
+let quickLessonFiles = [];
 
 (async function init(){
   const session = await requireSession();
@@ -1028,6 +1030,7 @@ function suggestedLessonTitle(){
 
 function renderNovaAulaTab(){
   resourceRowCount = 0;
+  quickLessonFiles = [];
   const today = new Date();
   const localDate = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
 
@@ -1042,8 +1045,9 @@ function renderNovaAulaTab(){
       </div>
       <div style="margin-top:16px;">
         <label for="new-lesson-files" style="display:block;font-weight:600;margin-bottom:8px;">Materiais desta aula (opcional)</label>
-        <input id="new-lesson-files" type="file" multiple onchange="renderQuickUploadFiles()">
-        <div class="small-note" style="margin-top:6px;">Selecione vários arquivos. Confira ou ajuste o tipo de cada um antes de salvar.</div>
+        <input id="new-lesson-files" type="file" multiple style="display:none;" onchange="addQuickLessonFiles(this.files)" aria-label="Escolher materiais da aula">
+        <button type="button" class="btn-ghost" onclick="document.getElementById('new-lesson-files').click()">+ Adicionar arquivos</button>
+        <div class="small-note" style="margin-top:6px;">Você pode escolher arquivos de pastas diferentes, um por vez ou vários por seleção. Confira o tipo e remova o que não quiser antes de salvar.</div>
         <div id="quick-upload-files"></div>
       </div>
       <div style="margin-top:16px;">
@@ -1087,16 +1091,43 @@ function inferQuickResourceType(fileName){
   return 'pdf';
 }
 
-function renderQuickUploadFiles(){
+function addQuickLessonFiles(fileList){
+  if (!fileList || !fileList.length) return;
+  for (const file of Array.from(fileList)) {
+    quickLessonFiles.push({ file, type: inferQuickResourceType(file.name) });
+  }
+  // Permite selecionar novamente o mesmo arquivo, mesmo após excluí-lo da lista.
   const input = document.getElementById('new-lesson-files');
+  if (input) input.value = '';
+  renderQuickUploadFiles();
+}
+
+function setQuickLessonFileType(index, type){
+  if (quickLessonFiles[index] && Object.prototype.hasOwnProperty.call(TYPE_LABELS, type)) {
+    quickLessonFiles[index].type = type;
+  }
+}
+
+function removeQuickLessonFile(index){
+  quickLessonFiles.splice(index, 1);
+  renderQuickUploadFiles();
+}
+
+function renderQuickUploadFiles(){
   const box = document.getElementById('quick-upload-files');
-  if (!input || !box) return;
-  box.innerHTML = Array.from(input.files).map((file, index) => `
+  if (!box) return;
+  if (!quickLessonFiles.length) {
+    box.innerHTML = '<div class="small-note" style="margin-top:10px;">Nenhum arquivo adicionado. Você também pode salvar a aula sem materiais.</div>';
+    return;
+  }
+  box.innerHTML = `<div class="small-note" style="margin-top:10px;">${quickLessonFiles.length} arquivo(s) selecionado(s)</div>` +
+    quickLessonFiles.map(({ file, type }, index) => `
     <div class="row" style="align-items:center;margin-top:10px;gap:10px;">
       <div style="flex:2;min-width:160px;overflow-wrap:anywhere;font-size:13px;">${escapeHtml(file.name)}</div>
-      <select id="quick-file-type-${index}" style="flex:1;min-width:140px;" aria-label="Tipo do arquivo ${escapeAttr(file.name)}">
-        ${Object.entries(TYPE_LABELS).map(([type,label]) => `<option value="${type}" ${type === inferQuickResourceType(file.name) ? 'selected' : ''}>${label}</option>`).join('')}
+      <select id="quick-file-type-${index}" style="flex:1;min-width:140px;" aria-label="Tipo do arquivo ${escapeAttr(file.name)}" onchange="setQuickLessonFileType(${index}, this.value)">
+        ${Object.entries(TYPE_LABELS).map(([key,label]) => `<option value="${key}" ${key === type ? 'selected' : ''}>${label}</option>`).join('')}
       </select>
+      <button type="button" class="resource-action" onclick="removeQuickLessonFile(${index})" aria-label="Remover arquivo ${escapeAttr(file.name)}">Remover</button>
     </div>
   `).join('');
 }
@@ -1339,7 +1370,8 @@ async function createLesson(){
   const title = document.getElementById('new-lesson-title').value.trim();
   const topic = document.getElementById('new-lesson-topic').value.trim();
   const date = document.getElementById('new-lesson-date').value || null;
-  const files = Array.from(document.getElementById('new-lesson-files').files);
+  // Mantém arquivos de seleções anteriores e os respectivos tipos escolhidos.
+  const files = quickLessonFiles.slice();
   const btn = document.getElementById('create-lesson-btn');
   const feedback = document.getElementById('create-lesson-feedback');
 
@@ -1370,8 +1402,7 @@ async function createLesson(){
   let successes = 0;
   const failures = [];
   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const type = document.getElementById(`quick-file-type-${i}`).value;
+    const { file, type } = files[i];
     btn.textContent = `Enviando materiais (${i + 1}/${files.length})...`;
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `${studentId}/${lesson.id}/${Date.now()}_${i}_${safeFileName}`;
