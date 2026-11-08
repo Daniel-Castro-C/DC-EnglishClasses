@@ -594,7 +594,10 @@ function renderStudentDetail(){
           <h3>${escapeHtml(l.title)}</h3>
           <div class="meta">${escapeHtml(l.topic || '')}${l.lesson_date ? ' · ' + formatDate(l.lesson_date) : ''}</div>
         </div>
-        <button class="resource-action" onclick="deleteLesson('${l.id}')">Excluir aula</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn-ghost" onclick="openAddMaterialToLesson('${l.id}')">+ Adicionar material</button>
+          <button class="resource-action" onclick="deleteLesson('${l.id}')">Excluir aula</button>
+        </div>
       </div>
       ${rows}
     </div>`;
@@ -1013,26 +1016,47 @@ async function downloadLessonResource(filePath){
 
 let resourceRowCount = 0;
 
+function suggestedLessonTitle(){
+  // Sugestão editável: o professor pode usar qualquer título.
+  const lessonNumbers = currentLessons.map(l => {
+    const match = (l.title || '').match(/(?:Aula|Class)\\s*#?\\s*(\\d+)/i);
+    return match ? Number(match[1]) : 0;
+  });
+  const next = Math.max(currentLessons.length, ...lessonNumbers, 0) + 1;
+  return 'Aula ' + next;
+}
+
 function renderNovaAulaTab(){
   resourceRowCount = 0;
+  const today = new Date();
+  const localDate = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
 
   document.getElementById('tab-content').innerHTML = `
     <div class="box">
-      <h3>+ Adicionar nova aula</h3>
+      <h3>+ Cadastrar aula e materiais</h3>
+      <div class="small-note" style="margin-top:0;">Crie a aula e envie slides, PDFs, exercícios ou relatórios em uma única etapa. Os arquivos são opcionais — você pode adicioná-los depois.</div>
       <div class="row">
-        <input id="new-lesson-title" placeholder="Título (ex: Aula 3 — 20/09/2026)">
+        <input id="new-lesson-title" value="${escapeAttr(suggestedLessonTitle())}" placeholder="Título da aula">
         <input id="new-lesson-topic" placeholder="Tópico da aula">
-        <input id="new-lesson-date" type="date">
+        <input id="new-lesson-date" type="date" value="${localDate}">
       </div>
-      <div style="margin-top:12px;">
-        <button class="btn-dark-sm" onclick="createLesson()">Salvar aula</button>
+      <div style="margin-top:16px;">
+        <label for="new-lesson-files" style="display:block;font-weight:600;margin-bottom:8px;">Materiais desta aula (opcional)</label>
+        <input id="new-lesson-files" type="file" multiple onchange="renderQuickUploadFiles()">
+        <div class="small-note" style="margin-top:6px;">Selecione vários arquivos. Confira ou ajuste o tipo de cada um antes de salvar.</div>
+        <div id="quick-upload-files"></div>
       </div>
+      <div style="margin-top:16px;">
+        <button id="create-lesson-btn" class="btn-dark-sm" onclick="createLesson()">Salvar aula e materiais</button>
+      </div>
+      <div id="create-lesson-feedback" class="feedback" role="status" aria-live="polite"></div>
     </div>
 
-    <div class="box">
-      <h3>+ Adicionar materiais a uma aula</h3>
+    <div class="box" id="existing-lesson-materials">
+      <h3>+ Adicionar materiais a uma aula já cadastrada</h3>
+      <div class="small-note" style="margin-top:0;">Para enviar um relatório de performance depois dos slides, selecione a aula existente. Os arquivos anteriores serão mantidos.</div>
       <div class="row">
-        <select id="resource-lesson">
+        <select id="resource-lesson" aria-label="Escolha a aula">
           ${currentLessons.map(l => `<option value="${l.id}">${escapeHtml(l.title)}</option>`).join('')}
         </select>
       </div>
@@ -1045,7 +1069,7 @@ function renderNovaAulaTab(){
           ${currentLessons.length === 0 ? 'Cadastre uma aula primeiro' : 'Enviar materiais'}
         </button>
       </div>
-      <div id="upload-feedback" class="feedback"></div>
+      <div id="upload-feedback" class="feedback" role="status" aria-live="polite"></div>
     </div>
   `;
 
@@ -1054,6 +1078,36 @@ function renderNovaAulaTab(){
     resourceRowCount++;
     container.insertAdjacentHTML('beforeend', resourceRowHtml(resourceRowCount));
   }
+}
+
+function inferQuickResourceType(fileName){
+  const extension = (fileName.split('.').pop() || '').toLowerCase();
+  if (['ppt', 'pptx', 'odp'].includes(extension)) return 'ppt';
+  if (['doc', 'docx', 'odt', 'xls', 'xlsx'].includes(extension)) return 'ex';
+  return 'pdf';
+}
+
+function renderQuickUploadFiles(){
+  const input = document.getElementById('new-lesson-files');
+  const box = document.getElementById('quick-upload-files');
+  if (!input || !box) return;
+  box.innerHTML = Array.from(input.files).map((file, index) => `
+    <div class="row" style="align-items:center;margin-top:10px;gap:10px;">
+      <div style="flex:2;min-width:160px;overflow-wrap:anywhere;font-size:13px;">${escapeHtml(file.name)}</div>
+      <select id="quick-file-type-${index}" style="flex:1;min-width:140px;" aria-label="Tipo do arquivo ${escapeAttr(file.name)}">
+        ${Object.entries(TYPE_LABELS).map(([type,label]) => `<option value="${type}" ${type === inferQuickResourceType(file.name) ? 'selected' : ''}>${label}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+}
+
+// Leva diretamente à área de anexos sem alterar a aula escolhida nem apagar os materiais existentes.
+function openAddMaterialToLesson(lessonId){
+  currentTab = 'nova';
+  renderStudentDetail();
+  const lessonSelect = document.getElementById('resource-lesson');
+  if (lessonSelect) lessonSelect.value = lessonId;
+  document.getElementById('existing-lesson-materials')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function resourceRowHtml(rowIndex){
@@ -1285,20 +1339,81 @@ async function createLesson(){
   const title = document.getElementById('new-lesson-title').value.trim();
   const topic = document.getElementById('new-lesson-topic').value.trim();
   const date = document.getElementById('new-lesson-date').value || null;
+  const files = Array.from(document.getElementById('new-lesson-files').files);
+  const btn = document.getElementById('create-lesson-btn');
+  const feedback = document.getElementById('create-lesson-feedback');
 
-  if (!title) { alert('Dê um título para a aula.'); return; }
+  if (!title) {
+    feedback.className = 'feedback show err';
+    feedback.textContent = 'Dê um título para a aula.';
+    return;
+  }
 
-  const { error } = await sb.from('lessons').insert({
-    student_id: currentStudent.id,
-    title, topic, lesson_date: date
-  });
+  const studentId = currentStudent.id;
+  btn.disabled = true;
+  btn.textContent = 'Salvando aula...';
 
-  if (error) { alert('Não foi possível salvar a aula.'); console.error(error); return; }
+  const { data: lesson, error } = await sb.from('lessons')
+    .insert({ student_id: studentId, title, topic, lesson_date: date })
+    .select('id')
+    .single();
 
-  // Avisa o aluno dentro do próprio portal (sininho ao lado de "Minhas aulas")
-  try { await sb.from('notifications').insert({ student_id: currentStudent.id, type: 'new_lesson' }); } catch (e) { console.error('Erro ao criar notificação:', e); }
+  if (error || !lesson) {
+    console.error(error);
+    feedback.className = 'feedback show err';
+    feedback.textContent = 'Não foi possível salvar a aula. Tente novamente.';
+    btn.disabled = false;
+    btn.textContent = 'Salvar aula e materiais';
+    return;
+  }
 
-  await loadLessonsFor(currentStudent.id);
+  let successes = 0;
+  const failures = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const type = document.getElementById(`quick-file-type-${i}`).value;
+    btn.textContent = `Enviando materiais (${i + 1}/${files.length})...`;
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${studentId}/${lesson.id}/${Date.now()}_${i}_${safeFileName}`;
+    const { error: uploadError } = await sb.storage.from(STORAGE_BUCKET).upload(filePath, file);
+    if (uploadError) {
+      console.error(uploadError);
+      failures.push(file.name);
+      continue;
+    }
+    const { error: insertError } = await sb.from('resources').insert({
+      lesson_id: lesson.id, type, name: `${title} - ${TYPE_LABELS[type]}`, file_path: filePath
+    });
+    if (insertError) {
+      console.error(insertError);
+      // Evita arquivos órfãos quando o registro no banco falha.
+      await sb.storage.from(STORAGE_BUCKET).remove([filePath]);
+      failures.push(file.name);
+      continue;
+    }
+    successes++;
+  }
+
+  // Uma única notificação, depois de concluir o cadastro, sem duplicar avisos por arquivo.
+  const { error: notificationError } = await sb.from('notifications').insert({ student_id: studentId, type: 'new_lesson' });
+  if (notificationError) console.error('Não foi possível notificar o aluno:', notificationError);
+
+  await loadLessonsFor(studentId);
+  if (failures.length) {
+    // Mantém o formulário visível com os arquivos escolhidos para que o professor saiba o que falhou.
+    feedback.className = 'feedback show err';
+    feedback.textContent = `Aula cadastrada e ${successes} material(is) enviado(s). Falha em: ${failures.join(', ')}. Para reenviar, utilize a seção "Adicionar materiais a uma aula já cadastrada" abaixo.`;
+    const selector = document.getElementById('resource-lesson');
+    if (selector) {
+      selector.insertAdjacentHTML('afterbegin', `<option value="${lesson.id}">${escapeHtml(title)}</option>`);
+      selector.value = lesson.id;
+    }
+    btn.disabled = true; // evita criar uma segunda aula com o mesmo formulário
+    btn.textContent = 'Aula salva';
+    return;
+  }
+
+  currentTab = 'cadastradas';
   renderStudentDetail();
 }
 
