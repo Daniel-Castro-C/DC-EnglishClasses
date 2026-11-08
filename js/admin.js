@@ -131,13 +131,13 @@ async function loadReportPendencies(){
   const batchSize = 500;
   for (let offset = 0; ; offset += batchSize) {
     const { data, error } = await sb.from('lessons')
-      .select('id, student_id, lesson_date, title, resources(type)')
+      .select('id, student_id, lesson_date, title, report_pending_dismissed, resources(type)')
       .order('created_at', { ascending: false })
       .range(offset, offset + batchSize - 1);
     if (error) throw error;
     const batch = data || [];
     for (const lesson of batch) {
-      if ((lesson.resources || []).some(resource => resource.type === 'rep')) continue;
+      if (lesson.report_pending_dismissed || (lesson.resources || []).some(resource => resource.type === 'rep')) continue;
       const student = studentById.get(lesson.student_id);
       pending.push({
         lesson,
@@ -190,7 +190,10 @@ async function renderHome(){
           <span><strong>${escapeHtml(studentName)}</strong> sem relatório de desempenho para a aula do dia
           ${lesson.lesson_date ? escapeHtml(formatDate(lesson.lesson_date)) : 'não informado'}
           ${lesson.lesson_date ? '' : `(${escapeHtml(lesson.title)})`}</span>
-          <button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
+            <button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
+            <button class="resource-action" onclick="dismissReportPending('${lesson.id}')" aria-label="Descartar pendência da aula ${escapeAttr(lesson.title)}">Descartar pendência</button>
+          </div>
         </div>`).join('')
       : '<div class="small-note">Todas as aulas cadastradas possuem relatório de desempenho.</div>';
   } catch(error) {
@@ -201,6 +204,19 @@ async function renderHome(){
     if (count) count.textContent = '—';
     if (list) list.innerHTML = '<div class="small-note">Não foi possível carregar as pendências. Abra a Home novamente para tentar.</div>';
   }
+}
+
+async function dismissReportPending(lessonId){
+  if (!confirm('Descartar esta pendência? A aula e os materiais serão mantidos. Esta pendência não aparecerá novamente na Home.')) return;
+  const { error } = await sb.from('lessons')
+    .update({ report_pending_dismissed: true })
+    .eq('id', lessonId);
+  if (error) {
+    console.error('Não foi possível descartar a pendência:', error);
+    alert('Não foi possível descartar a pendência. Tente novamente.');
+    return;
+  }
+  if (currentView === 'home') await renderHome();
 }
 
 async function openPendingReport(studentId, lessonId){
