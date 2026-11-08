@@ -1046,8 +1046,13 @@ function renderNovaAulaTab(){
       <div style="margin-top:16px;">
         <label for="new-lesson-files" style="display:block;font-weight:600;margin-bottom:8px;">Materiais desta aula (opcional)</label>
         <input id="new-lesson-files" type="file" multiple style="display:none;" onchange="addQuickLessonFiles(this.files)" aria-label="Escolher materiais da aula">
-        <button type="button" class="btn-ghost" onclick="document.getElementById('new-lesson-files').click()">+ Adicionar arquivos</button>
-        <div class="small-note" style="margin-top:6px;">Você pode escolher arquivos de pastas diferentes, um por vez ou vários por seleção. Confira o tipo e remova o que não quiser antes de salvar.</div>
+        <div id="quick-upload-dropzone" style="border:2px dashed var(--sky);border-radius:12px;padding:22px 16px;text-align:center;transition:background .15s,border-color .15s;">
+          <div style="font-size:26px;margin-bottom:8px;" aria-hidden="true">📁</div>
+          <div style="font-weight:600;">Arraste e solte seus arquivos aqui</div>
+          <div class="small-note" style="margin:7px 0 12px;">Adicione de pastas diferentes, em quantas etapas quiser. Os arquivos serão acumulados.</div>
+          <button type="button" class="btn-ghost" onclick="document.getElementById('new-lesson-files').click()">+ Adicionar arquivos</button>
+        </div>
+        <div class="small-note" style="margin-top:8px;">Confira o tipo dos arquivos ou remova algum antes de salvar a aula.</div>
         <div id="quick-upload-files"></div>
       </div>
       <div style="margin-top:16px;">
@@ -1076,6 +1081,40 @@ function renderNovaAulaTab(){
       <div id="upload-feedback" class="feedback" role="status" aria-live="polite"></div>
     </div>
   `;
+
+  const dropzone = document.getElementById('quick-upload-dropzone');
+  if (dropzone) {
+    let dragDepth = 0;
+    const highlight = active => {
+      dropzone.style.background = active ? 'var(--surface-hover, rgba(80,150,220,.12))' : '';
+      dropzone.style.borderColor = active ? 'var(--primary, #2676bd)' : 'var(--sky)';
+    };
+    dropzone.addEventListener('dragenter', event => {
+      if (!event.dataTransfer?.types.includes('Files')) return;
+      event.preventDefault();
+      dragDepth++;
+      highlight(true);
+    });
+    dropzone.addEventListener('dragover', event => {
+      if (!event.dataTransfer?.types.includes('Files')) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+      highlight(true);
+    });
+    dropzone.addEventListener('dragleave', event => {
+      if (!event.dataTransfer?.types.includes('Files')) return;
+      event.preventDefault();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (!dragDepth) highlight(false);
+    });
+    dropzone.addEventListener('drop', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      dragDepth = 0;
+      highlight(false);
+      if (event.dataTransfer?.files?.length) addQuickLessonFiles(event.dataTransfer.files);
+    });
+  }
 
   const container = document.getElementById('resource-rows-container');
   for (let i = 0; i < 3; i++) {
