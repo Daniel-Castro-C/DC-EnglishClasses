@@ -1025,7 +1025,7 @@ function suggestedLessonTitle(){
     return match ? Number(match[1]) : 0;
   });
   const next = Math.max(currentLessons.length, ...lessonNumbers, 0) + 1;
-  return 'Aula ' + next;
+  return 'Class #' + String(next).padStart(2, '0');
 }
 
 function renderNovaAulaTab(){
@@ -1124,7 +1124,11 @@ function renderNovaAulaTab(){
 }
 
 function inferQuickResourceType(fileName){
-  const extension = (fileName.split('.').pop() || '').toLowerCase();
+  const normalizedName = (fileName || '').trim();
+  // Regras de nome têm prioridade sobre a extensão, inclusive para PDFs.
+  if (/report\s*-\s*class/i.test(normalizedName)) return 'rep';
+  if (/^\d+/.test(normalizedName)) return 'ppt';
+  const extension = (normalizedName.split('.').pop() || '').toLowerCase();
   if (['ppt', 'pptx', 'odp'].includes(extension)) return 'ppt';
   if (['doc', 'docx', 'odt', 'xls', 'xlsx'].includes(extension)) return 'ex';
   return 'pdf';
@@ -1190,10 +1194,16 @@ function resourceRowHtml(rowIndex){
           <option value="ex">Exercícios</option>
           <option value="rep">Relatório de desempenho</option>
         </select>
-        <input id="resource-file-${rowIndex}" type="file">
+        <input id="resource-file-${rowIndex}" type="file" onchange="suggestExistingResourceType(${rowIndex}, this.files)">
       </div>
     </div>
   `;
+}
+
+function suggestExistingResourceType(rowIndex, fileList){
+  if (!fileList || !fileList.length) return;
+  const select = document.getElementById(`resource-type-${rowIndex}`);
+  if (select) select.value = inferQuickResourceType(fileList[0].name);
 }
 
 function addResourceRow(){
