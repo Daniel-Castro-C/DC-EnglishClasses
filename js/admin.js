@@ -163,6 +163,11 @@ async function renderHome(){
     <div class="topline">
       <div><h1>Home</h1><div class="sub">Aulas de hoje e relatórios de desempenho pendentes.</div></div>
     </div>
+    <div class="ec-admin-intro" aria-label="Resumo do dia">
+      <div class="ec-admin-kicker">Painel do professor</div>
+      <strong>Suas aulas, organizadas em um só lugar.</strong>
+      <p>Confira a agenda de hoje e acompanhe os relatórios que precisam de atenção.</p>
+    </div>
     <div class="admin-dashboard-grid">
       <section class="box">
         <h3>Aulas de hoje</h3>
