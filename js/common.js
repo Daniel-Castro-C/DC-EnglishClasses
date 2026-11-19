@@ -592,10 +592,22 @@ function buildAchievementsSection(lessonCount, opts){
     icons += `<img class="badge-icon badge-locked" src="${next.file}" alt="${next.alt}">`;
   }
 
+  // Barra apenas visual: progresso entre a última badge conquistada e a próxima.
+  const previousThreshold = earned.length ? earned[earned.length - 1].threshold : 0;
+  const nextThreshold = next ? next.threshold : previousThreshold;
+  const progress = next
+    ? Math.max(0, Math.min(100, Math.round(100 * (count - previousThreshold) / (nextThreshold - previousThreshold))))
+    : 100;
+
   return `
     <div class="achievements-wall">
       ${title ? `<div class="achievements-wall-title">${title}</div>` : ''}
       <div class="achievements-row">${icons}</div>
+      <div class="achievement-progress" role="progressbar"
+           aria-label="${next ? 'Progresso para a próxima conquista' : 'Todas as conquistas alcançadas'}"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}">
+        <div class="achievement-progress-fill" style="width:${progress}%"></div>
+      </div>
     </div>
   `;
 }
