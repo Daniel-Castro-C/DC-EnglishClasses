@@ -612,3 +612,67 @@ body.dark-mode .achievement-progress{background:#35445F;}
 @media(prefers-reduced-motion:reduce){
   .achievement-progress-fill{transition:none;}
 }
+
+/* PR #6 — remove artificial footer strip and keep interactive word panel in normal flow */
+.student-home .app-shell{min-height:100vh;}
+.student-home .student-home-main{display:flex;flex-direction:column;align-items:stretch;}
+.student-home .student-home-main > #word-of-day-container{
+  position:relative!important;
+  order:0!important;
+  display:block!important;
+  flex:none!important;
+  width:100%!important;
+  height:auto!important;
+  overflow:visible!important;
+  margin:20px 0 0!important;
+  padding:0!important;
+  bottom:auto!important;
+  left:auto!important;
+  right:auto!important;
+  top:auto!important;
+  transform:none!important;
+}
+.student-home #word-of-day-container .word-of-day-card{
+  position:relative!important;
+  display:block!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:hidden;
+  transform:none!important;
+}
+.student-home .student-home-main > .home-support-footer{
+  position:static!important;
+  flex:none;
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  align-self:stretch;
+  width:100%;
+  margin:18px 0 0;
+  padding:0;
+  background:transparent;
+}
+.student-home .student-home-main > .home-support-footer .whatsapp-fab{
+  position:static!important;
+  margin:0;
+  transform:none;
+}
+.student-home .achievement-next{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  width:60px;
+  flex:0 0 60px;
+}
+.student-home .achievement-next .badge-icon{width:60px;height:auto;}
+.achievement-next .achievement-progress{
+  width:100%;
+  max-width:100%;
+  margin-top:8px;
+  height:5px;
+}
+.achievements-row{align-items:flex-end;}
+@media(max-width:860px){
+  .student-home .student-home-main > .home-support-footer{padding:0;}
+}
