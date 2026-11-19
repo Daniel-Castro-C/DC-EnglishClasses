@@ -151,6 +151,27 @@ async function loadReportPendencies(){
     a.studentName.localeCompare(b.studentName, 'pt-BR'));
 }
 
+// Abre a videochamada da aula diretamente, sem navegar para o perfil.
+function openTodayClassCall(studentId){
+  const student = students.find(item => item.id === studentId);
+  if (!student) {
+    alert('Aluno não encontrado.');
+    return;
+  }
+  const url = (student.permanent_lesson_link || '').trim();
+  if (!url) {
+    alert('Este aluno ainda não possui um link fixo de videochamada cadastrado.');
+    return;
+  }
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error('Unsupported protocol');
+    window.open(parsed.href, '_blank', 'noopener,noreferrer');
+  } catch(error) {
+    alert('O link de videochamada cadastrado para este aluno é inválido.');
+  }
+}
+
 async function renderHome(){
   currentStudent = null;
   currentView = 'home';
@@ -163,12 +184,17 @@ async function renderHome(){
     <div class="topline">
       <div><h1>Home</h1><div class="sub">Aulas de hoje e relatórios de desempenho pendentes.</div></div>
     </div>
+    <div class="ec-admin-intro" aria-label="Resumo do dia">
+      <div class="ec-admin-kicker">Painel do professor</div>
+      <strong>Suas aulas, organizadas em um só lugar.</strong>
+      <p>Confira a agenda de hoje e acompanhe os relatórios que precisam de atenção.</p>
+    </div>
     <div class="admin-dashboard-grid">
       <section class="box">
         <h3>Aulas de hoje</h3>
         <div class="admin-dashboard-number">${classes.length}</div>
         ${classes.length ? classes.map(student => `
-          <button class="admin-dashboard-line" onclick="openStudent('${student.id}')">
+          <button class="admin-dashboard-line" onclick="openTodayClassCall('${student.id}')" title="Abrir videochamada da aula">
             <span>${studentDashboardLabel(student)}</span><strong>${escapeHtml(student.lesson_time.slice(0,5))}</strong>
           </button>`).join('') : '<div class="small-note">Nenhuma aula com horário fixo cadastrada para hoje.</div>'}
       </section>
@@ -511,13 +537,13 @@ function openComunicados(){
         ${students.length === 0 ? `
           <div class="empty-state">Nenhum aluno cadastrado ainda.</div>
         ` : `
-          <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:10px;">
+          <label class="broadcast-recipient-row broadcast-recipient-all">
             <input type="checkbox" id="broadcast-select-all" onchange="toggleSelectAllStudents(this.checked)">
             Todos
           </label>
           <div id="broadcast-student-list">
             ${students.map(s => `
-              <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13.5px;cursor:pointer;">
+              <label class="broadcast-recipient-row">
                 <input type="checkbox" class="broadcast-student-checkbox" value="${s.id}" onchange="updateSelectAllState()">
                 ${escapeHtml(s.full_name || s.email)}
               </label>

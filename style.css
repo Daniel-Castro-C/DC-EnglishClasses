@@ -318,3 +318,215 @@ button.admin-dashboard-line:hover{color:var(--sky);}
 .admin-dashboard-line strong{font-weight:650;}
 .admin-dashboard-line .btn-ghost{flex-shrink:0;font-size:12px;}
 @media(max-width:800px){.admin-dashboard-grid{grid-template-columns:1fr;}.admin-dashboard-line{flex-wrap:wrap;}}
+
+
+/* ===========================================================
+   D.C ENGLISH CLASSES — VISUAL REFRESH (PROPOSTA EM PR)
+   Camada exclusivamente visual: sem alteracoes em dados,
+   autenticacao, permissoes ou regras de negocio.
+   =========================================================== */
+:root{
+  --canvas-elevated:#F5F8FD;
+  --shadow-soft:0 3px 16px rgba(22,33,62,.045);
+  --shadow-raised:0 12px 28px rgba(22,33,62,.085);
+}
+body{font-feature-settings:"kern" 1;-webkit-font-smoothing:antialiased;}
+.app-shell{background:var(--canvas-elevated);}
+.sidebar{
+  flex:0 0 250px;
+  background:linear-gradient(170deg,#16213E 0%,#182B4C 100%);
+  box-shadow:4px 0 22px rgba(15,25,48,.04);
+}
+.side-brand{padding:2px 6px 20px;border-bottom:1px solid rgba(255,255,255,.09);margin-bottom:20px;}
+.side-brand img.logo{width:40px;height:40px;border-radius:11px;}
+.side-brand span{letter-spacing:.1px;}
+.nav-label{letter-spacing:1.4px;text-transform:uppercase;font-size:10px;opacity:.85;}
+.nav-item{border-radius:9px;transition:background-color .18s,color .18s,transform .18s;}
+.nav-item:not(.active):hover{background:rgba(255,255,255,.09);transform:translateX(2px);}
+.nav-item.active{background:#344C73;color:#fff;box-shadow:inset 3px 0 #8CB8E4;}
+.sidebar-foot{border-top:1px solid rgba(255,255,255,.1);padding-top:16px;}
+.main{min-width:0;}
+.main .topline{margin-bottom:26px;gap:15px;}
+.main .topline h1{font-size:clamp(26px,3vw,34px);letter-spacing:-.75px;line-height:1.18;margin-bottom:8px;}
+.main .sub{line-height:1.6;}
+.box,.home-card,.level-card,.lesson-card{
+  border-radius:14px;
+  border-color:var(--line);
+  box-shadow:var(--shadow-soft);
+}
+.box{overflow-wrap:anywhere;}
+.home-card{
+  min-height:160px;
+  border-radius:14px;
+  box-shadow:var(--shadow-soft);
+  transition:transform .18s,box-shadow .18s,border-color .18s;
+}
+.home-card:hover{
+  transform:translateY(-3px);
+  box-shadow:var(--shadow-raised);
+  border-color:#99B7D7;
+}
+.home-card .icon{border-radius:11px;}
+.home-card h3{font-size:18px;line-height:1.3;}
+.home-card p{line-height:1.65;}
+.welcome-row{
+  padding:5px 0 4px;
+  margin-bottom:26px;
+}
+.welcome-avatar{box-shadow:0 0 0 4px var(--paper-card),0 0 0 5px var(--line);}
+.admin-dashboard-grid{gap:16px;}
+.admin-dashboard-grid > .box{padding:24px;}
+.admin-dashboard-grid > .box h3{margin-top:0;}
+.admin-dashboard-number{
+  color:var(--ink);
+  font-family:'IBM Plex Sans',sans-serif;
+  letter-spacing:-1.25px;
+  font-weight:600;
+  font-size:40px;
+}
+.admin-dashboard-line{transition:color .15s,background .15s;padding:14px 3px;gap:12px;}
+button.admin-dashboard-line:hover{background:var(--sky-soft);}
+.btn-primary,.btn-dark-sm,.btn-ghost{transition:background-color .17s,transform .17s,box-shadow .17s;}
+.btn-primary{border-radius:10px;min-height:43px;}
+.btn-primary:not(:disabled):hover,.btn-dark-sm:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(22,33,62,.17);}
+input,select,textarea{border-radius:9px;min-height:42px;}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{
+  outline:3px solid #5B93C4;
+  outline-offset:3px;
+}
+.login-brand h1{font-size:clamp(32px,3.4vw,45px);letter-spacing:-1px;line-height:1.22;}
+.login-brand::after{right:-110px;bottom:-120px;width:380px;height:380px;}
+.login-box{max-width:365px;}
+.login-box h2{font-size:28px;letter-spacing:-.5px;}
+.login-form-side{background:#F5F8FD;}
+.login-box input{border-radius:10px;padding:13px 14px;}
+/* Administrator overview: visual-only introductory strip */
+.ec-admin-intro{
+  border:1px solid #355881;
+  padding:23px 25px;
+  border-radius:15px;
+  background:linear-gradient(110deg,#203657,#426b9c);
+  color:#fff;
+  margin-bottom:18px;
+  position:relative;
+  overflow:hidden;
+}
+.ec-admin-intro::after{
+  content:"";position:absolute;right:-58px;top:-110px;
+  width:270px;height:270px;border:1px solid rgba(255,255,255,.17);border-radius:50%;
+  pointer-events:none;
+}
+.ec-admin-intro strong{font-family:'Libre Baskerville',Georgia,serif;font-size:20px;line-height:1.45;display:block;margin-bottom:8px;position:relative;}
+.ec-admin-intro p{margin:0;font-size:13px;line-height:1.65;color:#D9E8FB;position:relative;}
+.ec-admin-kicker{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;color:#C4D9F4;margin-bottom:9px;position:relative;}
+body.dark-mode{
+  --canvas-elevated:#0E1524;
+  --shadow-soft:0 3px 18px rgba(0,0,0,.12);
+  --shadow-raised:0 10px 26px rgba(0,0,0,.2);
+}
+body.dark-mode .app-shell{background:var(--canvas-elevated);}
+body.dark-mode .admin-dashboard-number{color:#A9CDED;}
+body.dark-mode button.admin-dashboard-line:hover{background:#243653;}
+body.dark-mode .login-form-side{background:#0E1524;}
+@media(max-width:860px){
+  .sidebar{box-shadow:8px 0 26px rgba(0,0,0,.18);}
+  .main{width:100%;min-width:0;}
+  .admin-dashboard-grid{grid-template-columns:1fr;}
+}
+@media(max-width:560px){
+  .main .topline h1{font-size:26px;}
+  .home-cards{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:11px;}
+  .home-card{padding:17px;min-height:154px;}
+  .home-card .icon{width:39px;height:39px;}
+  .home-card h3{font-size:16px;}
+  .admin-dashboard-grid > .box{padding:18px;}
+  .ec-admin-intro{padding:20px 18px;}
+  .ec-admin-intro strong{font-size:18px;}
+  .welcome-row{gap:12px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .home-card,.nav-item,.btn-primary,.btn-dark-sm{transition:none!important;transform:none!important;}
+}
+
+/* PR #6 — compact and aligned broadcast recipient checkboxes */
+.broadcast-recipient-row{
+  display:grid;
+  grid-template-columns:18px minmax(0,1fr);
+  align-items:center;
+  column-gap:10px;
+  width:100%;
+  padding:7px 0;
+  margin:0;
+  font-size:13px;
+  line-height:1.45;
+  text-align:left;
+  cursor:pointer;
+  overflow-wrap:anywhere;
+}
+.broadcast-recipient-all{
+  font-weight:600;
+  padding:6px 0 11px;
+  margin-bottom:8px;
+  border-bottom:1px solid var(--line);
+}
+.broadcast-recipient-row input[type="checkbox"]{
+  appearance:auto;
+  display:block;
+  width:16px!important;
+  height:16px!important;
+  min-width:16px;
+  min-height:16px!important;
+  max-width:16px;
+  max-height:16px;
+  padding:0!important;
+  margin:0!important;
+  justify-self:center;
+  accent-color:#5B93C4;
+  box-shadow:none;
+}
+
+
+/* PR #6: preserve badge progress and responsive hamburger; Word of the Day
+   and WhatsApp support use unchanged main-branch styling and markup. */
+.achievement-next{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  width:60px;
+  flex:0 0 60px;
+}
+.achievement-next .badge-icon{width:60px;height:auto;}
+.achievement-next .achievement-progress{
+  width:100%;
+  max-width:100%;
+  height:5px;
+  margin-top:8px;
+}
+.achievement-progress{
+  height:5px;
+  overflow:hidden;
+  border-radius:999px;
+  background:var(--line);
+}
+.achievement-progress-fill{
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#5B93C4,#83AFDB);
+  transition:width .25s ease;
+}
+body.dark-mode .achievement-progress{background:#35445F;}
+@media(max-width:860px){
+  .app-shell{flex-direction:column;}
+  .app-shell .sidebar{
+    position:fixed;top:0;left:0;bottom:0;
+    width:250px;max-width:80vw;flex:none;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    z-index:1000;overflow-y:auto;
+  }
+  .app-shell .sidebar.open{transform:translateX(0);}
+  .app-shell .main{max-width:100%;width:100%;min-width:0;padding:76px 20px 40px;}
+  #mobile-menu-btn.mobile-menu-btn{display:flex;}
+  #mobile-menu-btn.mobile-menu-btn.hide-while-open{display:none;}
+}
+@media(prefers-reduced-motion:reduce){.achievement-progress-fill{transition:none;}}
