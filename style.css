@@ -451,3 +451,80 @@ body.dark-mode .login-form-side{background:#0E1524;}
 @media(prefers-reduced-motion:reduce){
   .home-card,.nav-item,.btn-primary,.btn-dark-sm{transition:none!important;transform:none!important;}
 }
+
+/* PR #6 — compact and aligned broadcast recipient checkboxes */
+.broadcast-recipient-row{
+  display:grid;
+  grid-template-columns:18px minmax(0,1fr);
+  align-items:center;
+  column-gap:10px;
+  width:100%;
+  padding:7px 0;
+  margin:0;
+  font-size:13px;
+  line-height:1.45;
+  text-align:left;
+  cursor:pointer;
+  overflow-wrap:anywhere;
+}
+.broadcast-recipient-all{
+  font-weight:600;
+  padding:6px 0 11px;
+  margin-bottom:8px;
+  border-bottom:1px solid var(--line);
+}
+.broadcast-recipient-row input[type="checkbox"]{
+  appearance:auto;
+  display:block;
+  width:16px!important;
+  height:16px!important;
+  min-width:16px;
+  min-height:16px!important;
+  max-width:16px;
+  max-height:16px;
+  padding:0!important;
+  margin:0!important;
+  justify-self:center;
+  accent-color:#5B93C4;
+  box-shadow:none;
+}
+/* Keep the word-of-day panel BELOW the home cards in normal document flow. */
+#word-of-day-container{
+  display:block;
+  position:static!important;
+  float:none!important;
+  clear:both;
+  width:100%;
+  max-width:100%;
+  height:auto;
+  margin-top:20px;
+  transform:none!important;
+}
+#word-of-day-container .word-of-day-card{
+  position:relative!important;
+  inset:auto!important;
+  float:none!important;
+  width:100%;
+  max-width:100%;
+  margin:0;
+  height:auto;
+  min-height:0;
+  transform:none!important;
+}
+.home-cards{position:relative;z-index:auto;}
+/* Later generic .main rules must not override the mobile menu layout. */
+@media(max-width:860px){
+  .app-shell{flex-direction:column;}
+  .app-shell .sidebar{
+    position:fixed;top:0;left:0;bottom:0;
+    width:250px;max-width:80vw;flex:none;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    z-index:1000;
+    overflow-y:auto;
+  }
+  .app-shell .sidebar.open{transform:translateX(0);}
+  .app-shell .main{max-width:100%;width:100%;min-width:0;padding:76px 20px 40px;}
+  #mobile-menu-btn.mobile-menu-btn{display:flex;}
+  #mobile-menu-btn.mobile-menu-btn.hide-while-open{display:none;}
+}
