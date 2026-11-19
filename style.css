@@ -676,3 +676,83 @@ body.dark-mode .achievement-progress{background:#35445F;}
 @media(max-width:860px){
   .student-home .student-home-main > .home-support-footer{padding:0;}
 }
+
+/* PR #6 — compact bottom dock in normal flow: word on left, support on right. */
+.student-home .student-home-main{display:flex;flex-direction:column;min-height:100vh;align-items:stretch;}
+.student-home .home-bottom-dock{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  width:100%;
+  min-width:0;
+  margin-top:auto;
+  padding-top:24px;
+  position:static;
+}
+.student-home .home-bottom-dock > #word-of-day-container{
+  order:0!important;
+  flex:1 1 0!important;
+  width:auto!important;
+  max-width:600px!important;
+  min-width:0;
+  height:auto!important;
+  margin:0!important;
+  padding:0!important;
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
+}
+.student-home .home-bottom-dock .word-of-day-card.word-of-day-compact{
+  position:relative!important;
+  width:100%;
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+  padding:13px 17px;
+  margin:0!important;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 4px 12px rgba(22,33,62,.12);
+}
+.student-home .word-of-day-compact .word-of-day-copy{position:relative;z-index:1;min-width:0;}
+.student-home .word-of-day-compact .word-of-day-label{font-size:10px;letter-spacing:1px;margin:0 0 4px;}
+.student-home .word-of-day-compact .word-of-day-term{font-size:19px;line-height:1.2;margin:0 0 3px;}
+.student-home .word-of-day-compact .word-of-day-definition{
+  font-size:12px;line-height:1.35;margin:0 0 3px;max-width:none;
+}
+.student-home .word-of-day-compact .word-of-day-example{
+  font-size:11.5px;line-height:1.35;margin:0;max-width:none;
+}
+.student-home .home-bottom-dock > .home-support-footer{
+  position:static!important;
+  display:flex!important;
+  flex:0 0 auto;
+  width:auto!important;
+  max-width:100%;
+  margin:0!important;
+  padding:0!important;
+  background:transparent!important;
+  align-self:center;
+}
+.student-home .home-bottom-dock .whatsapp-fab{
+  position:static!important;
+  display:inline-flex;
+  margin:0;
+  flex:0 0 auto;
+  white-space:nowrap;
+  max-width:100%;
+  padding:11px 16px;
+  font-size:12px;
+  inset:auto!important;
+  transform:none!important;
+}
+@media(max-width:700px){
+  .student-home .home-bottom-dock{flex-direction:column;align-items:stretch;gap:12px;}
+  .student-home .home-bottom-dock > #word-of-day-container{flex:auto!important;max-width:none!important;width:100%!important;}
+  .student-home .home-bottom-dock > .home-support-footer{width:100%!important;justify-content:flex-end;}
+}
+@media(max-width:560px){
+  .student-home .home-bottom-dock .whatsapp-fab span{display:inline;}
+  .student-home .home-bottom-dock .whatsapp-fab{font-size:11.5px;padding:10px 12px;}
+}
