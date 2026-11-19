@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>D.C English Classes — Área do aluno</title>
-<link rel="stylesheet" href="style.css?v=pr6-student-home-layout-2">
+<link rel="stylesheet" href="style.css?v=pr6-student-home-layout-3">
 <style>
   .home-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:8px;}
   .home-card{
@@ -220,6 +220,11 @@
          futuro deve ser adicionado ACIMA desta linha, nunca abaixo. -->
     <div id="word-of-day-container"></div>
   `;
+
+  // O suporte faz parte da área principal e não cria uma faixa abaixo da sidebar.
+  // A movimentação preserva o mesmo link e os mesmos eventos de clique.
+  const supportFooter = document.querySelector('.home-support-footer');
+  if (supportFooter) document.getElementById('main-content').appendChild(supportFooter);
 
   const wordEntry = await getTodayWordOfDay();
   document.getElementById('word-of-day-container').innerHTML = buildWordOfDayCard(wordEntry);
