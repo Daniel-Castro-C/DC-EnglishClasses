@@ -609,13 +609,13 @@ function openComunicados(){
         ` : `
           <label class="broadcast-recipient-row broadcast-recipient-all">
             <input type="checkbox" id="broadcast-select-all" onchange="toggleSelectAllStudents(this.checked)">
-            Todos
+            Todos os alunos reais
           </label>
           <div id="broadcast-student-list">
             ${students.map(s => `
               <label class="broadcast-recipient-row">
-                <input type="checkbox" class="broadcast-student-checkbox" value="${s.id}" onchange="updateSelectAllState()">
-                ${escapeHtml(s.full_name || s.email)}
+                <input type="checkbox" class="broadcast-student-checkbox" data-test-profile="${s.is_test_profile ? 'true' : 'false'}" value="${s.id}" onchange="updateSelectAllState()">
+                ${escapeHtml(s.full_name || s.email)}${s.is_test_profile ? ' — ' + escapeHtml(TEACHER_TEST_EMAIL) : ''}
               </label>
             `).join('')}
           </div>
@@ -626,12 +626,12 @@ function openComunicados(){
 }
 
 function toggleSelectAllStudents(checked){
-  document.querySelectorAll('.broadcast-student-checkbox').forEach(cb => { cb.checked = checked; });
+  document.querySelectorAll('.broadcast-student-checkbox:not([data-test-profile="true"])').forEach(cb => { cb.checked = checked; });
 }
 
 function updateSelectAllState(){
-  const all = document.querySelectorAll('.broadcast-student-checkbox');
-  const checkedCount = document.querySelectorAll('.broadcast-student-checkbox:checked').length;
+  const all = document.querySelectorAll('.broadcast-student-checkbox:not([data-test-profile="true"])');
+  const checkedCount = document.querySelectorAll('.broadcast-student-checkbox:not([data-test-profile="true"]):checked').length;
   document.getElementById('broadcast-select-all').checked = all.length > 0 && checkedCount === all.length;
 }
 
@@ -656,8 +656,12 @@ async function sendBroadcast(){
   }
 
   const recipients = students.filter(s => selectedIds.includes(s.id));
+  // O endereço do perfil de teste é sempre o informado pelo professor.
+  // Isso não depende do e-mail do perfil administrador no Supabase.
+  const testRecipient = recipients.find(s => s.is_test_profile);
+  if (testRecipient) testRecipient.email = TEACHER_TEST_EMAIL;
 
-  if (!confirm(`Enviar este comunicado para ${recipients.length} aluno(s)?`)) return;
+  if (!confirm(`Enviar este comunicado para ${recipients.length} destinatário(s)?${testRecipient ? '\\nPerfil de teste: ' + TEACHER_TEST_EMAIL : ''}`)) return;
 
   const btn = document.getElementById('broadcast-btn');
   btn.disabled = true;
