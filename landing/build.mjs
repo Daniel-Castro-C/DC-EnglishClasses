@@ -12,7 +12,24 @@ const cp=(from,to)=>{
 };
 for(const name of ['index.html','admin.html'])cp('landing/'+name,name);
 const pages=['home.html','aluno.html','perfil.html','enviar-material.html','pergunte-ao-daniel.html','guias-gramatica.html','recursos.html'];
-const scripts=['common.js','aluno.js','perfil.js','perguntaAoDaniel.js','enviarMaterial.js','guiasGramatica.js','recursos.js','recursos-module.js','textos-module.js'];
+// Discover dependencies from the actual student pages and shared modules,
+// including scripts loaded dynamically with document.write().
+const scripts=new Set();
+const seen=new Set();
+const scan=source=>{
+ for(const match of source.matchAll(/js\\/([a-zA-Z0-9_-]+\\.js)/g)){
+  const name=match[1];
+  if(name==='supabaseClient.js'||name==='emailConfig.js'||seen.has(name))continue;
+  const full=path.join(root,'js',name);
+  if(!fs.existsSync(full))throw Error('Student module referenced but not found: '+name);
+  seen.add(name);scripts.add(name);
+  scan(fs.readFileSync(full,'utf8'));
+ }
+};
+for(const name of pages){
+ const source=path.join(root,name);
+ if(fs.existsSync(source))scan(fs.readFileSync(source,'utf8'));
+}
 for(const f of scripts)cp('js/'+f,'visit/js/'+f);
 cp('landing/visitor-demo-client.js','visit/js/supabaseClient.js');
 cp('landing/visitor-tour.js','visit/visitor-tour.js');
