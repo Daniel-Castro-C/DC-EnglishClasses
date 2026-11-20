@@ -67,7 +67,7 @@ async function enterStudentTestMode(){
   window.location.href = 'home.html';
 }
 
-function leaveStudentTestMode(){
+function clearTeacherTestSession(){
   try {
     [['dc_teacher_test_previous_language','portal_lang'],['dc_teacher_test_previous_theme','portal_theme']].forEach(([backup, key]) => {
       const old = sessionStorage.getItem(backup);
@@ -77,6 +77,10 @@ function leaveStudentTestMode(){
     });
     sessionStorage.removeItem(TEACHER_TEST_SESSION_KEY);
   } catch (_) {}
+}
+
+function leaveStudentTestMode(){
+  clearTeacherTestSession();
   window.location.href = 'admin.html';
 }
 
