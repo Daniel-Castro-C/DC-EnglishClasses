@@ -20,76 +20,100 @@ let myProfile = null;
   render();
 })();
 
+
 function render(){
-  // Não permitir que os controles da área de aluno alterem o perfil Auth do professor.
+  // A versão de teste continua totalmente protegida: não exibe formulários
+  // que poderiam modificar nome, foto, senha ou preferências do professor.
   if (isTestStudentProfile(myProfile)) {
     document.getElementById('main-content').innerHTML = `
-      <div class="topline"><div><h1>${t('nav_perfil')}</h1><div class="sub">Perfil de demonstração vinculado ao professor</div></div></div>
-      <section class="lesson-card">
-        <h3>${escapeHtml(TEACHER_TEST_NAME)}</h3>
-        <p>Você está explorando o portal como aluno sem trocar de conta.</p>
-        <p class="small-note">E-mail de comunicados: <strong>${escapeHtml(TEACHER_TEST_EMAIL)}</strong></p>
-        <p class="small-note">Nome, foto, senha e configurações da sua conta real não podem ser alterados nesta visualização.</p>
-        <button type="button" class="btn-dark-sm" onclick="leaveStudentTestMode()">← Voltar ao painel do professor</button>
-      </section>
+      <div class="student-page student-profile-page">
+        <header class="student-page-heading">
+          <span class="student-page-kicker">${t('profile_kicker')}</span>
+          <h1>${t('nav_perfil')}</h1>
+          <p>${t('profile_sub')}</p>
+        </header>
+        <div class="student-profile-hero">
+          <span class="student-profile-initial" aria-hidden="true">T</span>
+          <div><h2>${escapeHtml(TEACHER_TEST_NAME)}</h2><p>Perfil de demonstração vinculado ao professor</p></div>
+          <span class="student-soft-tag">TESTE</span>
+        </div>
+        <section class="student-panel">
+          <div class="student-panel-head"><h2>${escapeHtml(TEACHER_TEST_NAME)}</h2></div>
+          <p>Você está explorando o portal como aluno sem trocar de conta.</p>
+          <p class="student-muted">E-mail de comunicados: <strong>${escapeHtml(TEACHER_TEST_EMAIL)}</strong></p>
+          <p class="student-muted">As configurações de nome, foto, senha e horários da sua conta real ficam protegidas nesta visualização.</p>
+          <button type="button" class="btn-dark-sm student-primary-action" onclick="leaveStudentTestMode()">← Voltar ao painel do professor</button>
+        </section>
+      </div>
     `;
     return;
   }
+
   const avatarSrc = myProfile.avatar_url || '';
   const linkAula = myProfile.permanent_lesson_link;
-  const WEEKDAY_KEYS = ['weekday_1', 'weekday_2', 'weekday_3', 'weekday_4', 'weekday_5', 'weekday_6', 'weekday_7'];
-  const scheduleLabel = (myProfile.lesson_weekday && myProfile.lesson_time)
-    ? `${t(WEEKDAY_KEYS[myProfile.lesson_weekday - 1])}, ${myProfile.lesson_time.slice(0,5)}`
-    : '';
+  const WEEKDAY_KEYS = ['weekday_1','weekday_2','weekday_3','weekday_4','weekday_5','weekday_6','weekday_7'];
+  const scheduleLabel = myProfile.lesson_weekday && myProfile.lesson_time
+    ? `${t(WEEKDAY_KEYS[myProfile.lesson_weekday - 1])}, ${myProfile.lesson_time.slice(0,5)}` : '';
 
   document.getElementById('main-content').innerHTML = `
-    <div class="topline">
-      <div>
+    <div class="student-page student-profile-page">
+      <header class="student-page-heading">
+        <span class="student-page-kicker">${t('profile_kicker')}</span>
         <h1>${t('nav_perfil')}</h1>
-        <div class="sub">${t('profile_sub')}</div>
+        <p>${t('profile_sub')}</p>
+      </header>
+      <div class="student-profile-hero">
+        ${avatarSrc ? `<img src="${escapeHtml(avatarSrc)}" alt="" class="student-profile-initial student-profile-hero-photo">` :
+          `<span class="student-profile-initial" aria-hidden="true">${escapeHtml((myProfile.full_name || myProfile.email || 'A').trim().charAt(0).toUpperCase())}</span>`}
+        <div><h2>${escapeHtml(myProfile.full_name || myProfile.email || '')}</h2>
+          <p>${t('area_aluno')}</p></div>
+        <span class="student-soft-tag">${t('area_aluno')}</span>
       </div>
-    </div>
-
-    <div class="lesson-card">
-      <h3>${t('photo_name_title')}</h3>
-      <div class="avatar-row">
-        ${avatarSrc
-          ? `<img id="avatar-preview" class="avatar-preview" src="${avatarSrc}" alt="Sua foto">`
-          : `<div id="avatar-preview" class="avatar-preview"></div>`}
-        <div style="flex:1;">
-          <input id="avatar-file" type="file" accept="image/*">
-          <div class="small-note">${t('photo_hint')}</div>
+      <div class="student-section-grid student-grid-main">
+        <section class="student-panel">
+          <div class="student-panel-head"><h2>${t('profile_personal_heading')}</h2></div>
+          <div class="avatar-row student-profile-avatar-row">
+            ${avatarSrc ? `<img id="avatar-preview" class="avatar-preview" src="${escapeHtml(avatarSrc)}" alt="${t('photo_name_title')}">` :
+              '<div id="avatar-preview" class="avatar-preview"></div>'}
+            <div class="student-avatar-picker">
+              <label for="avatar-file">${t('photo_name_title')}</label>
+              <input id="avatar-file" type="file" accept="image/*">
+              <div class="student-muted">${t('photo_hint')}</div>
+            </div>
+          </div>
+          <div id="avatar-feedback" class="feedback" role="status" aria-live="polite"></div>
+          <label for="full-name-input">${t('full_name_label')}</label>
+          <input id="full-name-input" value="${escapeHtml(myProfile.full_name || '')}">
+          <button class="btn-dark-sm student-primary-action" onclick="saveName()">${t('save_name_btn')}</button>
+          <div id="name-feedback" class="feedback" role="status" aria-live="polite"></div>
+        </section>
+        <section class="student-panel">
+          <div class="student-panel-head"><h2>${t('profile_class_heading')}</h2></div>
+          <label>${t('lesson_link_title')}</label>
+          <p class="student-muted">${t('lesson_link_meta')}</p>
+          ${linkAula ? `
+            <a class="btn-dark-sm student-secondary-link" href="${escapeHtml(linkAula)}" target="_blank" rel="noopener noreferrer">${t('open_lesson_link')} ↗</a>
+          ` : `<div class="student-muted student-profile-unset">${t('lesson_link_not_set')}</div>`}
+          ${scheduleLabel ? `
+            <div class="student-profile-schedule">
+              <label>${t('schedule_title')}</label>
+              <strong>${escapeHtml(scheduleLabel)}</strong>
+            </div>
+          ` : ''}
+        </section>
+      </div>
+      <!-- Segurança sempre após informações pessoais e informações de aula. -->
+      <section class="student-panel student-profile-security">
+        <div class="student-panel-head"><h2>${t('profile_security_heading')}</h2></div>
+        <div class="student-security-fields">
+          <div><label for="new-pass-1">${t('new_password_label')}</label>
+            <input id="new-pass-1" type="password" placeholder="${t('new_password_placeholder')}"></div>
+          <div><label for="new-pass-2">${t('confirm_password_label')}</label>
+            <input id="new-pass-2" type="password" placeholder="${t('confirm_password_placeholder')}"></div>
         </div>
-      </div>
-      <div id="avatar-feedback" class="feedback"></div>
-
-      <label style="margin-top:18px;">${t('full_name_label')}</label>
-      <input id="full-name-input" value="${escapeHtml(myProfile.full_name || '')}">
-      <button class="btn-dark-sm" onclick="saveName()">${t('save_name_btn')}</button>
-      <div id="name-feedback" class="feedback"></div>
-    </div>
-
-    <div class="lesson-card">
-      <h3>${t('lesson_link_title')}</h3>
-      <div class="meta">${t('lesson_link_meta')}</div>
-      ${linkAula
-        ? `<button class="btn-dark-sm" onclick="window.open('${escapeAttr(linkAula)}', '_blank')">${t('open_lesson_link')}</button>`
-        : `<div class="empty-state">${t('lesson_link_not_set')}</div>`}
-      ${scheduleLabel ? `
-        <div style="border-top:1px solid var(--line);margin:18px 0 12px;"></div>
-        <h3 style="margin-bottom:4px;">${t('schedule_title')}</h3>
-        <div style="font-size:15px;color:var(--text);font-weight:600;">${scheduleLabel}</div>
-      ` : ''}
-    </div>
-
-    <div class="lesson-card">
-      <h3>${t('change_password_title')}</h3>
-      <label>${t('new_password_label')}</label>
-      <input id="new-pass-1" type="password" placeholder="${t('new_password_placeholder')}">
-      <label>${t('confirm_password_label')}</label>
-      <input id="new-pass-2" type="password" placeholder="${t('confirm_password_placeholder')}">
-      <button class="btn-dark-sm" onclick="changePassword()">${t('save_password_btn')}</button>
-      <div id="pass-feedback" class="feedback"></div>
+        <button class="btn-dark-sm student-primary-action" onclick="changePassword()">${t('save_password_btn')}</button>
+        <div id="pass-feedback" class="feedback" role="status" aria-live="polite"></div>
+      </section>
     </div>
   `;
 
