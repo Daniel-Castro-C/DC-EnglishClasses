@@ -906,6 +906,7 @@ Object.assign(I18N.en, {
 /* Títulos e estados das páginas internas; preserva a alternância PT/EN. */
 Object.assign(I18N.pt, {
   nav_recursos:'Recursos',
+  recursos_texto:'Aprimorando a Escrita',
   recursos_vocab:'Expandindo seu vocabulário',
   recursos_vocab_sub:'Palavras que você ainda não costuma usar — transforme vocabulário em prática.',
   recursos_count:'{n} palavras',
@@ -946,6 +947,7 @@ Object.assign(I18N.pt, {
 });
 Object.assign(I18N.en, {
   nav_recursos:'Resources',
+  recursos_texto:'Improving Your Writing',
   recursos_vocab:'Expanding your vocabulary',
   recursos_vocab_sub:'Words you do not use yet — turn new vocabulary into practice.',
   recursos_count:'{n} words',
