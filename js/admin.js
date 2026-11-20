@@ -30,6 +30,9 @@ let quickLessonFiles = [];
     return;
   }
 
+  await syncThemeFromProfile(profile);
+  document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(profile.id);
+
   await loadStudents();
   await refreshPendingCounts();
   renderNav();
@@ -72,42 +75,53 @@ async function refreshPendingCounts(){
   danielPendingTotal = (pendingQuestions || []).length;
 }
 
+
 function renderNav(){
-  let html = `<div class="nav-item ${currentView === 'home' ? 'active' : ''}" onclick="renderHome()">
-    <span>Home</span>
-  </div>`;
-  html += `<div class="nav-item ${currentView === 'comunicados' ? 'active' : ''}" onclick="openComunicados()">
-    <span>Comunicados</span>
-  </div>`;
-  html += `<div class="nav-item ${currentView === 'guias' ? 'active' : ''}" onclick="openGuias()">
-    <span>Guias de Gramática</span>
-  </div>`;
-  html += `<div class="nav-item ${currentView === 'daniel' ? 'active' : ''}" onclick="openDanielModule()">
-    <span>Pergunte ao Daniel</span>
-    ${danielPendingTotal > 0 ? `<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;">${danielPendingTotal}</span>` : ''}
-  </div>`;
-  html += `<div class="nav-label">Alunos</div>`;
-  if (students.length === 0) {
-    html += `<div class="nav-item" style="opacity:.6;cursor:default;">Nenhum aluno ainda</div>`;
+  const items = [
+    { key:'home', label:'Início', icon:'home', action:'renderHome()' },
+    { key:'comunicados', label:'Comunicados', icon:'comunicados', action:'openComunicados()' },
+    { key:'guias', label:'Guias de Gramática', icon:'gramatica', action:'openGuias()' },
+    { key:'daniel', label:'Pergunte ao Daniel', icon:'daniel', action:'openDanielModule()' }
+  ];
+  let html = '<div class="nav-label">Área do professor</div>';
+  items.forEach(item => {
+    const active = currentView === item.key;
+    const badge = item.key === 'daniel' && danielPendingTotal > 0
+      ? '<span class="pill nav-badge">' + danielPendingTotal + '</span>' : '';
+    html += '<button type="button" class="nav-item' + (active ? ' active' : '') +
+      '" onclick="' + item.action + '"' + (active ? ' aria-current="page"' : '') + '>' +
+      portalNavIcon(item.icon) + '<span class="nav-item-label">' + item.label + '</span>' + badge + '</button>';
+  });
+  html += '<div class="nav-label nav-students-label">Alunos <span class="nav-student-count">' + students.length + '</span></div>';
+  if (!students.length) {
+    html += '<p class="sidebar-empty">Nenhum aluno cadastrado.</p>';
+  } else {
+    html += '<input class="sidebar-student-search" type="search" aria-label="Buscar aluno no menu" placeholder="Buscar aluno..." oninput="filterAdminStudentNav(this.value)">';
   }
-  students.forEach(s => {
-    const active = currentView === 'student' && currentStudent && currentStudent.id === s.id ? 'active' : '';
-    const pending = pendingCountsByStudent[s.id] || 0;
+  students.forEach(student => {
+    const active = currentView === 'student' && currentStudent && currentStudent.id === student.id;
+    const pending = pendingCountsByStudent[student.id] || 0;
     const badge = pending > 0
-      ? `<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;flex-shrink:0;">${pending}</span>`
-      : `<span class="dot" style="background:var(--sky);flex-shrink:0;"></span>`;
-    const scheduleLabel = (s.lesson_weekday && s.lesson_time)
-      ? `${WEEKDAY_SHORT[s.lesson_weekday - 1]} ${s.lesson_time.slice(0,5)}`
-      : '';
-    html += `<div class="nav-item ${active}" onclick="openStudent('${s.id}')">
-      <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;">
-        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(s.full_name || s.email)}</span>
-        ${scheduleLabel ? `<span style="font-size:11px;color:#8FA0BF;">${scheduleLabel}</span>` : ''}
-      </div>
-      ${badge}
-    </div>`;
+      ? '<span class="pill nav-badge">' + pending + '</span>'
+      : '<span class="dot" aria-hidden="true"></span>';
+    const schedule = student.lesson_weekday != null && student.lesson_time
+      ? WEEKDAY_SHORT[student.lesson_weekday - 1] + ' ' + student.lesson_time.slice(0,5) : '';
+    const name = student.full_name || student.email || 'Aluno sem nome';
+    html += '<button type="button" class="nav-item admin-student-nav' + (active ? ' active' : '') +
+      '" data-search-name="' + escapeHtml(name.toLocaleLowerCase('pt-BR')) +
+      '" onclick="openStudent(&quot;' + student.id + '&quot;)">' +
+      '<span class="nav-student-avatar" aria-hidden="true">' + escapeHtml(name.trim().charAt(0).toUpperCase()) + '</span>' +
+      '<span class="nav-student-text"><span class="nav-item-label">' + escapeHtml(name) + '</span>' +
+      (schedule ? '<small>' + escapeHtml(schedule) + '</small>' : '') + '</span>' + badge + '</button>';
   });
   document.getElementById('nav-container').innerHTML = html;
+}
+
+function filterAdminStudentNav(query){
+  const value = (query || '').trim().toLocaleLowerCase('pt-BR');
+  document.querySelectorAll('.admin-student-nav').forEach(item => {
+    item.hidden = !item.dataset.searchName.includes(value);
+  });
 }
 
 // São Paulo timezone: today and weekly schedule reflect the school's local calendar.
@@ -181,35 +195,49 @@ async function renderHome(){
     .sort((a,b) => a.lesson_time.localeCompare(b.lesson_time));
   const main = document.getElementById('main-content');
   main.innerHTML = `
-    <div class="topline">
-      <div><h1>Home</h1><div class="sub">Aulas de hoje e relatórios de desempenho pendentes.</div></div>
-    </div>
+
+    <header class="topline admin-topline">
+      <div>
+        <div class="dashboard-kicker">VISÃO GERAL</div>
+        <h1>Painel do professor</h1>
+        <div class="sub">Acompanhe sua agenda, seus alunos e o que precisa de atenção.</div>
+      </div>
+    </header>
     <div class="ec-admin-intro" aria-label="Resumo do dia">
-      <div class="ec-admin-kicker">Painel do professor</div>
+      <div class="ec-admin-kicker">SEU ESPAÇO DE GESTÃO</div>
       <strong>Suas aulas, organizadas em um só lugar.</strong>
-      <p>Confira a agenda de hoje e acompanhe os relatórios que precisam de atenção.</p>
+      <p>Confira a agenda do dia, acompanhe os relatórios e gerencie seus alunos com facilidade.</p>
     </div>
+    <section class="admin-overview-stats" aria-label="Indicadores do portal">
+      <div class="admin-stat"><span>Aulas hoje</span><strong>${classes.length}</strong><small>Horários fixos cadastrados</small></div>
+      <div class="admin-stat"><span>Alunos</span><strong>${students.length}</strong><small>Perfis de estudantes</small></div>
+      <div class="admin-stat"><span>Relatórios pendentes</span><strong id="report-pending-stat">—</strong><small>Necessitam de acompanhamento</small></div>
+    </section>
     <div class="admin-dashboard-grid">
-      <section class="box">
-        <h3>Aulas de hoje</h3>
-        <div class="admin-dashboard-number">${classes.length}</div>
+      <section class="box admin-panel">
+        <div class="admin-panel-heading"><h3>Agenda de hoje</h3><span class="admin-panel-count">${classes.length} aula(s)</span></div>
         ${classes.length ? classes.map(student => `
           <button class="admin-dashboard-line" onclick="openTodayClassCall('${student.id}')" title="Abrir videochamada da aula">
             <span>${studentDashboardLabel(student)}</span><strong>${escapeHtml(student.lesson_time.slice(0,5))}</strong>
           </button>`).join('') : '<div class="small-note">Nenhuma aula com horário fixo cadastrada para hoje.</div>'}
       </section>
-      <section class="box">
-        <h3>Pendências</h3>
-        <div class="admin-dashboard-number" id="report-pending-count">—</div>
+      <section class="box admin-panel">
+        <div class="admin-panel-heading"><h3>Pendências</h3><span class="admin-panel-count" id="report-pending-count">—</span></div>
         <div id="report-pending-list" aria-live="polite"><div class="small-note">Verificando relatórios de desempenho...</div></div>
       </section>
     </div>
+    <section class="box admin-recent-activity">
+      <div class="admin-panel-heading"><h3>Atividades recentes</h3><span class="admin-panel-count">Últimas ações dos alunos</span></div>
+      <div id="admin-recent-activity-list" aria-live="polite"><div class="small-note">Carregando atividades...</div></div>
+    </section>
   `;
+  renderRecentAdminActivity();
   try {
     const pendencies = await loadReportPendencies();
     // Evita sobrescrever outra tela se o usuário navegar durante o carregamento.
     if (currentView !== 'home' || !document.getElementById('report-pending-list')) return;
     document.getElementById('report-pending-count').textContent = String(pendencies.length);
+    document.getElementById('report-pending-stat').textContent = String(pendencies.length);
     document.getElementById('report-pending-list').innerHTML = pendencies.length
       ? pendencies.map(({lesson, studentName}) => `
         <div class="admin-dashboard-line">
@@ -228,7 +256,39 @@ async function renderHome(){
     const count = document.getElementById('report-pending-count');
     const list = document.getElementById('report-pending-list');
     if (count) count.textContent = '—';
+    const stat = document.getElementById('report-pending-stat');
+    if (stat) stat.textContent = '—';
     if (list) list.innerHTML = '<div class="small-note">Não foi possível carregar as pendências. Abra a Home novamente para tentar.</div>';
+  }
+}
+
+
+async function renderRecentAdminActivity(){
+  const target = document.getElementById('admin-recent-activity-list');
+  if (!target) return;
+  try {
+    const { data, error } = await sb.from('activity_log')
+      .select('student_id, action, created_at')
+      .order('created_at', { ascending: false })
+      .limit(6);
+    if (error) throw error;
+    if (currentView !== 'home' || !target.isConnected) return;
+    if (!data || !data.length) {
+      target.innerHTML = '<p class="dashboard-muted">Ainda não há atividades registradas.</p>';
+      return;
+    }
+    const names = new Map(students.map(s => [s.id, s.full_name || s.email]));
+    target.innerHTML = data.map(log => {
+      const date = new Date(log.created_at);
+      const when = Number.isNaN(date.getTime()) ? '' : date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+      const action = ACTIVITY_LABELS[log.action] || log.action;
+      return '<div class="admin-activity-row"><span class="admin-activity-marker" aria-hidden="true"></span>' +
+        '<div><strong>' + escapeHtml(names.get(log.student_id) || 'Aluno') + '</strong>' +
+        '<small>' + escapeHtml(action) + '</small></div><time>' + escapeHtml(when) + '</time></div>';
+    }).join('');
+  } catch (error) {
+    console.error('Erro ao carregar atividades recentes:', error);
+    if (target.isConnected) target.innerHTML = '<p class="dashboard-muted">Não foi possível carregar as atividades.</p>';
   }
 }
 

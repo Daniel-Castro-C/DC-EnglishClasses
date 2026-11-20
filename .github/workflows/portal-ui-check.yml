@@ -1,0 +1,54 @@
+name: Validate portal UI
+
+on:
+  pull_request:
+    paths:
+      - '**/*.html'
+      - '**/*.js'
+      - '**/*.css'
+      - '.github/workflows/portal-ui-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript files
+        run: find js -type f -name '*.js' -print0 | xargs -0 -n 1 node --check
+      - name: Validate inline scripts and dashboard entry points
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+
+          for path in Path('.').glob('*.html'):
+              html = path.read_text(encoding='utf-8')
+              for index, match in enumerate(re.finditer(r'<script\b([^>]*)>(.*?)</script>', html, re.I | re.S)):
+                  attributes, script = match.groups()
+                  if re.search(r'\bsrc\s*=', attributes, re.I) or not script.strip():
+                      continue
+                  if 'application/json' in attributes or 'application/ld+json' in attributes:
+                      continue
+                  with tempfile.TemporaryDirectory() as tmp:
+                      file = Path(tmp) / f'inline-{index}.js'
+                      file.write_text(script, encoding='utf-8')
+                      subprocess.run(['node', '--check', str(file)], check=True)
+              print(f'OK: {path}')
+
+          home = Path('home.html').read_text(encoding='utf-8')
+          admin = Path('admin.html').read_text(encoding='utf-8')
+          assert 'id="recent-materials-content"' in home
+          assert home.index('id="word-of-day-container"') > home.index('id="recent-materials-content"')
+          assert 'id="theme-toggle-container"' in admin
+          assert 'id="nav-container"' in admin
+          print('OK: dashboard entry points')
+          PY
