@@ -4,6 +4,34 @@ function escapeHtml(str){
   }[m]));
 }
 
+// A palavra do dia pertence exclusivamente à Home do aluno.
+// Proteção para páginas secundárias caso algum script ou widget a injete.
+(function enforceWordOfDayHomeOnly(){
+  const page = window.location.pathname.split('/').pop().toLowerCase();
+  if (page === 'home.html') return;
+
+  const selector = '#word-of-day-container, .word-of-day-card';
+  const style = document.createElement('style');
+  style.textContent = selector + '{display:none!important;}';
+  (document.head || document.documentElement).appendChild(style);
+
+  const removeWordOfDay = () => {
+    document.querySelectorAll(selector).forEach(node => node.remove());
+  };
+
+  const start = () => {
+    removeWordOfDay();
+    const observer = new MutationObserver(removeWordOfDay);
+    observer.observe(document.body, { childList:true, subtree:true });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once:true });
+  } else {
+    start();
+  }
+})();
+
 // Registra uma ação do aluno no log de atividades (visível só para o professor)
 async function logActivity(studentId, action, details){
   try {
