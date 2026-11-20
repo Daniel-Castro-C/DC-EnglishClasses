@@ -80,6 +80,7 @@ $('landing-photo-form').onsubmit=async e=>{
       throw save.error||new Error('Não foi possível confirmar a gravação.');
     }
     displayPhoto(name,save.data.updated_at);
+    try{localStorage.setItem('dc-landing-photo-updated',String(Date.now()))}catch(_){}
     $('landing-photo-file').value='';
     photoStatus('Foto salva! Ela já está disponível na landing page.');
     if(previous&&previous!==name)await db.storage.from(PHOTO_BUCKET).remove([previous]);
@@ -94,6 +95,7 @@ $('landing-photo-remove').onclick=async()=>{
   const {data,error}=await db.from('landing_media').update({image_path:null,updated_at:new Date().toISOString()}).eq('id','professor_photo').select('image_path,updated_at').single();
   if(error||!data){photoStatus('Não foi possível remover a foto.',true);btn.disabled=false;return}
   displayPhoto(null,data.updated_at);
+  try{localStorage.setItem('dc-landing-photo-updated',String(Date.now()))}catch(_){}
   photoStatus('Foto removida. A landing page voltará a exibir D.C.');
   await db.storage.from(PHOTO_BUCKET).remove([previous]);
 };
