@@ -4,7 +4,7 @@
 (function(){
   'use strict';
   const visitorId='visitor-demo-local';
-  const profile={id:visitorId,email:'visitante@demo.invalid',full_name:'Visitante',role:'student',avatar_url:null,preferred_language:'pt',preferred_theme:'light',permanent_lesson_link:null,lesson_weekday:null,lesson_time:null,has_seen_onboarding:true};
+  const profile={id:visitorId,email:'visitante@demo.invalid',full_name:'Visitante',role:'student',avatar_url:null,preferred_language:null,preferred_theme:null,permanent_lesson_link:null,lesson_weekday:null,lesson_time:null,has_seen_onboarding:true};
   const now=new Date();
   const lessons=Array.from({length:17},(_,i)=>{
     const d=new Date(now);d.setDate(d.getDate()-(16-i)*7);
@@ -94,5 +94,5 @@
 })();
 const sb=window.sb,STORAGE_BUCKET='materiais',AVATARS_BUCKET='avatars';
 async function requireSession(){return {user:{id:'visitor-demo-local'}}}
-async function getMyProfile(){return {id:'visitor-demo-local',email:'visitante@demo.invalid',full_name:'Visitante',role:'student',avatar_url:null,preferred_language:'pt',preferred_theme:'light',permanent_lesson_link:null,has_seen_onboarding:true}}
+async function getMyProfile(){return {id:'visitor-demo-local',email:'visitante@demo.invalid',full_name:'Visitante',role:'student',avatar_url:null,preferred_language:null,preferred_theme:null,permanent_lesson_link:null,has_seen_onboarding:true}}
 async function signOutAndRedirect(){window.location.href='../'}
