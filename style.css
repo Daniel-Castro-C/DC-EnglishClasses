@@ -1025,3 +1025,31 @@ body.dark-mode .student-profile-hero h2{color:var(--sp-hero);}
 @media(prefers-reduced-motion:reduce){
   .student-material-tile,.sidebar .nav-subitem{transition:none;}
 }
+
+
+/* Atalhos externos do professor: landing pública e administração de leads. */
+.admin-topline{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;}
+.admin-landing-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+.admin-landing-link{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  min-height:42px;padding:10px 13px;
+  font:600 12px/1.35 'IBM Plex Sans',sans-serif;text-decoration:none;
+  border-radius:10px;border:1px solid var(--line);
+  transition:background-color .16s,border-color .16s,transform .16s;
+}
+.admin-landing-public{color:var(--text);background:var(--paper-card);}
+.admin-landing-manage{color:#fff;background:var(--ink);border-color:var(--ink);}
+.admin-landing-link-icon{font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+.admin-landing-public:hover{border-color:var(--sky);background:var(--sky-soft);}
+.admin-landing-manage:hover{background:var(--ink-dark);border-color:var(--ink-dark);}
+.admin-landing-link:focus-visible{outline:2px solid var(--sky);outline-offset:3px;}
+body.dark-mode .admin-landing-public{color:var(--text);background:var(--paper-card);}
+body.dark-mode .admin-landing-public:hover{background:#2b4161;border-color:#8ebce6;}
+body.dark-mode .admin-landing-manage{color:#fff;background:#315580;border-color:#466e9d;}
+body.dark-mode .admin-landing-manage:hover{background:#3f6391;}
+@media(max-width:650px){
+  .admin-topline{align-items:stretch;}
+  .admin-landing-actions{width:100%;gap:8px;}
+  .admin-landing-link{flex:1 1 180px;white-space:normal;}
+}
+@media(prefers-reduced-motion:reduce){.admin-landing-link{transition:none;}}

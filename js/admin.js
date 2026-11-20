@@ -210,6 +210,22 @@ async function renderHome(){
         <h1>Painel do professor</h1>
         <div class="sub">Acompanhe sua agenda, seus alunos e o que precisa de atenção.</div>
       </div>
+      <nav class="admin-landing-actions" aria-label="Acessos à landing page">
+        <a class="admin-landing-link admin-landing-public"
+           href="https://dc-english-classes-leads.vercel.app/"
+           target="_blank" rel="noopener noreferrer"
+           title="Abrir a landing page pública em uma nova aba">
+          <span class="admin-landing-link-icon" aria-hidden="true">↗</span>
+          <span>Visitar a landing page</span>
+        </a>
+        <a class="admin-landing-link admin-landing-manage"
+           href="https://dc-english-classes-leads.vercel.app/admin.html"
+           target="_blank" rel="noopener noreferrer"
+           title="Gerenciar leads, disponibilidade e foto da landing page em uma nova aba">
+          <span class="admin-landing-link-icon" aria-hidden="true">⚙</span>
+          <span>Acessar a área de administrador</span>
+        </a>
+      </nav>
     </header>
     <div class="ec-admin-intro" aria-label="Resumo do dia">
       <div class="ec-admin-kicker">SEU ESPAÇO DE GESTÃO</div>
