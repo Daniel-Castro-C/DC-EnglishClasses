@@ -156,7 +156,7 @@ const I18N = {
     area_aluno: 'Área do aluno',
     painel_aluno: 'Painel do aluno',
     logout: 'Sair',
-    whatsapp_support: 'Fale com o suporte do professor',
+    whatsapp_support: 'Fale com nossa equipe',
     loading: 'Carregando...',
     cancel_btn: 'Cancelar',
 
