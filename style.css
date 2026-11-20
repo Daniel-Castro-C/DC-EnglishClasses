@@ -902,8 +902,8 @@ body.dark-mode .student-page{
 .student-lesson-item{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.3fr);gap:20px;background:var(--sp-card);border:1px solid var(--sp-line);border-radius:14px;padding:20px 22px;align-items:start;box-shadow:0 2px 12px rgba(26,52,85,.025);}
 .student-lesson-summary{min-width:0;padding:3px 0;}
 .student-lesson-number{display:block;color:var(--sp-accent);text-transform:uppercase;font-size:9.5px;letter-spacing:1.2px;font-weight:700;margin:0 0 8px;}
-.student-lesson-summary h3{margin:0 0 7px;color:var(--sp-hero);font-family:'Libre Baskerville',Georgia,serif;font-weight:700;font-size:16px;line-height:1.42;overflow-wrap:anywhere;}
-.student-lesson-summary p{margin:0 0 8px;color:var(--text-soft);font-size:16px;line-height:1.42;overflow-wrap:anywhere;}
+.student-lesson-summary h3{margin:0 0 7px;color:var(--sp-hero);font-family:'Libre Baskerville',Georgia,serif;font-weight:700;font-size:18px;line-height:1.42;overflow-wrap:anywhere;}
+.student-lesson-summary p{margin:0 0 8px;color:var(--text-soft);font-size:12px;line-height:1.5;overflow-wrap:anywhere;}
 .student-lesson-summary time{font-size:11px;color:var(--text-soft);display:inline-block;}
 .student-lesson-materials{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,158px),1fr));gap:9px;min-width:0;align-items:start;}
 .student-material-dropdown{min-width:0;position:relative;}
