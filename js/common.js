@@ -32,6 +32,7 @@ function makeTeacherTestProfile(profile){
     permanent_lesson_link: null,
     lesson_weekday: null,
     lesson_time: null,
+    has_seen_onboarding: true,
     is_test_profile: true
   };
 }
@@ -56,6 +57,8 @@ async function enterStudentTestMode(){
     return;
   }
   try {
+    sessionStorage.setItem('dc_teacher_test_previous_language', localStorage.getItem('portal_lang') ?? '__unset__');
+    sessionStorage.setItem('dc_teacher_test_previous_theme', localStorage.getItem('portal_theme') ?? '__unset__');
     sessionStorage.setItem(TEACHER_TEST_SESSION_KEY, user.id);
   } catch (e) {
     alert('O navegador bloqueou a sessão de testes. Ative o armazenamento da sessão para usar este recurso.');
@@ -65,7 +68,15 @@ async function enterStudentTestMode(){
 }
 
 function leaveStudentTestMode(){
-  try { sessionStorage.removeItem(TEACHER_TEST_SESSION_KEY); } catch (_) {}
+  try {
+    [['dc_teacher_test_previous_language','portal_lang'],['dc_teacher_test_previous_theme','portal_theme']].forEach(([backup, key]) => {
+      const old = sessionStorage.getItem(backup);
+      if (old === '__unset__') localStorage.removeItem(key);
+      else if (old !== null) localStorage.setItem(key, old);
+      sessionStorage.removeItem(backup);
+    });
+    sessionStorage.removeItem(TEACHER_TEST_SESSION_KEY);
+  } catch (_) {}
   window.location.href = 'admin.html';
 }
 
@@ -514,7 +525,7 @@ function t(key, vars){
 // No carregamento da página, sincroniza o cache local com o idioma salvo no perfil do aluno
 // (o perfil no banco é a fonte de verdade — assim o idioma "segue" o aluno em qualquer aparelho)
 async function syncLanguageFromProfile(profile){
-  if (!profile) return getLang();
+  if (!profile || isTestStudentProfile(profile)) return getLang();
   if (profile.preferred_language === 'pt' || profile.preferred_language === 'en') {
     if (profile.preferred_language !== getLang()) setLangLocal(profile.preferred_language);
   } else {
@@ -528,7 +539,7 @@ async function syncLanguageFromProfile(profile){
 async function changeLanguage(lang, profileId){
   if (lang === getLang()) return;
   setLangLocal(lang);
-  if (profileId) {
+  if (profileId && !window.__dcTeacherTestMode) {
     try {
       await sb.from('profiles').update({ preferred_language: lang }).eq('id', profileId);
     } catch (e) {
@@ -579,7 +590,7 @@ function applyTheme(){
 // No carregamento da página, sincroniza o cache local com o tema salvo no perfil do aluno
 // (o perfil no banco é a fonte de verdade — assim o tema "segue" o aluno em qualquer aparelho)
 async function syncThemeFromProfile(profile){
-  if (!profile) { applyTheme(); return getTheme(); }
+  if (!profile || isTestStudentProfile(profile)) { applyTheme(); return getTheme(); }
   if (profile.preferred_theme === 'light' || profile.preferred_theme === 'dark') {
     if (profile.preferred_theme !== getTheme()) setThemeLocal(profile.preferred_theme);
   } else {
@@ -594,7 +605,7 @@ async function changeTheme(theme, profileId){
   if (theme === getTheme()) return;
   setThemeLocal(theme);
   applyTheme();
-  if (profileId) {
+  if (profileId && !window.__dcTeacherTestMode) {
     try { await sb.from('profiles').update({ preferred_theme: theme }).eq('id', profileId); } catch (e) { console.error('Erro ao salvar tema no perfil:', e); }
   }
 }
