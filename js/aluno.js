@@ -159,8 +159,8 @@ function renderLessonsList(){
       <article class="student-lesson-item">
         <div class="student-lesson-summary">
           <span class="student-lesson-number">${escapeHtml(t('nav_aulas'))}</span>
-          <h3>${escapeHtml(lesson.title || '')}</h3>
-          ${lesson.topic ? `<p>${escapeHtml(lesson.topic)}</p>` : ''}
+          <h3>${escapeHtml(lesson.topic || lesson.title || '')}</h3>
+          ${lesson.topic && lesson.title ? `<p>${escapeHtml(lesson.title)}</p>` : ''}
           ${lesson.lesson_date ? `<time datetime="${escapeHtml(lesson.lesson_date)}">${lessonDateLabel(lesson.lesson_date)}</time>` : ''}
         </div>
         <div class="student-lesson-materials" aria-label="${escapeHtml(t('materials_title'))}">
