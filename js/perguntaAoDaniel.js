@@ -127,6 +127,18 @@ async function submitQuestion(){
     return;
   }
 
+  if (isTestStudentProfile(myProfile)) {
+    btn.disabled = false;
+    btn.textContent = t('send_question_btn');
+    logActivity(myProfile.id, 'daniel_question', subject);
+    showFeedback(t('question_sent_success'), true);
+    document.getElementById('q-subject').value = '';
+    document.getElementById('q-question').value = '';
+    await loadQuestions();
+    renderNav();
+    return;
+  }
+
   // Avisa o professor por e-mail
   const { data: adminProfile, error: adminError } = await sb
     .from('profiles')
