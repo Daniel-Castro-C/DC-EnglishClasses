@@ -1,8 +1,26 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Administração da Landing · D.C English Classes</title><style>
-*{box-sizing:border-box}body{margin:0;background:#f0f5fa;color:#23334b;font:15px/1.55 system-ui,-apple-system,sans-serif}header{background:#152442;color:#fff;padding:18px 22px}header .row{max-width:1100px;margin:auto}h1,h2{letter-spacing:-.04em}button,input,select,textarea{font:inherit}button{background:#193553;color:white;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;font-weight:600}button:disabled{opacity:.5}button.alt{background:#e6eff8;color:#234566}button.del{background:#fff0f0;color:#912c2c}input,select{background:#fff;border:1px solid #cbd9e9;padding:10px;border-radius:8px;width:100%}a{color:#539be3}main{max-width:1100px;margin:auto;padding:26px 20px}.card{border:1px solid #d8e4f1;background:white;border-radius:16px;padding:23px;margin:16px 0;box-shadow:0 6px 30px #1e3c600b}.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.field{margin:11px 0}.field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}.muted{color:#60738a;font-size:13px}.entry{padding:12px 0;border-bottom:1px solid #e0e8f1}.entry:last-child{border:0}.entry small{display:block;color:#687e96}.controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.status{background:#e9f1fb;color:#315e8d;padding:4px 10px;border-radius:30px;font-size:12px}.notice{background:#fff3ce;color:#755322;padding:13px 16px;border-radius:9px;margin:16px 0}.hide{display:none!important}#login{max-width:430px;margin:60px auto}#leads a{font-size:13px}#leads select{width:auto}@media(max-width:650px){.columns{grid-template-columns:1fr}main{padding:15px}.card{padding:17px}}
+*{box-sizing:border-box}body{margin:0;background:#f0f5fa;color:#23334b;font:15px/1.55 system-ui,-apple-system,sans-serif}header{background:#152442;color:#fff;padding:18px 22px}header .row{max-width:1100px;margin:auto}h1,h2{letter-spacing:-.04em}button,input,select,textarea{font:inherit}button{background:#193553;color:white;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;font-weight:600}button:disabled{opacity:.5}button.alt{background:#e6eff8;color:#234566}button.del{background:#fff0f0;color:#912c2c}input,select{background:#fff;border:1px solid #cbd9e9;padding:10px;border-radius:8px;width:100%}a{color:#539be3}main{max-width:1100px;margin:auto;padding:26px 20px}.card{border:1px solid #d8e4f1;background:white;border-radius:16px;padding:23px;margin:16px 0;box-shadow:0 6px 30px #1e3c600b}.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.field{margin:11px 0}.field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}.muted{color:#60738a;font-size:13px}.entry{padding:12px 0;border-bottom:1px solid #e0e8f1}.entry:last-child{border:0}.entry small{display:block;color:#687e96}.controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.status{background:#e9f1fb;color:#315e8d;padding:4px 10px;border-radius:30px;font-size:12px}.notice{background:#fff3ce;color:#755322;padding:13px 16px;border-radius:9px;margin:16px 0}.hide{display:none!important}#login{max-width:430px;margin:60px auto}#leads a{font-size:13px}#leads select{width:auto}.photo-admin-layout{display:grid;grid-template-columns:minmax(170px,260px) 1fr;gap:23px;align-items:center}.photo-preview{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:17px;border:1px solid #c5d6e8;background:#dce9f5}.photo-placeholder{width:100%;aspect-ratio:1/1;border-radius:17px;background:linear-gradient(145deg,#dbe8f6,#a9c8e5);display:grid;place-items:center;font:700 65px Georgia;color:#345c85}.photo-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}.photo-actions button{min-width:125px}.photo-description{font-size:13px;color:#61758b}.photo-status{font-size:13px;margin-top:9px;font-weight:600}input[type=file]{max-width:100%}@media(max-width:650px){.photo-admin-layout{grid-template-columns:1fr}.photo-preview,.photo-placeholder{max-width:280px}}@media(max-width:650px){.columns{grid-template-columns:1fr}main{padding:15px}.card{padding:17px}}
 </style></head><body><header><div class="row"><div><b>D.C English Classes</b><div style="font-size:12px;color:#c2d6ec">Leads e disponibilidade</div></div><div class="controls"><a href="./">Ver landing page</a><button class="alt hide" id="logout">Sair</button></div></div></header><main><div id="notice" class="notice hide" role="status"></div>
 <div id="login" class="card"><h1>Acesso administrativo</h1><p class="muted">Utilize seu login de professor do portal English Classes.</p><form id="sign-in"><div class="field"><label>E-mail</label><input id="email" type="email" autocomplete="username" required></div><div class="field"><label>Senha</label><input id="password" type="password" autocomplete="current-password" required></div><button type="submit">Entrar</button></form></div>
 <div id="dashboard" class="hide"><h1>Disponibilidade e lista de espera</h1><p class="muted">Apenas os horários publicados como disponíveis aparecem na landing page. O calendário considera as próximas três semanas. Horários de Brasília.</p>
+<section class="card" id="landing-photo-panel">
+  <h2>Foto da landing page</h2>
+  <p class="muted">Adicione ou substitua a foto que aparece na seção “Seu professor”. A alteração será mostrada automaticamente na página pública, sem precisar publicar uma nova versão.</p>
+  <div class="photo-admin-layout">
+    <div><div class="photo-placeholder" id="landing-photo-placeholder">D.C</div><img class="photo-preview hide" id="landing-photo-preview" alt="Foto atual de apresentação do professor"></div>
+    <form id="landing-photo-form">
+      <div class="field"><label for="landing-photo-file">Selecionar foto</label>
+        <input type="file" id="landing-photo-file" accept="image/jpeg,image/png,image/webp" required>
+      </div>
+      <p class="photo-description">Formatos: JPG, PNG ou WebP. Tamanho máximo: 5 MB. Recomendação: imagem quadrada ou retrato, com boa iluminação.</p>
+      <div class="photo-actions">
+        <button type="submit" id="landing-photo-save">Salvar foto</button>
+        <button type="button" class="del" id="landing-photo-remove">Remover foto</button>
+      </div>
+      <p id="landing-photo-status" class="photo-status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
 <div class="columns"><section class="card"><h2>Horário recorrente</h2><form id="weekly-form"><div class="field"><label>Dia</label><select id="weekday"><option value="0">Segunda</option><option value="1">Terça</option><option value="2">Quarta</option><option value="3">Quinta</option><option value="4">Sexta</option><option value="5">Sábado</option></select></div><div class="field"><label>Início da aula</label><input id="weekly-time" type="time" required value="18:00"></div><button type="submit">Adicionar horário</button></form></section>
 <section class="card"><h2>Exceção por data</h2><form id="exception-form"><div class="field"><label>Data específica</label><input id="exception-date" type="date" required></div><div class="field"><label>Horário</label><input id="exception-time" type="time" value="18:00" required></div><div class="field"><label>Operação</label><select id="exception-kind"><option value="blocked">Bloquear este horário nesta data</option><option value="available">Abrir vaga extra nesta data</option></select></div><button type="submit">Salvar exceção</button></form></section></div>
 <section class="card"><h2>Horários semanais</h2><div id="weekly-items" class="muted">Carregando...</div></section><section class="card"><h2>Bloqueios e vagas extras</h2><div id="exception-items" class="muted">Carregando...</div></section>
@@ -11,13 +29,75 @@
 (function(){const db=window.supabase.createClient('https://dgwbjgngewymzgedlzix.supabase.co','sb_publishable_Zlgeqn4PhdY11rZPD6i8-w_T42hrmgN');const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));const days=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];let admin=false;const time=x=>String(x||'').slice(0,5);
 function notice(s){$('notice').textContent=s;$('notice').classList.remove('hide');setTimeout(()=>$('notice').classList.add('hide'),7000)}
 function loginView(){admin=false;$('login').classList.remove('hide');$('dashboard').classList.add('hide');$('logout').classList.add('hide')}
-async function check(){const {data:{user}}=await db.auth.getUser();if(!user){loginView();return}const {data,error}=await db.from('profiles').select('role').eq('id',user.id).single();if(error||data?.role!=='admin'){await db.auth.signOut();loginView();notice('Esta área é exclusiva do professor administrador.');return}admin=true;$('login').classList.add('hide');$('dashboard').classList.remove('hide');$('logout').classList.remove('hide');await refresh()}
+async function check(){const {data:{user}}=await db.auth.getUser();if(!user){loginView();return}const {data,error}=await db.from('profiles').select('role').eq('id',user.id).single();if(error||data?.role!=='admin'){await db.auth.signOut();loginView();notice('Esta área é exclusiva do professor administrador.');return}admin=true;$('login').classList.add('hide');$('dashboard').classList.remove('hide');$('logout').classList.remove('hide');await refresh();await refreshPhoto()}
 $('sign-in').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});b.disabled=false;if(error)return notice('Não foi possível entrar. Confira o e-mail e a senha.');await check()};
 $('logout').onclick=async()=>{await db.auth.signOut();loginView()};
 async function refresh(){if(!admin)return;const [a,b,c]=await Promise.all([db.from('landing_weekly_slots').select('*').order('weekday').order('start_time'),db.from('landing_date_overrides').select('*').gte('slot_date',new Date().toISOString().slice(0,10)).order('slot_date'),db.from('landing_leads').select('*').order('created_at',{ascending:false}).limit(300)]);if(a.error||b.error||c.error){notice('Erro ao carregar dados; confira as permissões.');return}
 $('weekly-items').innerHTML=(a.data||[]).map(s=>'<div class="entry row"><div><b>'+days[s.weekday]+' · '+time(s.start_time)+'</b><small>'+(s.active?'Disponível':'Desativado')+'</small></div><div class="controls"><button class="alt" data-toggle="'+s.id+'" data-active="'+s.active+'">'+(s.active?'Desativar':'Reativar')+'</button><button class="del" data-remove-weekly="'+s.id+'">Excluir</button></div></div>').join('')||'Sem horários cadastrados.';
 $('exception-items').innerHTML=(b.data||[]).map(s=>'<div class="entry row"><div><b>'+s.slot_date.split('-').reverse().join('/')+' · '+time(s.start_time)+'</b><small>'+(s.kind==='blocked'?'Bloqueio':'Vaga extra')+'</small></div><button class="del" data-remove-exception="'+s.id+'">Excluir</button></div>').join('')||'Sem exceções futuras.';
 $('lead-items').innerHTML=(c.data||[]).map(s=>{const contact=s.phone.replace(/\D/g,'');const text=encodeURIComponent('Olá, '+s.full_name+'! Recebi seu interesse nas aulas do D.C English Classes. Vamos conversar sobre sua disponibilidade?');return '<div class="entry"><div class="row"><b>'+esc(s.full_name)+'</b><span class="status">'+esc(s.status)+'</span><a href="https://wa.me/'+contact+'?text='+text+'" target="_blank" rel="noopener noreferrer">Conversar no WhatsApp ↗</a></div><p class="muted">'+esc(s.phone)+' · '+esc(s.available_days.join(', '))+' · '+esc(s.period)+'</p><p class="muted">'+esc(s.goal)+'</p><label class="muted">Andamento <select data-status="'+s.id+'">'+['novo','contatado','matriculado','encerrado'].map(st=>'<option value="'+st+'" '+(st===s.status?'selected':'')+'>'+st+'</option>').join('')+'</select></label></div>'}).join('')||'Nenhum interessado cadastrado.'}
+
+const PHOTO_BUCKET='landing-photos';
+let currentPhotoPath=null;
+function photoStatus(message,failed=false){
+  const el=$('landing-photo-status');el.textContent=message;el.style.color=failed?'#a02f28':'#20724f';
+}
+function displayPhoto(path,updated){
+  currentPhotoPath=path||null;
+  const preview=$('landing-photo-preview'),placeholder=$('landing-photo-placeholder');
+  preview.classList.toggle('hide',!currentPhotoPath);
+  placeholder.classList.toggle('hide',!!currentPhotoPath);
+  $('landing-photo-remove').disabled=!currentPhotoPath;
+  if(currentPhotoPath){
+    const {data}=db.storage.from(PHOTO_BUCKET).getPublicUrl(currentPhotoPath);
+    preview.src=data.publicUrl+'?v='+encodeURIComponent(updated||Date.now());
+  }else preview.removeAttribute('src');
+}
+async function refreshPhoto(){
+  if(!admin)return;
+  const {data,error}=await db.from('landing_media').select('image_path,updated_at').eq('id','professor_photo').single();
+  if(error){photoStatus('Não foi possível carregar a foto atual.',true);return;}
+  displayPhoto(data?.image_path,data?.updated_at);
+  photoStatus(data?.image_path?'Foto publicada na landing page.':'Nenhuma foto cadastrada. O monograma D.C aparece como alternativa.');
+}
+$('landing-photo-form').onsubmit=async e=>{
+  e.preventDefault();if(!admin)return;
+  const file=$('landing-photo-file').files?.[0];
+  if(!file){photoStatus('Escolha uma imagem para enviar.',true);return}
+  const extensions={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};
+  if(!extensions[file.type]){photoStatus('Use um arquivo JPG, PNG ou WebP.',true);return}
+  if(file.size>5*1024*1024||file.size===0){photoStatus('A foto deve ter até 5 MB e não pode estar vazia.',true);return}
+  const btn=$('landing-photo-save');btn.disabled=true;
+  const previous=currentPhotoPath;
+  const name='professor/'+crypto.randomUUID().replace(/-/g,'')+'.'+extensions[file.type];
+  photoStatus('Enviando a foto...');
+  try{
+    const upload=await db.storage.from(PHOTO_BUCKET).upload(name,file,{contentType:file.type,cacheControl:'3600',upsert:false});
+    if(upload.error)throw upload.error;
+    const save=await db.from('landing_media').update({image_path:name,updated_at:new Date().toISOString()}).eq('id','professor_photo').select('image_path,updated_at').single();
+    if(save.error||save.data?.image_path!==name){
+      await db.storage.from(PHOTO_BUCKET).remove([name]);
+      throw save.error||new Error('Não foi possível confirmar a gravação.');
+    }
+    displayPhoto(name,save.data.updated_at);
+    $('landing-photo-file').value='';
+    photoStatus('Foto salva! Ela já está disponível na landing page.');
+    if(previous&&previous!==name)await db.storage.from(PHOTO_BUCKET).remove([previous]);
+  }catch(error){photoStatus('Erro ao salvar a foto: '+(error?.message||'Tente novamente.'),true)}
+  finally{btn.disabled=false}
+};
+$('landing-photo-remove').onclick=async()=>{
+  if(!admin||!currentPhotoPath)return;
+  if(!confirm('Remover a foto da landing page? O monograma D.C voltará a aparecer.'))return;
+  const previous=currentPhotoPath;
+  const btn=$('landing-photo-remove');btn.disabled=true;
+  const {data,error}=await db.from('landing_media').update({image_path:null,updated_at:new Date().toISOString()}).eq('id','professor_photo').select('image_path,updated_at').single();
+  if(error||!data){photoStatus('Não foi possível remover a foto.',true);btn.disabled=false;return}
+  displayPhoto(null,data.updated_at);
+  photoStatus('Foto removida. A landing page voltará a exibir D.C.');
+  await db.storage.from(PHOTO_BUCKET).remove([previous]);
+};
+
 $('refresh').onclick=refresh;
 $('weekly-form').onsubmit=async e=>{e.preventDefault();if(!admin)return;const {error}=await db.from('landing_weekly_slots').insert({weekday:Number($('weekday').value),start_time:$('weekly-time').value,active:true});notice(error?'Não foi possível salvar. O horário já pode existir.':'Horário cadastrado.');await refresh()};
 $('exception-form').onsubmit=async e=>{e.preventDefault();if(!admin)return;const {error}=await db.from('landing_date_overrides').upsert({slot_date:$('exception-date').value,start_time:$('exception-time').value,kind:$('exception-kind').value},{onConflict:'slot_date,start_time'});notice(error?'Não foi possível salvar a exceção.':'Exceção salva.');await refresh()};
