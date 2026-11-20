@@ -12,7 +12,7 @@ const cp=(from,to)=>{
 };
 for(const name of ['index.html','admin.html'])cp('landing/'+name,name);
 const pages=['home.html','aluno.html','perfil.html','enviar-material.html','pergunte-ao-daniel.html','guias-gramatica.html','recursos.html'];
-const scripts=['common.js','aluno.js','perfil.js','perguntaAoDaniel.js','enviarMaterial.js','guiasGramatica.js','recursos.js'];
+const scripts=['common.js','aluno.js','perfil.js','perguntaAoDaniel.js','enviarMaterial.js','guiasGramatica.js','recursos.js','recursos-module.js','textos-module.js'];
 for(const f of scripts)cp('js/'+f,'visit/js/'+f);
 cp('landing/visitor-demo-client.js','visit/js/supabaseClient.js');
 cp('landing/visitor-tour.js','visit/visitor-tour.js');
