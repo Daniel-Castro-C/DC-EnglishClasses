@@ -6,6 +6,7 @@ on:
       - '**/*.html'
       - '**/*.js'
       - '**/*.css'
+      - 'tests/**'
       - '.github/workflows/portal-ui-check.yml'
   workflow_dispatch:
 
@@ -22,6 +23,8 @@ jobs:
           node-version: '22'
       - name: Validate JavaScript files
         run: find js -type f -name '*.js' -print0 | xargs -0 -n 1 node --check
+      - name: Validate student test mode behavior
+        run: node --test tests/*.test.mjs
       - name: Validate inline scripts and dashboard entry points
         run: |
           python3 - <<'PY'
