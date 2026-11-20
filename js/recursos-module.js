@@ -186,8 +186,9 @@
     renderDock();
   };
 
-  async function initWordDock() {
+    async function initWordDock() {
     if (!document.getElementById('nav-container')) return;          // não é página de aluno
+    if (!/(^|\/)home(\.html)?\/?$/.test(window.location.pathname)) return;   // Termo do dia só aparece na Home
     if (typeof renderPerfilTab === 'function') return;               // painel do professor
     try {
       const { data: { session } } = await sb.auth.getSession();
