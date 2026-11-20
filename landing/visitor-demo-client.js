@@ -5,12 +5,18 @@
   'use strict';
   const visitorId='visitor-demo-local';
   const profile={id:visitorId,email:'visitante@demo.invalid',full_name:'Visitante',role:'student',avatar_url:null,preferred_language:null,preferred_theme:null,permanent_lesson_link:null,lesson_weekday:null,lesson_time:null,has_seen_onboarding:true};
-  const now=new Date();
-  const lessons=Array.from({length:17},(_,i)=>{
-    const d=new Date(now);d.setDate(d.getDate()-(16-i)*7);
-    return {id:'demo-lesson-'+(i+1),student_id:visitorId,title:i===16?'Everyday Conversations':'Aula demonstrativa '+String(i+1).padStart(2,'0'),topic:i===16?'Prática de conversação':'Exemplo de aula',lesson_date:d.toISOString().slice(0,10),created_at:d.toISOString()};
-  });
-  const resources=[{id:'demo-guide',lesson_id:'demo-lesson-17',name:'Guia do Portal do Aluno',type:'pdf',description:'Material demonstrativo real do portal, disponível para visualização.',file_path:'guia-portal-do-aluno.pdf',created_at:new Date().toISOString()}];
+  // Exactly two fictional classes, rendered by the authentic student portal.
+  const lessons=[
+    {id:'demo-productivity',student_id:visitorId,title:'Class #1',topic:'Productivity',lesson_date:null,created_at:'2026-01-01T12:00:00Z'},
+    {id:'demo-feedback',student_id:visitorId,title:'Class #2',topic:'Giving and Receiving Feedback',lesson_date:null,created_at:'2026-01-02T12:00:00Z'}
+  ];
+  const resources=[
+    {id:'demo-productivity-slides',lesson_id:'demo-productivity',name:'Productivity — Modo Demonstração',type:'ppt',file_path:'demo/Productivity - Modo Demonstração.pdf',created_at:'2026-01-01T12:01:00Z'},
+    {id:'demo-productivity-report',lesson_id:'demo-productivity',name:'Relatório de Performance — Productivity',type:'rep',file_path:'demo/Productivity - Relatório de Performance - Modo Demonstração.pdf',created_at:'2026-01-01T12:02:00Z'},
+    {id:'demo-feedback-slides',lesson_id:'demo-feedback',name:'Giving and Receiving Feedback — Modo Demonstração',type:'ppt',file_path:'demo/Giving and Receiving Feedback - Modo Demonstração.pdf',created_at:'2026-01-02T12:01:00Z'},
+    {id:'demo-feedback-report',lesson_id:'demo-feedback',name:'Relatório de Performance — Giving and Receiving Feedback',type:'rep',file_path:'demo/Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf',created_at:'2026-01-02T12:02:00Z'}
+  ];
+  lessons.forEach(lesson=>{lesson.resources=resources.filter(r=>r.lesson_id===lesson.id)});
   const word={term:'confidence',definition:'The feeling that you can do something successfully.',example:'I feel more confident when I practice English.'};
   const deny=()=>({data:null,error:{message:'Ação indisponível no modo visitante. Nenhum dado foi enviado.'}});
   const resolveQuery=(table,params,head,single)=>{
@@ -60,9 +66,9 @@
     from:tableQuery,
     storage:{
       from:()=>({
-        createSignedUrl:async file=>file==='guia-portal-do-aluno.pdf'
-          ?{data:{signedUrl:'/visit/guia-portal-do-aluno.pdf'},error:null}
-          :{data:null,error:{message:'Somente o material demonstrativo está disponível.'}},
+        createSignedUrl:async file=> (typeof file==='string' && (file==='guia-portal-do-aluno.pdf' || resources.some(r=>r.file_path===file)))
+          ?{data:{signedUrl:'/visit/'+file.split('/').map(encodeURIComponent).join('/')},error:null}
+          :{data:null,error:{message:'Arquivo indisponível na demonstração.'}},
         upload:async()=>deny(),remove:async()=>deny(),download:async()=>deny()
       })
     }
