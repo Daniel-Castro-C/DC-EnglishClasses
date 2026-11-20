@@ -758,7 +758,8 @@ const PORTAL_NAV_PATHS = {
   daniel: '<path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 20l1-4.3A8.5 8.5 0 1 1 20 11.5z"/><path d="M8.5 11.5h7"/>',
   enviar: '<path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/>',
   perfil: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-  comunicados: '<path d="M3 11v3a2 2 0 0 0 2 2h2l2 5h3l-2-5 9 3V6L7 9H5a2 2 0 0 0-2 2z"/>',
+  recursos: '<path d="m12 2 2.1 7.9L22 12l-7.9 2.1L12 22l-2.1-7.9L2 12l7.9-2.1z"/>',
+  comunicados: '<path d="M3 11v3a2 2 0 0 0 2 2h2l2 5 9 3V6L7 9H5a2 2 0 0 0-2 2z"/>',
   alunos: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.5a4 4 0 0 1 0 7.8M22 21v-2a4 4 0 0 0-3-3.9"/><circle cx="9" cy="7" r="4"/>'
 };
 function portalNavIcon(name){
@@ -766,24 +767,39 @@ function portalNavIcon(name){
   return '<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg></span>';
 }
 
-// Mantém todos os destinos e notificações, com ordem e marcação acessível mais claras.
-function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts){
+// Perfil é a segunda opção; Recursos contém submenus nativos (sem abas).
+// options.resourceSection só define qual submenu está selecionado na página de Recursos.
+function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts, options){
   notifCounts = notifCounts || {};
+  options = options || {};
   const items = [
     { key:'home', label:t('nav_home'), href:'home.html' },
+    { key:'perfil', label:t('nav_perfil'), href:'perfil.html' },
     { key:'aulas', label:t('nav_aulas'), href:'aluno.html' }
   ];
   if (showGrammarGuides) items.push({ key:'gramatica', label:t('nav_gramatica'), href:'guias-gramatica.html' });
   items.push(
     { key:'daniel', label:t('nav_daniel'), href:'pergunte-ao-daniel.html' },
-    { key:'enviar', label:t('nav_enviar'), href:'enviar-material.html' },
-    { key:'perfil', label:t('nav_perfil'), href:'perfil.html' }
+    { key:'enviar', label:t('nav_enviar'), href:'enviar-material.html' }
   );
   let html = '<div class="nav-label">' + t('menu_label') + '</div>';
   items.forEach(it => {
     const active = it.key === activeKey;
     html += '<a class="nav-item' + (active ? ' active' : '') + '" href="' + it.href + '"' + (active ? ' aria-current="page"' : '') + '>' + portalNavIcon(it.key) + '<span class="nav-item-label">' + escapeHtml(it.label) + '</span>' + (notifCounts[it.key] ? NOTIF_BELL_SVG : '') + '</a>';
   });
+
+  const resourcesActive = activeKey === 'recursos';
+  const section = options.resourceSection === 'texto' ? 'texto' : 'vocab';
+  html += '<details class="nav-resource-group"' + (resourcesActive ? ' open' : '') + '>' +
+    '<summary class="nav-item nav-resource-trigger' + (resourcesActive ? ' active' : '') + '">' +
+    portalNavIcon('recursos') + '<span class="nav-item-label">' + escapeHtml(t('nav_recursos')) + '</span>' +
+    (notifCounts.recursos ? NOTIF_BELL_SVG : '') +
+    '<span class="nav-resource-chevron" aria-hidden="true">⌄</span></summary>' +
+    '<div class="nav-resource-children">' +
+    '<a class="nav-subitem' + (resourcesActive && section === 'vocab' ? ' active' : '') + '" href="recursos.html?s=vocab"' + (resourcesActive && section === 'vocab' ? ' aria-current="page"' : '') + '>' + escapeHtml(t('recursos_vocab')) + '</a>' +
+    '<a class="nav-subitem' + (resourcesActive && section === 'texto' ? ' active' : '') + '" href="recursos.html?s=texto"' + (resourcesActive && section === 'texto' ? ' aria-current="page"' : '') + '>' + escapeHtml(t('recursos_texto')) + '</a>' +
+    '</div></details>';
+
   if (window.__dcTeacherTestMode) {
     html = '<div class="student-test-menu">' +
       '<div class="student-test-label"><span class="student-test-dot"></span> Modo Aluno de Teste</div>' +
@@ -884,4 +900,89 @@ Object.assign(I18N.en, {
   dashboard_lessons_summary:'available lessons',
   dashboard_grammar_title:'Grammar guides',
   dashboard_ask_title:'Ask Daniel'
+});
+
+
+/* Títulos e estados das páginas internas; preserva a alternância PT/EN. */
+Object.assign(I18N.pt, {
+  nav_recursos:'Recursos',
+  recursos_texto:'Aprimorando a Escrita',
+  recursos_vocab:'Expandindo seu vocabulário',
+  recursos_vocab_sub:'Palavras que você ainda não costuma usar — transforme vocabulário em prática.',
+  recursos_count:'{n} palavras',
+  recursos_empty:'Nenhuma palavra pendente de revisão por enquanto.',
+  recursos_load_error:'Não foi possível carregar seus vocabulários.',
+  word_use:'Já uso esta palavra',
+  word_save_error:'Não foi possível atualizar esta palavra.',
+  lessons_overview_kicker:'SUA BIBLIOTECA DE ESTUDOS',
+  lessons_overview_title:'Minhas aulas',
+  lessons_overview_sub:'Revisite suas aulas, encontre materiais e continue aprendendo no seu ritmo.',
+  lessons_counter:'aulas registradas',
+  lessons_materials_counter:'materiais',
+  lessons_no_materials:'Nenhum material nesta aula ainda.',
+  lessons_open_material:'Abrir opções de {type}: {name}',
+  lessons_preview:'Visualizar',
+  lessons_download:'Baixar',
+  lessons_type_ppt:'Slides',
+  lessons_type_pdf:'PDF',
+  lessons_type_ex:'Exercício',
+  lessons_type_rep:'Relatório de desempenho',
+  questions_kicker:'SEU CANAL COM O PROFESSOR',
+  questions_intro_title:'Um espaço para aprender sem medo de perguntar',
+  questions_intro_desc:'Envie suas dúvidas sobre inglês e consulte as respostas sempre que quiser.',
+  questions_history_title:'Histórico de perguntas',
+  questions_history_empty:'Você ainda não enviou perguntas.',
+  questions_answered_status:'Respondida',
+  questions_pending_status:'Aguardando',
+  send_kicker:'PARTICIPE DA SUA PRÓXIMA AULA',
+  profile_kicker:'SUAS INFORMAÇÕES',
+  profile_personal_heading:'Informações pessoais',
+  profile_class_heading:'Informações da aula',
+  profile_security_heading:'Segurança da conta',
+  resources_kicker:'FERRAMENTAS DE APRENDIZAGEM',
+  writing_steps:'Como funciona',
+  writing_step_1:'Escreva seu texto',
+  writing_step_2:'Envie para correção',
+  writing_step_3:'Receba a devolutiva'
+});
+Object.assign(I18N.en, {
+  nav_recursos:'Resources',
+  recursos_texto:'Improving Your Writing',
+  recursos_vocab:'Expanding your vocabulary',
+  recursos_vocab_sub:'Words you do not use yet — turn new vocabulary into practice.',
+  recursos_count:'{n} words',
+  recursos_empty:'No words to review right now.',
+  recursos_load_error:'Could not load your vocabulary.',
+  word_use:'I use this word now',
+  word_save_error:'Could not update this word.',
+  lessons_overview_kicker:'YOUR LEARNING LIBRARY',
+  lessons_overview_title:'My lessons',
+  lessons_overview_sub:'Revisit lessons, find resources, and keep learning at your pace.',
+  lessons_counter:'recorded lessons',
+  lessons_materials_counter:'materials',
+  lessons_no_materials:'No materials have been added to this lesson.',
+  lessons_open_material:'Open options for {type}: {name}',
+  lessons_preview:'Preview',
+  lessons_download:'Download',
+  lessons_type_ppt:'Slides',
+  lessons_type_pdf:'PDF',
+  lessons_type_ex:'Exercise',
+  lessons_type_rep:'Performance report',
+  questions_kicker:'YOUR DIRECT LINE TO THE TEACHER',
+  questions_intro_title:'A space to learn without being afraid to ask',
+  questions_intro_desc:'Ask English questions and revisit the answers whenever you want.',
+  questions_history_title:'Question history',
+  questions_history_empty:'You have not sent any questions yet.',
+  questions_answered_status:'Answered',
+  questions_pending_status:'Waiting',
+  send_kicker:'HELP SHAPE YOUR NEXT LESSON',
+  profile_kicker:'YOUR INFORMATION',
+  profile_personal_heading:'Personal information',
+  profile_class_heading:'Lesson information',
+  profile_security_heading:'Account security',
+  resources_kicker:'LEARNING TOOLS',
+  writing_steps:'How it works',
+  writing_step_1:'Write your text',
+  writing_step_2:'Send for correction',
+  writing_step_3:'Get feedback'
 });

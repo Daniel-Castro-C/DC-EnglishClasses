@@ -45,142 +45,170 @@ const LESSONS_PER_PAGE = 10;
   await loadLessons();
 })();
 
+
 async function loadLessons(){
-  const { data, error } = await sb
-    .from('lessons')
-    .select('*')
+  // Aulas e recursos são carregados juntos; o aluno já vê todos os materiais
+  // na listagem, sem precisar selecionar a aula previamente.
+  const { data, error } = await sb.from('lessons')
+    .select('*, resources(*)')
     .eq('student_id', myProfile.id);
 
   if (error) {
+    console.error('Erro ao carregar aulas e materiais:', error);
     document.getElementById('main-content').innerHTML =
       `<div class="empty-state">${t('load_lessons_error')}</div>`;
     return;
   }
-
   myLessons = sortLessonsByDate(data || [], false);
-
-  if (myLessons.length === 0) {
-    document.getElementById('nav-container').innerHTML = buildStudentTopNav('aulas', grammarUnlocked, notifCounts) + `<div class="nav-label">${t('nav_aulas')}</div>`;
-    document.getElementById('main-content').innerHTML = `
-      <div class="topline"><div><h1>${t('no_lessons_title')}</h1>
-      <div class="sub">${t('no_lessons_sub')}</div></div></div>`;
-    return;
-  }
-
+  currentResources = myLessons.flatMap(l => l.resources || []);
   lessonsPage = 0;
-  activeLessonId = myLessons[0].id;
   renderNav();
-  renderLesson(activeLessonId);
+  renderLessonsPage();
 }
 
 function renderNav(){
-  let html = buildStudentTopNav('aulas', grammarUnlocked, notifCounts);
-  html += `<div class="nav-label">${t('nav_aulas')}</div>`;
-  html += `<input id="lesson-search-input" placeholder="${t('search_placeholder')}" value="${escapeHtml(lessonSearchTerm)}"
-    oninput="onLessonSearchInput(this.value)"
-    style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;font-size:12.5px;border-radius:6px;border:1px solid rgba(255,255,255,0.28);background:rgba(255,255,255,0.06);color:#fff;">`;
-  html += `<div id="lessons-list-container"></div>`;
-  document.getElementById('nav-container').innerHTML = html;
-  renderLessonsList();
+  document.getElementById('nav-container').innerHTML =
+    buildStudentTopNav('aulas', grammarUnlocked, notifCounts);
 }
 
 function onLessonSearchInput(value){
   lessonSearchTerm = value;
   lessonsPage = 0;
-  renderLessonsList(); // só atualiza a lista, sem recriar o campo de busca (mantém o foco)
+  renderLessonsList(); // atualiza só os cards — não perde foco do campo de busca
 }
 
 function getFilteredLessons(){
-  const term = lessonSearchTerm.trim().toLowerCase();
-  if (!term) return myLessons;
-  return myLessons.filter(l => l.title.toLowerCase().includes(term));
+  const term = lessonSearchTerm.trim().toLocaleLowerCase(getLang() === 'en' ? 'en-US' : 'pt-BR');
+  return term ? myLessons.filter(l => ((l.title || '') + ' ' + (l.topic || '')).toLocaleLowerCase(getLang() === 'en' ? 'en-US' : 'pt-BR').includes(term)) : myLessons;
+}
+
+function lessonDateLabel(isoDate){
+  if (!isoDate) return '';
+  const parts = isoDate.split('-');
+  if (parts.length !== 3) return escapeHtml(isoDate);
+  return getLang() === 'en' ? [parts[1],parts[2],parts[0]].join('/') : [parts[2],parts[1],parts[0]].join('/');
+}
+
+function renderLessonsPage(){
+  const count = myLessons.length;
+  document.getElementById('main-content').innerHTML = `
+    <div class="student-page student-lessons-page">
+      <header class="student-page-heading">
+        <span class="student-page-kicker">${t('lessons_overview_kicker')}</span>
+        <h1>${t('lessons_overview_title')}</h1>
+        <p>${t('lessons_overview_sub')}</p>
+      </header>
+      <div class="student-lessons-statbar">
+        <div class="student-lessons-stat"><strong>${count}</strong><span>${t('lessons_counter')}</span></div>
+        <div class="student-lessons-stat"><strong>${currentResources.length}</strong><span>${t('lessons_materials_counter')}</span></div>
+      </div>
+      <div class="student-lessons-toolbar">
+        <div>
+          <h2>${t('nav_aulas')}</h2>
+          <p class="student-muted">${t('materials_meta')}</p>
+        </div>
+        <label class="student-search-wrap">
+          <span class="sr-only">${t('search_placeholder')}</span>
+          <input id="lesson-search-input" type="search" placeholder="${escapeHtml(t('search_placeholder'))}" value="${escapeHtml(lessonSearchTerm)}" oninput="onLessonSearchInput(this.value)">
+        </label>
+      </div>
+      <div id="lessons-list-container" aria-live="polite"></div>
+    </div>
+  `;
+  renderLessonsList();
 }
 
 function renderLessonsList(){
+  const list = document.getElementById('lessons-list-container');
+  if (!list) return;
   const filtered = getFilteredLessons();
-  const start = lessonsPage * LESSONS_PER_PAGE;
-  const pageItems = filtered.slice(start, start + LESSONS_PER_PAGE);
   const totalPages = Math.max(1, Math.ceil(filtered.length / LESSONS_PER_PAGE));
+  lessonsPage = Math.max(0, Math.min(lessonsPage, totalPages - 1));
+  const pageItems = filtered.slice(lessonsPage * LESSONS_PER_PAGE, (lessonsPage + 1) * LESSONS_PER_PAGE);
 
-  let html = '';
-  if (filtered.length === 0) {
-    html = `<div class="small-note" style="padding:4px 6px;">${t('no_lessons_found')}</div>`;
-  } else {
-    pageItems.forEach(l => {
-      html += `<div class="nav-item ${l.id === activeLessonId ? 'active' : ''}" onclick="renderLesson('${l.id}')">
-        <span>${escapeHtml(l.title)}</span><span class="dot"></span>
-      </div>`;
-    });
+  if (!pageItems.length) {
+    list.innerHTML = '<div class="student-empty-card">' + escapeHtml(t(myLessons.length ? 'no_lessons_found' : 'no_lessons_sub')) + '</div>';
+    return;
   }
 
-  if (totalPages > 1) {
-    html += `<div style="display:flex;gap:6px;margin-top:10px;padding:0 6px;">`;
-    html += `<button class="sidebar-nav-btn" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(-1)" ${lessonsPage === 0 ? 'disabled' : ''}>${t('prev_page')}</button>`;
-    html += `<button class="sidebar-nav-btn" style="flex:1;padding:6px;font-size:12px;" onclick="changeLessonsPage(1)" ${lessonsPage >= totalPages - 1 ? 'disabled' : ''}>${t('next_page')}</button>`;
-    html += `</div>`;
-    html += `<div class="small-note" style="text-align:center;margin-top:6px;color:#93A3C0;">${t('page_of', {a: lessonsPage + 1, b: totalPages})}</div>`;
-  }
+  const tiles = pageItems.map(lesson => {
+    const resources = (lesson.resources || []).slice().sort((x,y) => String(x.created_at || '').localeCompare(String(y.created_at || '')));
+    const materials = resources.filter(r => !!r.file_path).map(r => {
+      const typeKey = 'lessons_type_' + r.type;
+      const typeLabel = t(typeKey) === typeKey ? (r.type || 'Arquivo') : t(typeKey);
+      const filename = r.name || typeLabel;
+      const hint = filename === typeLabel ? '' : filename;
+      const aria = t('lessons_open_material', {type:typeLabel,name:filename});
+      return `
+        <details class="student-material-dropdown">
+          <summary class="student-material-tile" aria-label="${escapeHtml(aria)}" title="${escapeHtml(filename)}">
+            <span class="student-material-icon type-${escapeHtml(r.type || 'file')}">${escapeHtml(r.type === 'ppt' ? 'PPT' : (r.type === 'rep' ? 'R' : (r.type === 'ex' ? 'EX' : 'PDF')))}</span>
+            <span class="student-material-text">
+              <strong>${escapeHtml(typeLabel)}</strong>
+              ${hint ? `<small>${escapeHtml(hint)}</small>` : ''}
+            </span>
+            <span class="student-material-caret" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="student-material-actions">
+            <button type="button" onclick="previewLessonResource('${r.id}')">${t('lessons_preview')}</button>
+            <button type="button" onclick="downloadLessonResourceById('${r.id}')">${t('lessons_download')}</button>
+          </div>
+        </details>`;
+    }).join('');
+    return `
+      <article class="student-lesson-item">
+        <div class="student-lesson-summary">
+          <span class="student-lesson-number">${escapeHtml(t('nav_aulas'))}</span>
+          <h3>${escapeHtml(lesson.topic || lesson.title || '')}</h3>
+          ${lesson.topic && lesson.title ? `<p>${escapeHtml(lesson.title)}</p>` : ''}
+          ${lesson.lesson_date ? `<time datetime="${escapeHtml(lesson.lesson_date)}">${lessonDateLabel(lesson.lesson_date)}</time>` : ''}
+        </div>
+        <div class="student-lesson-materials" aria-label="${escapeHtml(t('materials_title'))}">
+          ${materials || `<span class="student-muted student-no-materials">${t('lessons_no_materials')}</span>`}
+        </div>
+      </article>`;
+  }).join('');
 
-  document.getElementById('lessons-list-container').innerHTML = html;
+  list.innerHTML = '<div class="student-lesson-list">' + tiles + '</div>' +
+    (totalPages > 1 ? `
+    <nav class="student-lessons-pagination" aria-label="${escapeHtml(t('nav_aulas'))}">
+      <button type="button" onclick="changeLessonsPage(-1)" ${lessonsPage === 0 ? 'disabled' : ''}>${t('prev_page')}</button>
+      <span>${t('page_of', {a:lessonsPage + 1,b:totalPages})}</span>
+      <button type="button" onclick="changeLessonsPage(1)" ${lessonsPage >= totalPages - 1 ? 'disabled' : ''}>${t('next_page')}</button>
+    </nav>` : '');
 }
 
 function changeLessonsPage(delta){
-  lessonsPage += delta;
+  const maxPage = Math.max(0, Math.ceil(getFilteredLessons().length / LESSONS_PER_PAGE) - 1);
+  lessonsPage = Math.max(0, Math.min(maxPage, lessonsPage + delta));
   renderLessonsList();
+  document.querySelector('.student-lessons-toolbar')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-async function renderLesson(lessonId){
-  activeLessonId = lessonId;
-  renderLessonsList();
-  const lesson = myLessons.find(l => l.id === lessonId);
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="topline">
-      <div>
-        <h1>${escapeHtml(lesson.title)}</h1>
-        <div class="sub">${escapeHtml(lesson.topic || '')}</div>
-      </div>
-      <div class="pill">${t('only_you_pill')}</div>
-    </div>
-    <div class="lesson-card">
-      <h3>${t('materials_title')}</h3>
-      <div class="meta">${t('materials_meta')}</div>
-      <div id="resources-list"><div class="empty-state">${t('loading_materials')}</div></div>
-    </div>
-  `;
-
-  const { data: resources, error } = await sb
-    .from('resources')
-    .select('*')
-    .eq('lesson_id', lessonId)
-    .order('created_at', { ascending: true });
-
-  const list = document.getElementById('resources-list');
-
-  if (error) {
-    list.innerHTML = `<div class="empty-state">${t('materials_load_error')}</div>`;
+async function previewLessonResource(resourceId){
+  const resource = currentResources.find(r => r.id === resourceId);
+  if (!resource || !resource.file_path) return;
+  // Abre a aba no gesto de clique para não ser bloqueada como pop-up após a requisição assíncrona.
+  const tab = window.open('about:blank', '_blank');
+  const { data, error } = await sb.storage.from(STORAGE_BUCKET).createSignedUrl(resource.file_path, 60 * 10);
+  if (error || !data) {
+    if (tab) tab.close();
+    alert(t('download_error_alert'));
     return;
   }
-
-  if (!resources || resources.length === 0) {
-    list.innerHTML = `<div class="empty-state">${t('no_materials')}</div>`;
-    return;
+  logActivity(myProfile.id, 'preview_material', resource.name || '');
+  if (tab) {
+    tab.opener = null;
+    tab.location.replace(data.signedUrl);
+  } else {
+    window.location.href = data.signedUrl;
   }
+  // O navegador pode baixar arquivos como PPT/DOC caso não suporte visualização nativa.
+}
 
-  currentResources = resources;
-
-  list.innerHTML = resources.map(r => {
-    const [cls, label] = ICONS[r.type] || ['ic-pdf','?'];
-    return `<div class="resource-row">
-      <div class="resource-icon ${cls}">${label}</div>
-      <div class="resource-info">
-        <div class="name">${escapeHtml(r.name)}</div>
-        <div class="desc">${escapeHtml(r.description || '')}</div>
-      </div>
-      ${isPdfPath(r.file_path) ? `<button class="resource-action" onclick="previewFile('${r.file_path}')">${t('preview_file')}</button>` : ''}
-      <button class="resource-action" onclick="downloadResource('${r.file_path}')">${t('download_file')}</button>
-    </div>`;
-  }).join('');
+function downloadLessonResourceById(resourceId){
+  const resource = currentResources.find(r => r.id === resourceId);
+  if (resource && resource.file_path) downloadResource(resource.file_path);
 }
 
 async function downloadResource(filePath){

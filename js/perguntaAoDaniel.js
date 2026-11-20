@@ -35,6 +35,7 @@ let prefilledSubject = ''; // vem do botão "Enviar dúvida sobre este conteúdo
 
   await loadQuestions();
   renderNav();
+  refreshQuestionHistory();
   renderNewQuestionForm();
 })();
 
@@ -49,49 +50,71 @@ async function loadQuestions(){
   myQuestions = data || [];
 }
 
+
 function renderNav(){
-  let html = buildStudentTopNav('daniel', grammarUnlocked, notifCounts);
-  html += `<div class="nav-label">${t('my_questions_label')}</div>`;
-  html += `<div class="nav-item ${activeQuestionId === null ? 'active' : ''}" onclick="renderNewQuestionForm()">
-    <span>${t('new_question_nav')}</span>
-  </div>`;
-  myQuestions.forEach(q => {
-    html += `<div class="nav-item ${q.id === activeQuestionId ? 'active' : ''}" onclick="showQuestion('${q.id}')">
-      <span>${escapeHtml(q.subject)}</span>
-      <span class="dot" style="background:${q.answer ? 'var(--sage)' : 'var(--amber)'}"></span>
-    </div>`;
-  });
-  document.getElementById('nav-container').innerHTML = html;
+  document.getElementById('nav-container').innerHTML =
+    buildStudentTopNav('daniel', grammarUnlocked, notifCounts);
+}
+
+function buildQuestionHistoryHtml(){
+  if (!myQuestions.length) return '<p class="student-muted">' + t('questions_history_empty') + '</p>';
+  return myQuestions.map(q => {
+    const answered = !!q.answer;
+    const status = answered ? t('questions_answered_status') : t('questions_pending_status');
+    return `
+      <button type="button" class="student-question-history-item" onclick="showQuestion('${q.id}')">
+        <span class="student-question-history-top">
+          <strong>${escapeHtml(q.subject)}</strong>
+          <span class="student-status ${answered ? 'is-complete' : 'is-pending'}">${escapeHtml(status)}</span>
+        </span>
+        <span class="student-question-date">${escapeHtml(t('sent_on',{date:formatDateLocalized(q.created_at)}))}</span>
+        ${answered ? `<span class="student-question-excerpt">${escapeHtml(q.answer.length > 170 ? q.answer.slice(0,170) + '…' : q.answer)}</span>` : ''}
+      </button>`;
+  }).join('');
+}
+
+function refreshQuestionHistory(){
+  const el = document.getElementById('question-history-container');
+  if (el) el.innerHTML = buildQuestionHistoryHtml();
 }
 
 function renderNewQuestionForm(){
   activeQuestionId = null;
   renderNav();
-
   const subjectValue = prefilledSubject;
-  prefilledSubject = ''; // usa o preenchimento só uma vez
+  prefilledSubject = '';
 
   document.getElementById('main-content').innerHTML = `
-    <div class="topline">
-      <div>
+    <div class="student-page student-questions-page">
+      <header class="student-page-heading">
+        <span class="student-page-kicker">${t('questions_kicker')}</span>
         <h1>${t('nav_daniel')}</h1>
+        <p>${t('ask_daniel_intro')}</p>
+      </header>
+      <div class="student-info-strip">
+        <span class="student-info-icon" aria-hidden="true">?</span>
+        <div><strong>${t('questions_intro_title')}</strong><p>${t('questions_intro_desc')}</p></div>
       </div>
-    </div>
-
-    <div class="lesson-card">
-      <p style="margin-top:0;font-size:14.5px;line-height:1.6;">
-        ${t('ask_daniel_intro')}
-      </p>
-    </div>
-
-    <div class="lesson-card">
-      <h3>${t('new_question_title')}</h3>
-      <label>${t('subject_label')}</label>
-      <input id="q-subject" placeholder="${t('subject_placeholder')}" value="${escapeHtml(subjectValue)}">
-      <label>${t('question_label')}</label>
-      <textarea id="q-question" placeholder="${t('question_placeholder')}"></textarea>
-      <button id="q-submit-btn" class="btn-dark-sm" onclick="submitQuestion()">${t('send_question_btn')}</button>
-      <div id="q-feedback" class="feedback"></div>
+      <div class="student-section-grid student-grid-main">
+        <section class="student-panel">
+          <div class="student-panel-head">
+            <h2>${t('new_question_title')}</h2>
+            <span class="student-soft-tag">+${t('new_question_title')}</span>
+          </div>
+          <label for="q-subject">${t('subject_label')}</label>
+          <input id="q-subject" placeholder="${t('subject_placeholder')}" value="${escapeHtml(subjectValue)}">
+          <label for="q-question">${t('question_label')}</label>
+          <textarea id="q-question" placeholder="${t('question_placeholder')}"></textarea>
+          <button id="q-submit-btn" class="btn-dark-sm student-primary-action" onclick="submitQuestion()">${t('send_question_btn')} →</button>
+          <div id="q-feedback" class="feedback" role="status" aria-live="polite"></div>
+        </section>
+        <section class="student-panel">
+          <div class="student-panel-head"><h2>${t('questions_history_title')}</h2>
+            <span class="student-soft-tag">${myQuestions.length}</span>
+          </div>
+          <div id="question-history-container">${buildQuestionHistoryHtml()}</div>
+        </section>
+      </div>
     </div>
   `;
 }
@@ -175,6 +198,7 @@ async function submitQuestion(){
 
   await loadQuestions();
   renderNav();
+  refreshQuestionHistory();
 }
 
 function showQuestion(id){
@@ -185,8 +209,11 @@ function showQuestion(id){
   const canEdit = !q.answer;
 
   document.getElementById('main-content').innerHTML = `
+    <div class="student-page student-questions-page">
+      <button class="student-back-link" type="button" onclick="renderNewQuestionForm()">← ${t('questions_history_title')}</button>
     <div class="topline">
       <div>
+        <span class="student-page-kicker">${t('questions_kicker')}</span>
         <h1>${escapeHtml(q.subject)}</h1>
         <div class="sub">${t('sent_on', {date: formatDateLocalized(q.created_at)})}</div>
       </div>
@@ -211,6 +238,7 @@ function showQuestion(id){
           <button class="btn-ghost" style="flex:0 0 auto;" onclick="deleteQuestionByStudent('${q.id}')">${t('delete_question_btn')}</button>
         </div>
       ` : ''}
+    </div>
     </div>
   `;
 }

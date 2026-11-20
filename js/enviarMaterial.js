@@ -20,41 +20,49 @@ let myProfile = null;
   render();
 })();
 
+
 function render(){
   document.getElementById('main-content').innerHTML = `
-    <div class="topline">
-      <div>
-        <h1>${t('send_material_title')}</h1>
-        <div class="sub">${t('send_material_sub')}</div>
+    <div class="student-page student-send-page">
+      <header class="student-page-heading">
+        <span class="student-page-kicker">${t('send_kicker')}</span>
+        <h1>${t('nav_enviar')}</h1>
+        <p>${t('send_material_sub')}</p>
+      </header>
+      <div class="student-section-grid student-grid-main">
+        <section class="student-panel">
+          <div class="student-panel-head">
+            <h2>${t('new_request_title')}</h2>
+            <span class="student-soft-tag">${t('nav_enviar')}</span>
+          </div>
+          <label for="req-date">${t('request_date_label')}</label>
+          <input id="req-date" type="date">
+          <label for="req-file">${t('file_label')}</label>
+          <div class="student-upload-zone">
+            <span class="student-upload-icon" aria-hidden="true">↑</span>
+            <span>${t('file_hint')}</span>
+            <input id="req-file" type="file" aria-label="${t('file_label')}">
+          </div>
+          <label for="req-link">${t('link_label')}</label>
+          <input id="req-link" type="url" placeholder="${t('link_placeholder')}">
+          <label for="req-notes">${t('usage_label')}</label>
+          <textarea id="req-notes" placeholder="${t('usage_placeholder')}"></textarea>
+          <button id="req-submit-btn" class="btn-dark-sm student-primary-action" onclick="submitRequest()">${t('notify_btn')} →</button>
+          <div id="req-feedback" class="feedback" role="status" aria-live="polite"></div>
+        </section>
+        <div class="student-side-stack">
+          <section class="student-panel">
+            <div class="student-panel-head"><h2>${t('my_requests_title')}</h2></div>
+            <div id="my-requests-list"><div class="student-muted">${t('loading')}</div></div>
+          </section>
+          <aside class="student-info-strip">
+            <span class="student-info-icon" aria-hidden="true">✦</span>
+            <div><strong>${t('nav_enviar')}</strong><p>${t('card_enviar_desc')}</p></div>
+          </aside>
+        </div>
       </div>
     </div>
-
-    <div class="lesson-card">
-      <h3>${t('new_request_title')}</h3>
-
-      <label>${t('request_date_label')}</label>
-      <input id="req-date" type="date">
-
-      <label>${t('file_label')}</label>
-      <input id="req-file" type="file">
-      <div class="small-note" style="margin-bottom:16px;">${t('file_hint')}</div>
-
-      <label>${t('link_label')}</label>
-      <input id="req-link" type="url" placeholder="${t('link_placeholder')}">
-
-      <label>${t('usage_label')}</label>
-      <textarea id="req-notes" placeholder="${t('usage_placeholder')}"></textarea>
-
-      <button id="req-submit-btn" class="btn-dark-sm" onclick="submitRequest()">${t('notify_btn')}</button>
-      <div id="req-feedback" class="feedback"></div>
-    </div>
-
-    <div class="lesson-card">
-      <h3>${t('my_requests_title')}</h3>
-      <div id="my-requests-list"><div class="empty-state">${t('loading')}</div></div>
-    </div>
   `;
-
   loadMyRequests();
 }
 
