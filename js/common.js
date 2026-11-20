@@ -670,25 +670,39 @@ function formatDateLocalized(dateObjOrIso){
 const NOTIF_BELL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" style="flex-shrink:0;" aria-hidden="true"><path d="M12 3a5 5 0 00-5 5v3.5c0 .6-.2 1.2-.6 1.7L5 15h14l-1.4-1.8c-.4-.5-.6-1.1-.6-1.7V8a5 5 0 00-5-5z" fill="#C98A2E"/><path d="M9.5 17.5a2.5 2.5 0 005 0" stroke="#C98A2E" stroke-width="1.4" stroke-linecap="round"/></svg>`;
 
 // Constrói o menu principal (topo da barra lateral) usado em todas as páginas do aluno
+// Ícones de navegação compartilhados entre aluno e professor (sem bibliotecas externas).
+const PORTAL_NAV_PATHS = {
+  home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  aulas: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>',
+  gramatica: '<path d="M12 6c-2.5-1.4-5.2-1.7-9-1v13c3.2-.6 6.2-.4 9 1 2.8-1.4 5.8-1.6 9-1V5c-3.8-.7-6.5-.4-9 1zM12 6v13"/>',
+  daniel: '<path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 20l1-4.3A8.5 8.5 0 1 1 20 11.5z"/><path d="M8.5 11.5h7"/>',
+  enviar: '<path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/>',
+  perfil: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  comunicados: '<path d="M3 11v3a2 2 0 0 0 2 2h2l2 5h3l-2-5 9 3V6L7 9H5a2 2 0 0 0-2 2z"/>',
+  alunos: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.5a4 4 0 0 1 0 7.8M22 21v-2a4 4 0 0 0-3-3.9"/><circle cx="9" cy="7" r="4"/>'
+};
+function portalNavIcon(name){
+  const paths = PORTAL_NAV_PATHS[name] || PORTAL_NAV_PATHS.home;
+  return '<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg></span>';
+}
+
+// Mantém todos os destinos e notificações, com ordem e marcação acessível mais claras.
 function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts){
   notifCounts = notifCounts || {};
   const items = [
-    { key: 'home',      label: t('nav_home'),      href: 'home.html' },
-    { key: 'perfil',    label: t('nav_perfil'),    href: 'perfil.html' },
-    { key: 'aulas',     label: t('nav_aulas'),     href: 'aluno.html' },
-    { key: 'enviar',    label: t('nav_enviar'),    href: 'enviar-material.html' },
+    { key:'home', label:t('nav_home'), href:'home.html' },
+    { key:'aulas', label:t('nav_aulas'), href:'aluno.html' }
   ];
-  if (showGrammarGuides) {
-    items.push({ key: 'gramatica', label: t('nav_gramatica'), href: 'guias-gramatica.html' });
-  }
-  items.push({ key: 'daniel', label: t('nav_daniel'), href: 'pergunte-ao-daniel.html' });
-  let html = `<div class="nav-label">${t('menu_label')}</div>`;
+  if (showGrammarGuides) items.push({ key:'gramatica', label:t('nav_gramatica'), href:'guias-gramatica.html' });
+  items.push(
+    { key:'daniel', label:t('nav_daniel'), href:'pergunte-ao-daniel.html' },
+    { key:'enviar', label:t('nav_enviar'), href:'enviar-material.html' },
+    { key:'perfil', label:t('nav_perfil'), href:'perfil.html' }
+  );
+  let html = '<div class="nav-label">' + t('menu_label') + '</div>';
   items.forEach(it => {
-    const active = it.key === activeKey ? 'active' : '';
-    html += `<div class="nav-item ${active}" onclick="window.location.href='${it.href}'">
-      <span>${it.label}</span>
-      ${notifCounts[it.key] ? NOTIF_BELL_SVG : ''}
-    </div>`;
+    const active = it.key === activeKey;
+    html += '<a class="nav-item' + (active ? ' active' : '') + '" href="' + it.href + '"' + (active ? ' aria-current="page"' : '') + '>' + portalNavIcon(it.key) + '<span class="nav-item-label">' + escapeHtml(it.label) + '</span>' + (notifCounts[it.key] ? NOTIF_BELL_SVG : '') + '</a>';
   });
   return html;
 }
@@ -747,3 +761,41 @@ async function previewFile(filePath){
   }
 }
    document.write('<script src="js/recursos-module.js"><\/script>');
+
+/* Textos da home modernizada; o idioma escolhido continua sendo respeitado. */
+Object.assign(I18N.pt, {
+  dashboard_eyebrow:'SEU ESPAÇO DE APRENDIZAGEM',
+  dashboard_intro:'Seu inglês continua evoluindo. Escolha por onde começar hoje.',
+  dashboard_continue:'CONTINUE APRENDENDO',
+  dashboard_hero_title:'Suas aulas, em um só lugar.',
+  dashboard_hero_desc:'Revise apresentações, exercícios e relatórios no seu ritmo.',
+  dashboard_hero_action:'Ver minhas aulas',
+  dashboard_explore:'Explorar',
+  dashboard_recent_title:'Materiais recentes',
+  dashboard_recent_empty:'Os materiais das suas aulas aparecerão aqui.',
+  dashboard_recent_error:'Não foi possível consultar os materiais recentes.',
+  dashboard_quick_title:'Acesso rápido',
+  dashboard_profile_short:'Meu perfil',
+  dashboard_send_short:'Enviar material',
+  dashboard_lessons_summary:'aulas disponíveis',
+  dashboard_grammar_title:'Guias de gramática',
+  dashboard_ask_title:'Pergunte ao Daniel'
+});
+Object.assign(I18N.en, {
+  dashboard_eyebrow:'YOUR LEARNING SPACE',
+  dashboard_intro:'Your English keeps improving. Choose where to start today.',
+  dashboard_continue:'KEEP LEARNING',
+  dashboard_hero_title:'All your lessons, in one place.',
+  dashboard_hero_desc:'Review presentations, exercises and reports at your own pace.',
+  dashboard_hero_action:'View my lessons',
+  dashboard_explore:'Explore',
+  dashboard_recent_title:'Recent materials',
+  dashboard_recent_empty:'Materials from your lessons will appear here.',
+  dashboard_recent_error:'Could not load recent materials.',
+  dashboard_quick_title:'Quick access',
+  dashboard_profile_short:'My profile',
+  dashboard_send_short:'Send material',
+  dashboard_lessons_summary:'available lessons',
+  dashboard_grammar_title:'Grammar guides',
+  dashboard_ask_title:'Ask Daniel'
+});
