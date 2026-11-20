@@ -24,6 +24,7 @@ function slide(name,frames){
  frames.forEach((item,i)=>{frame(p,item.title,item.label||'Conversation',i+1);let y=206;
  if(item.intro)y=p.wrap(item.intro,45,y,865,18,1.4,'#284665')+15;
  for(const bullet of item.items||[]){p.rect(45,y+4,7,7,'#619acb');y=p.wrap(bullet,64,y,835,18,1.26,'#213d5b')+13;if(y>445)break}
+ p.page();
  });p.finish(name);
 }
 slide('Giving and Receiving Feedback - Modo Demonstração.pdf',[
