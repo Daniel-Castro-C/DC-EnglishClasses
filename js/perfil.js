@@ -21,6 +21,20 @@ let myProfile = null;
 })();
 
 function render(){
+  // Não permitir que os controles da área de aluno alterem o perfil Auth do professor.
+  if (isTestStudentProfile(myProfile)) {
+    document.getElementById('main-content').innerHTML = `
+      <div class="topline"><div><h1>${t('nav_perfil')}</h1><div class="sub">Perfil de demonstração vinculado ao professor</div></div></div>
+      <section class="lesson-card">
+        <h3>${escapeHtml(TEACHER_TEST_NAME)}</h3>
+        <p>Você está explorando o portal como aluno sem trocar de conta.</p>
+        <p class="small-note">E-mail de comunicados: <strong>${escapeHtml(TEACHER_TEST_EMAIL)}</strong></p>
+        <p class="small-note">Nome, foto, senha e configurações da sua conta real não podem ser alterados nesta visualização.</p>
+        <button type="button" class="btn-dark-sm" onclick="leaveStudentTestMode()">← Voltar ao painel do professor</button>
+      </section>
+    `;
+    return;
+  }
   const avatarSrc = myProfile.avatar_url || '';
   const linkAula = myProfile.permanent_lesson_link;
   const WEEKDAY_KEYS = ['weekday_1', 'weekday_2', 'weekday_3', 'weekday_4', 'weekday_5', 'weekday_6', 'weekday_7'];
@@ -89,6 +103,7 @@ function showFeedback(id, msg, ok){
 }
 
 async function uploadAvatar(e){
+  if (isTestStudentProfile(myProfile)) return;
   const file = e.target.files[0];
   if (!file) return;
 
@@ -125,6 +140,7 @@ async function uploadAvatar(e){
 }
 
 async function saveName(){
+  if (isTestStudentProfile(myProfile)) return;
   const name = document.getElementById('full-name-input').value.trim();
   if (!name) { showFeedback('name-feedback', t('name_empty_error'), false); return; }
 
@@ -136,6 +152,7 @@ async function saveName(){
 }
 
 async function changePassword(){
+  if (isTestStudentProfile(myProfile)) return;
   const p1 = document.getElementById('new-pass-1').value;
   const p2 = document.getElementById('new-pass-2').value;
 
