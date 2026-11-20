@@ -109,7 +109,7 @@ function renderNav(){
     const name = student.full_name || student.email || 'Aluno sem nome';
     html += '<button type="button" class="nav-item admin-student-nav' + (active ? ' active' : '') +
       '" data-search-name="' + escapeHtml(name.toLocaleLowerCase('pt-BR')) +
-      '" onclick="openStudent(\\'' + student.id + '\\')">' +
+      '" onclick="openStudent(&quot;' + student.id + '&quot;)">' +
       '<span class="nav-student-avatar" aria-hidden="true">' + escapeHtml(name.trim().charAt(0).toUpperCase()) + '</span>' +
       '<span class="nav-student-text"><span class="nav-item-label">' + escapeHtml(name) + '</span>' +
       (schedule ? '<small>' + escapeHtml(schedule) + '</small>' : '') + '</span>' + badge + '</button>';
