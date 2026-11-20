@@ -64,7 +64,7 @@ function renderSchedule(){
     const format=k=>{const [d,t]=k.split('|');return days[Number(d)]+' às '+t};
     $('#selected').innerHTML='<b>'+selected.length+' horário(s) selecionado(s)</b><p>'+selected.map(format).join(' · ')+
       '</p><button class="btn green" id="send-slots">Conversar sobre esses horários →</button>';
-    $('#send-slots').onclick=()=>send('Olá! Tenho interesse nas aulas do D.C English Classes. Tenho disponibilidade nestes dias e horários: '+selected.map(format).join('; ')+'. Podemos confirmar quais datas estão disponíveis?');
+    $('#send-slots').onclick=()=>send('Olá! Tenho interesse nas aulas do D.C English Classes. Tenho disponibilidade nestes dias e horários: '+selected.map(format).join('; ')+'. Você pode me dar mais informações?');
   }
 }
 $('#availability-grid').addEventListener('click',e=>{let b=e.target.closest('[data-slot]');if(!b)return;let k=b.dataset.slot;selected=selected.includes(k)?selected.filter(x=>x!==k):[...selected,k];renderSchedule()});
