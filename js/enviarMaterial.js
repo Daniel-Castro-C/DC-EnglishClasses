@@ -113,6 +113,17 @@ async function submitRequest(){
     return;
   }
 
+  if (isTestStudentProfile(myProfile)) {
+    logActivity(myProfile.id, 'material_request', 'Teste');
+    showFeedback(t('request_sent_success'), true);
+    document.getElementById('req-date').value = '';
+    document.getElementById('req-file').value = '';
+    document.getElementById('req-link').value = '';
+    document.getElementById('req-notes').value = '';
+    loadMyRequests();
+    return;
+  }
+
   // Avisa o professor por e-mail
   const { data: adminProfile, error: adminError } = await sb
     .from('profiles')
