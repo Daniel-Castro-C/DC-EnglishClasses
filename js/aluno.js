@@ -22,11 +22,11 @@ const LESSONS_PER_PAGE = 10;
   myProfile = await getMyProfile(session.user.id);
   if (!myProfile) { await signOutAndRedirect(); return; }
 
-  if (myProfile.role !== 'student') {
-    // professor tentou abrir a página de aluno -> manda pro painel certo
+  if (!canAccessStudentPortal(myProfile)) {
     window.location.href = 'admin.html';
     return;
   }
+  myProfile = studentPortalProfile(myProfile);
 
   await syncLanguageFromProfile(myProfile);
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);

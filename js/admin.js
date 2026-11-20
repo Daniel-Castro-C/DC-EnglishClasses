@@ -9,6 +9,7 @@ const WEEKDAY_LABELS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta
 const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 let students = [];
+let teacherTestProfile = null;
 let currentStudent = null;
 let currentLessons = [];
 let currentTab = 'geral';
@@ -30,6 +31,7 @@ let quickLessonFiles = [];
     return;
   }
 
+  teacherTestProfile = makeTeacherTestProfile(profile);
   await syncThemeFromProfile(profile);
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(profile.id);
 
@@ -46,13 +48,16 @@ async function loadStudents(){
     .eq('role', 'student')
     .order('created_at', { ascending: true });
 
-  if (error) { console.error(error); students = []; return; }
+  if (error) console.error(error);
   students = data || [];
+  if (teacherTestProfile) students.push(teacherTestProfile);
   sortStudentsBySchedule();
 }
 
 function sortStudentsBySchedule(){
   students.sort((a, b) => {
+    if (a.is_test_profile) return b.is_test_profile ? 0 : 1;
+    if (b.is_test_profile) return -1;
     const aHas = a.lesson_weekday != null && a.lesson_time;
     const bHas = b.lesson_weekday != null && b.lesson_time;
     if (aHas && !bHas) return -1;
@@ -72,7 +77,8 @@ async function refreshPendingCounts(){
   (materialReqs || []).forEach(r => { counts[r.student_id] = (counts[r.student_id] || 0) + 1; });
 
   pendingCountsByStudent = counts;
-  danielPendingTotal = (pendingQuestions || []).length;
+  danielPendingTotal = (pendingQuestions || []).filter(q =>
+    !teacherTestProfile || q.student_id !== teacherTestProfile.id).length;
 }
 
 
@@ -92,7 +98,7 @@ function renderNav(){
       '" onclick="' + item.action + '"' + (active ? ' aria-current="page"' : '') + '>' +
       portalNavIcon(item.icon) + '<span class="nav-item-label">' + item.label + '</span>' + badge + '</button>';
   });
-  html += '<div class="nav-label nav-students-label">Alunos <span class="nav-student-count">' + students.length + '</span></div>';
+  html += '<div class="nav-label nav-students-label">Alunos <span class="nav-student-count">' + students.filter(s => !s.is_test_profile).length + '</span></div>';
   if (!students.length) {
     html += '<p class="sidebar-empty">Nenhum aluno cadastrado.</p>';
   } else {
@@ -112,7 +118,8 @@ function renderNav(){
       '" onclick="openStudent(&quot;' + student.id + '&quot;)">' +
       '<span class="nav-student-avatar" aria-hidden="true">' + escapeHtml(name.trim().charAt(0).toUpperCase()) + '</span>' +
       '<span class="nav-student-text"><span class="nav-item-label">' + escapeHtml(name) + '</span>' +
-      (schedule ? '<small>' + escapeHtml(schedule) + '</small>' : '') + '</span>' + badge + '</button>';
+      (student.is_test_profile ? '<small>Ambiente de teste</small>' : (schedule ? '<small>' + escapeHtml(schedule) + '</small>' : '')) +
+      '</span>' + (student.is_test_profile ? '<span class="test-mode-mini">TESTE</span>' : badge) + '</button>';
   });
   document.getElementById('nav-container').innerHTML = html;
 }
@@ -151,6 +158,7 @@ async function loadReportPendencies(){
     if (error) throw error;
     const batch = data || [];
     for (const lesson of batch) {
+      if (teacherTestProfile && lesson.student_id === teacherTestProfile.id) continue;
       if (lesson.report_pending_dismissed || (lesson.resources || []).some(resource => resource.type === 'rep')) continue;
       const student = studentById.get(lesson.student_id);
       pending.push({
@@ -191,7 +199,7 @@ async function renderHome(){
   currentView = 'home';
   renderNav();
   const today = adminToday();
-  const classes = students.filter(s => Number(s.lesson_weekday) === today.day && s.lesson_time)
+  const classes = students.filter(s => !s.is_test_profile && Number(s.lesson_weekday) === today.day && s.lesson_time)
     .sort((a,b) => a.lesson_time.localeCompare(b.lesson_time));
   const main = document.getElementById('main-content');
   main.innerHTML = `
@@ -210,7 +218,7 @@ async function renderHome(){
     </div>
     <section class="admin-overview-stats" aria-label="Indicadores do portal">
       <div class="admin-stat"><span>Aulas hoje</span><strong>${classes.length}</strong><small>Horários fixos cadastrados</small></div>
-      <div class="admin-stat"><span>Alunos</span><strong>${students.length}</strong><small>Perfis de estudantes</small></div>
+      <div class="admin-stat"><span>Alunos</span><strong>${students.filter(s => !s.is_test_profile).length}</strong><small>Perfis de estudantes</small></div>
       <div class="admin-stat"><span>Relatórios pendentes</span><strong id="report-pending-stat">—</strong><small>Necessitam de acompanhamento</small></div>
     </section>
     <div class="admin-dashboard-grid">
@@ -267,10 +275,12 @@ async function renderRecentAdminActivity(){
   const target = document.getElementById('admin-recent-activity-list');
   if (!target) return;
   try {
-    const { data, error } = await sb.from('activity_log')
+    let query = sb.from('activity_log')
       .select('student_id, action, created_at')
       .order('created_at', { ascending: false })
       .limit(6);
+    if (teacherTestProfile) query = query.neq('student_id', teacherTestProfile.id);
+    const { data, error } = await query;
     if (error) throw error;
     if (currentView !== 'home' || !target.isConnected) return;
     if (!data || !data.length) {
@@ -599,13 +609,13 @@ function openComunicados(){
         ` : `
           <label class="broadcast-recipient-row broadcast-recipient-all">
             <input type="checkbox" id="broadcast-select-all" onchange="toggleSelectAllStudents(this.checked)">
-            Todos
+            Todos os alunos reais
           </label>
           <div id="broadcast-student-list">
             ${students.map(s => `
               <label class="broadcast-recipient-row">
-                <input type="checkbox" class="broadcast-student-checkbox" value="${s.id}" onchange="updateSelectAllState()">
-                ${escapeHtml(s.full_name || s.email)}
+                <input type="checkbox" class="broadcast-student-checkbox" data-test-profile="${s.is_test_profile ? 'true' : 'false'}" value="${s.id}" onchange="updateSelectAllState()">
+                ${escapeHtml(s.full_name || s.email)}${s.is_test_profile ? ' — ' + escapeHtml(TEACHER_TEST_EMAIL) : ''}
               </label>
             `).join('')}
           </div>
@@ -616,12 +626,12 @@ function openComunicados(){
 }
 
 function toggleSelectAllStudents(checked){
-  document.querySelectorAll('.broadcast-student-checkbox').forEach(cb => { cb.checked = checked; });
+  document.querySelectorAll('.broadcast-student-checkbox:not([data-test-profile="true"])').forEach(cb => { cb.checked = checked; });
 }
 
 function updateSelectAllState(){
-  const all = document.querySelectorAll('.broadcast-student-checkbox');
-  const checkedCount = document.querySelectorAll('.broadcast-student-checkbox:checked').length;
+  const all = document.querySelectorAll('.broadcast-student-checkbox:not([data-test-profile="true"])');
+  const checkedCount = document.querySelectorAll('.broadcast-student-checkbox:not([data-test-profile="true"]):checked').length;
   document.getElementById('broadcast-select-all').checked = all.length > 0 && checkedCount === all.length;
 }
 
@@ -646,8 +656,12 @@ async function sendBroadcast(){
   }
 
   const recipients = students.filter(s => selectedIds.includes(s.id));
+  // O endereço do perfil de teste é sempre o informado pelo professor.
+  // Isso não depende do e-mail do perfil administrador no Supabase.
+  const testRecipient = recipients.find(s => s.is_test_profile);
+  if (testRecipient) testRecipient.email = TEACHER_TEST_EMAIL;
 
-  if (!confirm(`Enviar este comunicado para ${recipients.length} aluno(s)?`)) return;
+  if (!confirm(`Enviar este comunicado para ${recipients.length} destinatário(s)?${testRecipient ? '\\nPerfil de teste: ' + TEACHER_TEST_EMAIL : ''}`)) return;
 
   const btn = document.getElementById('broadcast-btn');
   btn.disabled = true;
@@ -766,7 +780,7 @@ function renderStudentDetail(){
     <div class="topline">
       <div>
         <h1>${escapeHtml(s.full_name || s.email)}</h1>
-        <div class="sub">${escapeHtml(s.email)} · visível apenas para você e para o aluno</div>
+        <div class="sub">${s.is_test_profile ? 'Perfil vinculado ao seu login · dados para testes' : escapeHtml(s.email) + ' · visível apenas para você e para o aluno'}</div>
       </div>
       <button class="btn-dark-sm" onclick="renderHome()">← Todos os alunos</button>
     </div>
@@ -797,6 +811,25 @@ function renderStudentDetail(){
 
 function renderPerfilTab(){
   const s = currentStudent;
+  if (s.is_test_profile) {
+    document.getElementById('tab-content').innerHTML = `
+      <div class="box teacher-test-panel">
+        <h3>Seu aluno de teste</h3>
+        <p>Este perfil usa seu login atual, sem criar outra conta. Aulas, materiais e atividades ficam vinculados ao seu ID, sem entrar nos indicadores dos alunos reais.</p>
+        <div class="test-mode-actions">
+          <button type="button" class="btn-dark-sm" onclick="enterStudentTestMode()">Abrir visão do aluno →</button>
+          <button type="button" class="btn-ghost" onclick="switchTab('nova')">Cadastrar aula de teste</button>
+        </div>
+        <p class="small-note">Os comunicados selecionados para este perfil chegam a ${escapeHtml(TEACHER_TEST_EMAIL)}. Outros testes não disparam e-mails.</p>
+      </div>
+      <div class="box"><h3>Mural de conquistas — teste</h3>
+        ${buildAchievementsSection(currentLessons.length, {title:''}) || '<p class="small-note">Os emblemas aparecem após 10 aulas de teste.</p>'}
+      </div>
+      <div class="box"><h3>Status de estudo — teste</h3><div id="grammar-status-box">Carregando...</div></div>
+    `;
+    renderGrammarStatusBox(s.id);
+    return;
+  }
   document.getElementById('tab-content').innerHTML = `
     <div class="box">
       <h3>Mural de conquistas</h3>
@@ -964,8 +997,9 @@ async function renderDanielModuleList(){
 }
 
 function danielModuleRowHtml(q){
-  const studentName = (q.profiles && (q.profiles.full_name || q.profiles.email)) || 'Aluno';
-  const studentEmail = q.profiles ? q.profiles.email : '';
+  const isTest = !!teacherTestProfile && q.student_id === teacherTestProfile.id;
+  const studentName = isTest ? TEACHER_TEST_NAME : ((q.profiles && (q.profiles.full_name || q.profiles.email)) || 'Aluno');
+  const studentEmail = isTest ? TEACHER_TEST_EMAIL : (q.profiles ? q.profiles.email : '');
   const dateStr = new Date(q.created_at).toLocaleDateString('pt-BR');
 
   if (q.answer) {
@@ -1017,6 +1051,13 @@ async function answerQuestionModule(questionId, subject, studentId){
   // Avisa o aluno dentro do próprio portal (sininho ao lado de "Pergunte ao Daniel")
   try { await sb.from('notifications').insert({ student_id: studentId, type: 'daniel_answered' }); } catch (e) { console.error('Erro ao criar notificação:', e); }
 
+  if (teacherTestProfile && studentId === teacherTestProfile.id) {
+    alert('Resposta salva. A notificação está disponível no modo aluno de teste.');
+    renderDanielModuleList();
+    await refreshPendingCounts();
+    renderNav();
+    return;
+  }
   const { data: studentProfile } = await sb.from('profiles').select('email, full_name').eq('id', studentId).single();
 
   if (studentProfile) {
@@ -1440,7 +1481,7 @@ function renderAulasCadastradasTab(lessonsHtml){
         <h3 style="margin:0 0 4px;">Notificar aluno por e-mail</h3>
         <div class="small-note" style="margin-top:0;">Envia: "Os dados da sua última aula já estão disponíveis no portal!"</div>
       </div>
-      <button class="btn-dark-sm" style="flex:0 0 auto;" onclick="notifyStudentAboutLesson()">Enviar e-mail ao aluno</button>
+      ${currentStudent.is_test_profile ? '<span class="small-note">Aulas de teste: apenas notificação interna.</span>' : '<button class="btn-dark-sm" style="flex:0 0 auto;" onclick="notifyStudentAboutLesson()">Enviar e-mail ao aluno</button>'}
     </div>
 
     ${lessonsHtml}
@@ -1448,6 +1489,7 @@ function renderAulasCadastradasTab(lessonsHtml){
 }
 
 async function uploadStudentAvatar(e){
+  if (currentStudent && currentStudent.is_test_profile) return;
   const file = e.target.files[0];
   if (!file) return;
 
@@ -1476,6 +1518,7 @@ async function uploadStudentAvatar(e){
 }
 
 async function notifyStudentAboutLesson(){
+  if (currentStudent && currentStudent.is_test_profile) return;
   const confirmed = confirm(
     `Enviar e-mail para ${currentStudent.email} avisando que os dados da última aula estão disponíveis?`
   );
@@ -1495,6 +1538,7 @@ async function notifyStudentAboutLesson(){
 }
 
 async function saveStudentLink(){
+  if (currentStudent && currentStudent.is_test_profile) return;
   const link = document.getElementById('student-link-input').value.trim();
   const { error } = await sb.from('profiles').update({ permanent_lesson_link: link }).eq('id', currentStudent.id);
   if (error) { alert('Não foi possível salvar o link.'); return; }
@@ -1505,6 +1549,7 @@ async function saveStudentLink(){
 }
 
 async function saveStudentSchedule(){
+  if (currentStudent && currentStudent.is_test_profile) return;
   const weekdayRaw = document.getElementById('student-weekday-input').value;
   const timeRaw = document.getElementById('student-time-input').value;
 
@@ -1541,6 +1586,7 @@ function openStudentLink(){
 }
 
 function generatePasswordSQL(){
+  if (currentStudent && currentStudent.is_test_profile) return;
   const pass = document.getElementById('student-newpass-input').value;
   if (pass.length < 6) { alert('Digite uma senha com pelo menos 6 caracteres.'); return; }
 
@@ -1562,6 +1608,7 @@ async function copyPasswordSQL(){
 }
 
 async function saveStudentName(){
+  if (currentStudent && currentStudent.is_test_profile) return;
   const name = document.getElementById('student-name-input').value.trim();
   const { error } = await sb.from('profiles').update({ full_name: name }).eq('id', currentStudent.id);
   if (error) { alert('Não foi possível salvar o nome.'); return; }

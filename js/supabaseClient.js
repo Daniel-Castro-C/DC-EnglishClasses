@@ -52,6 +52,7 @@ async function getMyProfile(userId) {
 }
 
 async function signOutAndRedirect() {
+  if (typeof clearTeacherTestSession === 'function') clearTeacherTestSession();
   await sb.auth.signOut();
   window.location.href = "index.html";
 }

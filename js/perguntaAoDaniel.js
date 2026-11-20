@@ -11,7 +11,8 @@ let prefilledSubject = ''; // vem do botão "Enviar dúvida sobre este conteúdo
 
   myProfile = await getMyProfile(session.user.id);
   if (!myProfile) { await signOutAndRedirect(); return; }
-  if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
+  if (!canAccessStudentPortal(myProfile)) { window.location.href = 'admin.html'; return; }
+  myProfile = studentPortalProfile(myProfile);
 
   try {
     const params = new URLSearchParams(window.location.search);
@@ -123,6 +124,18 @@ async function submitQuestion(){
     btn.textContent = t('send_question_btn');
     showFeedback(t('question_save_error'), false);
     console.error(insertError);
+    return;
+  }
+
+  if (isTestStudentProfile(myProfile)) {
+    btn.disabled = false;
+    btn.textContent = t('send_question_btn');
+    logActivity(myProfile.id, 'daniel_question', subject);
+    showFeedback(t('question_sent_success'), true);
+    document.getElementById('q-subject').value = '';
+    document.getElementById('q-question').value = '';
+    await loadQuestions();
+    renderNav();
     return;
   }
 

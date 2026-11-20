@@ -6,7 +6,8 @@ let myProfile = null;
 
   myProfile = await getMyProfile(session.user.id);
   if (!myProfile) { await signOutAndRedirect(); return; }
-  if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
+  if (!canAccessStudentPortal(myProfile)) { window.location.href = 'admin.html'; return; }
+  myProfile = studentPortalProfile(myProfile);
 
   await syncLanguageFromProfile(myProfile);
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
@@ -109,6 +110,17 @@ async function submitRequest(){
   if (insertError) {
     showFeedback(t('request_save_error'), false);
     console.error(insertError);
+    return;
+  }
+
+  if (isTestStudentProfile(myProfile)) {
+    logActivity(myProfile.id, 'material_request', 'Teste');
+    showFeedback(t('request_sent_success'), true);
+    document.getElementById('req-date').value = '';
+    document.getElementById('req-file').value = '';
+    document.getElementById('req-link').value = '';
+    document.getElementById('req-notes').value = '';
+    loadMyRequests();
     return;
   }
 

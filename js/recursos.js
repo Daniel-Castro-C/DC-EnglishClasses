@@ -76,7 +76,8 @@ Object.assign(I18N.en, {
 
   myProfile = await getMyProfile(session.user.id);
   if (!myProfile) { await signOutAndRedirect(); return; }
-  if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
+  if (!canAccessStudentPortal(myProfile)) { window.location.href = 'admin.html'; return; }
+  myProfile = studentPortalProfile(myProfile);
 
   await syncLanguageFromProfile(myProfile);
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
@@ -292,6 +293,14 @@ async function submitText(){
   input.value = '';
   updateTextoCounter();
   await refreshSubmissions();
+
+  if (isTestStudentProfile(myProfile)) {
+    btn.disabled = false;
+    btn.textContent = t('texto_send_btn');
+    logActivity(myProfile.id, 'text_submission', t('texto_words', {n: words}));
+    showTextoFeedback(t('texto_sent_success'), true);
+    return;
+  }
 
   // Avisa o professor por e-mail, com o texto completo no corpo da mensagem
   const { data: adminProfile, error: adminError } = await sb

@@ -166,9 +166,10 @@ async function renderRecentDashboardMaterials(studentId){
   const session = await requireSession();
   if (!session) return;
 
-  const profile = await getMyProfile(session.user.id);
-  if (!profile) { await signOutAndRedirect(); return; }
-  if (profile.role !== 'student') { window.location.href = 'admin.html'; return; }
+  const authProfile = await getMyProfile(session.user.id);
+  if (!authProfile) { await signOutAndRedirect(); return; }
+  if (!canAccessStudentPortal(authProfile)) { window.location.href = 'admin.html'; return; }
+  const profile = studentPortalProfile(authProfile);
 
   await syncLanguageFromProfile(profile);
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(profile.id);
