@@ -11,7 +11,8 @@ let prefilledSubject = ''; // vem do botão "Enviar dúvida sobre este conteúdo
 
   myProfile = await getMyProfile(session.user.id);
   if (!myProfile) { await signOutAndRedirect(); return; }
-  if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
+  if (!canAccessStudentPortal(myProfile)) { window.location.href = 'admin.html'; return; }
+  myProfile = studentPortalProfile(myProfile);
 
   try {
     const params = new URLSearchParams(window.location.search);
