@@ -105,11 +105,8 @@ Object.assign(I18N.en, {
 
 // Submenu do módulo: novos itens de "Recursos" entram aqui
 function renderNav(){
-  let html = buildStudentTopNav('recursos', grammarUnlocked, notifCounts);
-  html += `<div class="nav-label">${t('nav_recursos')}</div>`;
-  html += `<div class="nav-item ${activeSection === 'vocab' ? 'active' : ''}" onclick="showVocab()"><span>${t('recursos_vocab')}</span></div>`;
-  html += `<div class="nav-item ${activeSection === 'texto' ? 'active' : ''}" onclick="showTexto()"><span>${t('recursos_texto')}</span>${notifCounts.recursos ? NOTIF_BELL_SVG : ''}</div>`;
-  document.getElementById('nav-container').innerHTML = html;
+  document.getElementById('nav-container').innerHTML =
+    buildStudentTopNav('recursos', grammarUnlocked, notifCounts, {resourceSection:activeSection});
 }
 
 // ==========================================================
@@ -127,9 +124,9 @@ async function loadVocab(){
   return (data || []).filter(r => r.word_of_day);
 }
 
+
 async function showVocab(){
   if (activeSection !== 'vocab') { activeSection = 'vocab'; renderNav(); }
-
   const rows = await loadVocab();
   const main = document.getElementById('main-content');
 
@@ -140,23 +137,26 @@ async function showVocab(){
   vocab = rows;
 
   const cards = vocab.map(r => `
-    <div class="lesson-card">
-      <div class="vocab-term">${escapeHtml(r.word_of_day.term)}</div>
-      <div class="vocab-def">${escapeHtml(r.word_of_day.definition)}</div>
-      <div class="vocab-ex">&ldquo;${escapeHtml(r.word_of_day.example)}&rdquo;</div>
-      <button class="btn-ghost" onclick="markAsUsed(${r.day_index})">${t('word_use')}</button>
-    </div>
+    <article class="student-vocab-card">
+      <h2 class="vocab-term">${escapeHtml(r.word_of_day.term)}</h2>
+      <p class="vocab-def">${escapeHtml(r.word_of_day.definition)}</p>
+      <blockquote class="vocab-ex">“${escapeHtml(r.word_of_day.example)}”</blockquote>
+      <button type="button" class="btn-ghost" onclick="markAsUsed(${r.day_index})">${t('word_use')} ✓</button>
+    </article>
   `).join('');
 
   main.innerHTML = `
-    <div class="topline">
-      <div>
+    <div class="student-page student-resources-page">
+      <header class="student-page-heading">
+        <span class="student-page-kicker">${t('resources_kicker')}</span>
         <h1>${t('recursos_vocab')}</h1>
-        <div class="sub">${t('recursos_vocab_sub')}</div>
-      </div>
-      ${vocab.length ? `<div class="pill">${t('recursos_count', {n: vocab.length})}</div>` : ''}
+        <p>${t('recursos_vocab_sub')}</p>
+      </header>
+      ${vocab.length ? `
+        <div class="student-resource-count"><span>${t('recursos_count',{n:vocab.length})}</span></div>
+        <div class="student-vocab-grid">${cards}</div>
+      ` : `<div class="student-empty-card">${t('recursos_empty')}</div>`}
     </div>
-    ${vocab.length ? cards : `<div class="empty-state">${t('recursos_empty')}</div>`}
   `;
 }
 
@@ -184,41 +184,47 @@ async function showTexto(){
   if (activeSection !== 'texto') { activeSection = 'texto'; renderNav(); }
 
   document.getElementById('main-content').innerHTML = `
-    <div class="topline">
-      <div>
+    <div class="student-page student-resources-page student-writing-page">
+      <header class="student-page-heading">
+        <span class="student-page-kicker">${t('resources_kicker')}</span>
         <h1>${t('texto_title')}</h1>
-        <div class="sub">${t('texto_sub')}</div>
+        <p>${t('texto_sub')}</p>
+      </header>
+      <div class="student-section-grid student-grid-main">
+        <div class="student-side-stack">
+          <section class="student-panel">
+            <div class="student-panel-head">
+              <h2>${t('texto_form_title')}</h2>
+              <span class="student-soft-tag">English</span>
+            </div>
+            <textarea id="texto-input" placeholder="${t('texto_placeholder')}"
+              spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+              data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
+            <div id="texto-counter" class="texto-counter"></div>
+            <button id="texto-send-btn" class="btn-dark-sm student-primary-action" onclick="submitText()">${t('texto_send_btn')} →</button>
+            <div id="texto-feedback" class="feedback" role="status" aria-live="polite"></div>
+          </section>
+          <section class="student-panel">
+            <div class="student-panel-head"><h2>${t('texto_my_title')}</h2></div>
+            <div id="texto-list"><div class="student-muted">${t('loading')}</div></div>
+          </section>
+        </div>
+        <div class="student-side-stack">
+          <section class="student-panel student-howto">
+            <div class="student-panel-head"><h2>${t('texto_howto_title')}</h2></div>
+            <ol>
+              <li>${t('texto_howto_1')}</li>
+              <li>${t('texto_howto_2')}</li>
+              <li>${t('texto_howto_3')}</li>
+              <li>${t('texto_howto_4')}</li>
+            </ol>
+          </section>
+          <div class="warn-box">
+            <h4>${t('texto_warning_title')}</h4>
+            <p>${t('texto_warning')}</p>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div class="lesson-card howto">
-      <h3>${t('texto_howto_title')}</h3>
-      <ol>
-        <li>${t('texto_howto_1')}</li>
-        <li>${t('texto_howto_2')}</li>
-        <li>${t('texto_howto_3')}</li>
-        <li>${t('texto_howto_4')}</li>
-      </ol>
-    </div>
-
-    <div class="warn-box">
-      <h4>${t('texto_warning_title')}</h4>
-      <p>${t('texto_warning')}</p>
-    </div>
-
-    <div class="lesson-card">
-      <h3>${t('texto_form_title')}</h3>
-      <textarea id="texto-input" placeholder="${t('texto_placeholder')}"
-        spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
-        data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
-      <div id="texto-counter" class="texto-counter"></div>
-      <button id="texto-send-btn" class="btn-dark-sm" onclick="submitText()">${t('texto_send_btn')}</button>
-      <div id="texto-feedback" class="feedback"></div>
-    </div>
-
-    <div class="lesson-card">
-      <h3>${t('texto_my_title')}</h3>
-      <div id="texto-list"><div class="empty-state">${t('loading')}</div></div>
     </div>
   `;
 
