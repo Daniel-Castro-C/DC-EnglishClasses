@@ -294,6 +294,14 @@ async function submitText(){
   updateTextoCounter();
   await refreshSubmissions();
 
+  if (isTestStudentProfile(myProfile)) {
+    btn.disabled = false;
+    btn.textContent = t('texto_send_btn');
+    logActivity(myProfile.id, 'text_submission', t('texto_words', {n: words}));
+    showTextoFeedback(t('texto_sent_success'), true);
+    return;
+  }
+
   // Avisa o professor por e-mail, com o texto completo no corpo da mensagem
   const { data: adminProfile, error: adminError } = await sb
     .from('profiles')
