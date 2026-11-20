@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>D.C English Classes — Entrar</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=pr6-login-visual-20261119">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16213E">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -16,12 +16,19 @@
 <div id="login-screen">
   <div class="login-brand">
     <div class="brand-top">
-      <img class="logo" src="logo.png" alt="Logo">
+      <img class="logo" src="logo.png" alt="D.C English Classes">
+      <span class="brand-divider" aria-hidden="true"></span>
       <span>D.C English Classes</span>
     </div>
     <div class="brand-text-wrap">
-      <h1>Suas aulas de inglês, organizadas em um só lugar.</h1>
-      <p>Materiais, apresentações, exercícios e relatórios de cada aula, sempre à mão.</p>
+      <h1>Seu espaço para aprender, praticar e evoluir.</h1>
+      <div class="brand-accent" aria-hidden="true"></div>
+      <p>Tudo o que você precisa para aproveitar melhor suas aulas de inglês e continuar avançando.</p>
+      <div class="brand-features" aria-label="Recursos do portal">
+        <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5.5C9.1 3.9 6.2 3.9 3 4.5v14.3c3-.6 6.1-.6 9 1.2 2.9-1.8 6-1.8 9-1.2V4.5c-3.2-.6-6.1-.6-9 1zM12 5.5V20" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Materiais</span>
+        <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 8 9-5 9 5-9 5-9-5Zm0 4 9 5 9-5M3 16l9 5 9-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Exercícios</span>
+        <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 20h18M6 20v-7h3v7m3 0V9h3v11m3 0V4h3v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Relatórios</span>
+      </div>
     </div>
   </div>
 
@@ -33,9 +40,15 @@
       <div id="login-error" class="form-error"></div>
 
       <label for="login-email">E-mail</label>
-      <input id="login-email" type="email" placeholder="voce@email.com" autocomplete="username">
+      <div class="login-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input id="login-email" type="email" placeholder="voce@email.com" autocomplete="username">
+      </div>
       <label for="login-pass">Senha</label>
-      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+      <div class="login-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
 
       <button id="login-btn" class="btn-primary" onclick="handleLogin()">Entrar</button>
       <div class="small-note"><a href="esqueci-senha.html" style="color:var(--ink);">Esqueci minha senha</a></div>
