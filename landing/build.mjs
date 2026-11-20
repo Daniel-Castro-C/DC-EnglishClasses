@@ -70,4 +70,5 @@ for(const name of pages){
 }
 fs.writeFileSync(path.join(out,'visit','index.html'),'<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=home.html"><a href="home.html">Abrir demonstração</a>','utf8');
 fs.writeFileSync(path.join(out,'visitor.html'),'<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=visit/home.html"><a href="visit/home.html">Explorar o portal do aluno</a>','utf8');
+await import('./generate-demo-pdfs.mjs');
 console.log('Built guest portal from',pages.length,'original HTML pages and',scripts.length,'original JS modules.');
