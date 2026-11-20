@@ -530,3 +530,112 @@ body.dark-mode .achievement-progress{background:#35445F;}
   #mobile-menu-btn.mobile-menu-btn.hide-while-open{display:none;}
 }
 @media(prefers-reduced-motion:reduce){.achievement-progress-fill{transition:none;}}
+
+/* ------------------------------------------------------------
+   PR #6: login page inspired by approved visual reference.
+   Scoped exclusively to #login-screen and its children.
+   ------------------------------------------------------------ */
+#login-screen{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
+#login-screen .login-brand{
+  flex:auto;
+  padding:clamp(36px,7.8vw,136px) clamp(38px,8.85vw,146px);
+  background:
+    radial-gradient(ellipse at 18% 35%,rgba(44,91,138,.32),transparent 51%),
+    linear-gradient(155deg,#132c4d 0%,#11203d 50%,#111c38 100%);
+}
+#login-screen .login-brand::before{
+  content:"";position:absolute;width:600px;height:600px;left:-460px;top:-500px;
+  border:1px solid rgba(104,165,221,.55);border-radius:50%;pointer-events:none;
+}
+#login-screen .login-brand::after{
+  content:"";position:absolute;width:620px;height:620px;right:-360px;bottom:-440px;
+  border:1px solid rgba(104,165,221,.48);border-radius:50%;pointer-events:none;
+}
+#login-screen .brand-top{position:relative;z-index:1;gap:22px;white-space:nowrap;}
+#login-screen .brand-top img.logo{width:68px;height:68px;border-radius:12px;object-fit:contain;}
+#login-screen .brand-top .brand-divider{width:2px;height:54px;background:#B7D2EB;opacity:.95;flex:none;}
+#login-screen .brand-top > span:last-child{font-size:clamp(17px,1.75vw,29px);font-weight:600;color:#F5F8FF;letter-spacing:-.4px;}
+#login-screen .brand-text-wrap{position:relative;z-index:1;align-items:flex-start;}
+#login-screen .brand-text-wrap h1{
+  font-family:'Libre Baskerville',Georgia,serif;
+  font-size:clamp(32px,3.35vw,55px);
+  line-height:1.21;
+  max-width:580px;
+  letter-spacing:-1.45px;
+  font-weight:700;
+}
+#login-screen .brand-accent{background:#81B8ED;width:73px;height:8px;border-radius:999px;margin-top:28px;}
+#login-screen .brand-text-wrap p{
+  margin-top:23px;
+  font-size:clamp(15px,1.39vw,23px);
+  line-height:1.62;
+  max-width:575px;color:#DCE8F9;
+}
+#login-screen .brand-features{
+  display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-top:35px;color:#EFF5FF;
+}
+#login-screen .brand-features span{
+  display:flex;align-items:center;gap:12px;font-size:clamp(12px,1vw,16px);
+  padding:0 27px;min-height:34px;border-right:1px solid rgba(149,180,215,.48);
+}
+#login-screen .brand-features span:first-child{padding-left:0;}
+#login-screen .brand-features span:last-child{border-right:0;padding-right:0;}
+#login-screen .brand-features svg{width:30px;height:30px;color:#B5D6F3;flex:none;}
+#login-screen .login-form-side{
+  padding:40px clamp(24px,5vw,80px);
+  background:radial-gradient(ellipse at 50% 48%,#F7FAFE 0%,#F1F5FC 78%);
+}
+#login-screen .login-box{
+  width:100%;max-width:550px;padding:clamp(28px,3vw,49px);
+  border:1px solid #D2E0F3;
+  background:rgba(255,255,255,.35);
+  border-radius:23px;
+  box-shadow:0 18px 44px rgba(39,80,124,.06);
+}
+#login-screen .login-box h2{font-size:clamp(26px,2.1vw,36px);line-height:1.24;letter-spacing:-.9px;margin:0 0 9px;}
+#login-screen .login-box .sub{font-size:15px;margin-bottom:36px;}
+#login-screen .login-box label{font-size:14px;color:#53545A;margin-bottom:9px;}
+#login-screen .login-input-wrap{position:relative;}
+#login-screen .login-input-wrap svg{
+  width:22px;height:22px;position:absolute;top:16px;left:18px;color:#21548C;
+  pointer-events:none;
+}
+#login-screen .login-input-wrap input{
+  min-height:54px;padding:14px 15px 14px 54px;margin-bottom:24px;
+  border:1px solid #BFD3EC;border-radius:11px;background:#fff;font-size:16px;
+}
+#login-screen .login-box .btn-primary{min-height:53px;border-radius:11px;font-size:16px;background:#172445;}
+#login-screen .login-box .small-note{margin-top:16px;font-size:14px;}
+@media(max-width:1100px){
+  #login-screen .login-brand{padding:42px 55px;}
+  #login-screen .brand-top{gap:13px;}
+  #login-screen .brand-top img.logo{width:52px;height:52px;}
+  #login-screen .brand-top .brand-divider{height:40px;}
+  #login-screen .brand-text-wrap h1{font-size:clamp(31px,3.6vw,42px);}
+  #login-screen .brand-features span{padding:0 13px;gap:7px;}
+  #login-screen .brand-features svg{width:23px;height:23px;}
+  #login-screen .login-box{padding:30px;}
+}
+@media(max-width:760px){
+  #login-screen{display:flex;flex-direction:column;min-height:100vh;}
+  #login-screen .login-brand{padding:28px 24px 35px;}
+  #login-screen .brand-top img.logo{width:46px;height:46px;}
+  #login-screen .brand-top .brand-divider{height:35px;}
+  #login-screen .brand-top > span:last-child{font-size:17px;}
+  #login-screen .brand-text-wrap{padding:50px 0 0;}
+  #login-screen .brand-text-wrap h1{font-size:clamp(28px,7.3vw,38px);letter-spacing:-.6px;}
+  #login-screen .brand-text-wrap p{font-size:15px;margin-top:17px;}
+  #login-screen .brand-accent{height:6px;margin-top:18px;width:60px;}
+  #login-screen .brand-features{margin-top:22px;gap:8px;}
+  #login-screen .brand-features span{font-size:11.5px;padding:0 10px;gap:6px;}
+  #login-screen .brand-features svg{width:19px;height:19px;}
+  #login-screen .login-form-side{padding:28px 20px 80px;flex:1;align-items:flex-start;}
+  #login-screen .login-box{max-width:460px;border-radius:16px;padding:28px 24px;}
+  #login-screen .login-box h2{font-size:26px;}
+  #login-screen .login-box .sub{font-size:13px;margin-bottom:24px;}
+}
+@media(max-width:350px){
+  #login-screen .brand-features span{padding:0 6px;font-size:10px;}
+  #login-screen .brand-features svg{width:17px;height:17px;}
+  #login-screen .login-box{padding:22px 17px;}
+}
