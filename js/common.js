@@ -4,6 +4,71 @@ function escapeHtml(str){
   }[m]));
 }
 
+// Modo Aluno de Teste: usa a própria identidade autenticada do professor.
+// Os registros com student_id = ID do professor ficam fora da lista de alunos reais.
+// Não usa service_role, não altera o papel do perfil em profiles, nem cria conta Auth.
+const TEACHER_TEST_EMAIL = 'teacherdaniel.cas@gmail.com';
+const TEACHER_TEST_NAME = 'Perfil de teste';
+const TEACHER_TEST_SESSION_KEY = 'dc_teacher_student_test_id';
+
+function isTeacherStudentMode(profile){
+  if (!profile || profile.role !== 'admin') return false;
+  try { return sessionStorage.getItem(TEACHER_TEST_SESSION_KEY) === profile.id; }
+  catch (_) { return false; }
+}
+
+function canAccessStudentPortal(profile){
+  return !!profile && (profile.role === 'student' || isTeacherStudentMode(profile));
+}
+
+function makeTeacherTestProfile(profile){
+  if (!profile || profile.role !== 'admin') return null;
+  return {
+    ...profile,
+    role: 'student',
+    full_name: TEACHER_TEST_NAME,
+    email: TEACHER_TEST_EMAIL,
+    avatar_url: null,
+    permanent_lesson_link: null,
+    lesson_weekday: null,
+    lesson_time: null,
+    is_test_profile: true
+  };
+}
+
+function studentPortalProfile(profile){
+  if (!isTeacherStudentMode(profile)) return profile;
+  window.__dcTeacherTestMode = true;
+  return makeTeacherTestProfile(profile);
+}
+
+function isTestStudentProfile(profile){
+  return !!(profile && profile.is_test_profile);
+}
+
+async function enterStudentTestMode(){
+  // Confere o papel no servidor antes de ativar o modo; o estado local não é uma permissão.
+  const { data: { user }, error } = await sb.auth.getUser();
+  if (error || !user) { window.location.href = 'index.html'; return; }
+  const profile = await getMyProfile(user.id);
+  if (!profile || profile.role !== 'admin') {
+    alert('Apenas professores administradores podem usar o modo de teste.');
+    return;
+  }
+  try {
+    sessionStorage.setItem(TEACHER_TEST_SESSION_KEY, user.id);
+  } catch (e) {
+    alert('O navegador bloqueou a sessão de testes. Ative o armazenamento da sessão para usar este recurso.');
+    return;
+  }
+  window.location.href = 'home.html';
+}
+
+function leaveStudentTestMode(){
+  try { sessionStorage.removeItem(TEACHER_TEST_SESSION_KEY); } catch (_) {}
+  window.location.href = 'admin.html';
+}
+
 // Registra uma ação do aluno no log de atividades (visível só para o professor)
 async function logActivity(studentId, action, details){
   try {
@@ -704,6 +769,12 @@ function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts){
     const active = it.key === activeKey;
     html += '<a class="nav-item' + (active ? ' active' : '') + '" href="' + it.href + '"' + (active ? ' aria-current="page"' : '') + '>' + portalNavIcon(it.key) + '<span class="nav-item-label">' + escapeHtml(it.label) + '</span>' + (notifCounts[it.key] ? NOTIF_BELL_SVG : '') + '</a>';
   });
+  if (window.__dcTeacherTestMode) {
+    html = '<div class="student-test-menu">' +
+      '<div class="student-test-label"><span class="student-test-dot"></span> Modo Aluno de Teste</div>' +
+      '<button type="button" class="student-test-exit" onclick="leaveStudentTestMode()">← Voltar ao painel do professor</button>' +
+      '</div>' + html;
+  }
   return html;
 }
 
