@@ -76,7 +76,8 @@ Object.assign(I18N.en, {
 
   myProfile = await getMyProfile(session.user.id);
   if (!myProfile) { await signOutAndRedirect(); return; }
-  if (myProfile.role !== 'student') { window.location.href = 'admin.html'; return; }
+  if (!canAccessStudentPortal(myProfile)) { window.location.href = 'admin.html'; return; }
+  myProfile = studentPortalProfile(myProfile);
 
   await syncLanguageFromProfile(myProfile);
   document.getElementById('lang-switcher-container').innerHTML = buildLanguageSwitcher(myProfile.id);
