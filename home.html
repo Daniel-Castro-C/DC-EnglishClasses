@@ -203,6 +203,8 @@ async function renderRecentDashboardMaterials(studentId){
         </div>
       </header>
 
+      ${achievementsHtml}
+
       <section class="dashboard-hero" aria-label="${t('dashboard_continue')}">
         <div class="dashboard-hero-copy">
           <span class="dashboard-hero-kicker">${t('dashboard_continue')}</span>
@@ -244,8 +246,6 @@ async function renderRecentDashboardMaterials(studentId){
         <a href="enviar-material.html">${portalNavIcon('enviar')}${t('dashboard_send_short')} <span aria-hidden="true">→</span></a>
         <a href="perfil.html">${portalNavIcon('perfil')}${t('dashboard_profile_short')} <span aria-hidden="true">→</span></a>
       </div>
-
-      ${achievementsHtml}
 
       <div class="home-bottom-grid">
         <section class="dashboard-recent-panel">
