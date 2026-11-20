@@ -20,7 +20,7 @@
     {page:'home.html',target:'.dashboard-heading',title:'Bem-vindo ao seu portal',text:'Conheça o ambiente real do aluno.'},
     {page:'home.html',target:'.achievements-wall',title:'Mural de conquistas',text:'O mural mostra a quantidade de aulas que você já realizou.'},
     {page:'home.html',target:'.dashboard-hero',title:'Continue aprendendo',text:'Os conteúdos das aulas ficam organizados para você revisar quando quiser.'},
-    {page:'aluno.html',target:'.lesson-card',title:'Materiais das aulas',text:'Aqui ficam todos os materiais das aulas realizadas.'},
+    {page:'aluno.html',target:'.student-lesson-item',title:'Materiais das aulas',text:'Aqui ficam todos os materiais das aulas realizadas.'},
     {page:'aluno.html',target:'#nav-container',title:'Explore o portal',text:'Use os mesmos menus da área do aluno. Quando terminar, consulte nossos horários disponíveis.'}
   ];
   const currentPage=location.pathname.split('/').pop();
@@ -34,7 +34,7 @@
       try{sessionStorage.setItem(tourKey,String(i))}catch(_){}
       location.href=steps[i].page;return;
     }
-    index=i;overlay.hidden=false;tip.hidden=false;tip.querySelector('.visitor-tour-counter').textContent='ETAPA '+(i+1)+' DE '+steps.length;
+    index=i;tip.dataset.retry='false';overlay.hidden=false;tip.hidden=false;tip.querySelector('.visitor-tour-counter').textContent='ETAPA '+(i+1)+' DE '+steps.length;
     tip.querySelector('h3').textContent=steps[i].title;tip.querySelector('p').textContent=steps[i].text;
     tip.querySelector('.visitor-tour-progress').innerHTML=steps.map((_,k)=>'<i class="'+(k<=i?'on':'')+'"></i>').join('');
     tip.querySelector('[data-tour=back]').disabled=i===0;
@@ -45,9 +45,13 @@
       if(index!==i)return;
       const target=document.querySelector(steps[i].target);
       if(!target){
-        if(Date.now()-start<10000){setTimeout(findTarget,200);return}
-        // An updated portal may remove this element. Skip a stale tour step.
-        goTo(i+1);return;
+        // Wait for the real asynchronous lesson renderer, rather than showing a
+        // grey overlay for ten seconds and skipping an unseen step.
+        if(Date.now()-start<12000){setTimeout(findTarget,160);return}
+        tip.querySelector('p').textContent='Os materiais ainda estão carregando. Use Próximo para tentar novamente ou Pular para explorar livremente.';
+        tip.querySelector('[data-tour=next]').textContent='Tentar novamente ↻';
+        tip.dataset.retry='true';
+        return;
       }
       focused=target;target.classList.add('visitor-tour-focus');
       target.scrollIntoView({block:'nearest',behavior:'instant'});
@@ -67,7 +71,7 @@
   tip.addEventListener('click',e=>{
     const action=e.target.closest('[data-tour]')?.dataset.tour;
     if(!action)return;
-    if(action==='skip')close();else if(action==='back')goTo(index-1);else goTo(index+1);
+    if(action==='skip')close();else if(action==='back')goTo(index-1);else if(tip.dataset.retry==='true')goTo(index);else goTo(index+1);
   });
   banner.querySelector('#visitor-restart').addEventListener('click',()=>{
     try{sessionStorage.removeItem(wasStarted)}catch(_){}
@@ -75,6 +79,23 @@
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&index>=0)close()});
   addEventListener('resize',()=>{if(focused)position(focused)});
+  // Use the portal's existing download controls with explicit demonstration filenames.
+  if(window.__dcGuestDemo){
+    window.downloadResource=function(filePath){
+      const safeFiles={
+        'demo/Productivity - Modo Demonstração.pdf':'Productivity - Modo Demonstração.pdf',
+        'demo/Giving and Receiving Feedback - Modo Demonstração.pdf':'Giving and Receiving Feedback - Modo Demonstração.pdf',
+        'demo/Productivity - Relatório de Performance - Modo Demonstração.pdf':'Productivity - Relatório de Performance - Modo Demonstração.pdf',
+        'demo/Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf':'Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf'
+      };
+      const name=safeFiles[filePath];
+      if(!name){window.__dcDemoReadOnlyNotice?.();return}
+      const a=document.createElement('a');
+      a.href='/visit/'+filePath.split('/').map(encodeURIComponent).join('/');
+      a.download=name;
+      document.body.append(a);a.click();a.remove();
+    };
+  }
   try{
     const saved=sessionStorage.getItem(tourKey);
     if(saved!==null){goTo(Number(saved))}
