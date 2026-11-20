@@ -79,6 +79,40 @@
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&index>=0)close()});
   addEventListener('resize',()=>{if(focused)position(focused)});
+  // Visitor-only enhancements follow the actual portal renderer. Never change
+  // authenticated student screens or leak supplied real student documents.
+  function updateVisitorContent(){
+    if(currentPage==='perfil.html'){
+      // No lesson URL has been assigned to the fictional visitor.
+      // The real student component stays intact; only its empty-state text disappears.
+      document.querySelectorAll('.student-profile-unset').forEach(el=>el.remove());
+    }
+    if(currentPage==='recursos.html'){
+      const page=document.querySelector('.student-writing-page');
+      if(page&&!document.getElementById('visitor-writing-example')){
+        const anchor=page.querySelector('.student-side-stack');
+        if(anchor){
+          const section=document.createElement('section');
+          section.className='student-panel';
+          section.id='visitor-writing-example';
+          section.innerHTML='<div class="student-panel-head"><h2>Exemplo de texto corrigido</h2></div>'+
+            '<p class="student-muted">Conheça um exemplo fictício do processo de correção: texto inicial, pontos a revisar e versão corrigida. Nenhuma informação de alunos reais é utilizada.</p>'+
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:13px">'+
+            '<a class="btn-dark-sm" href="/visit/demo/Teamwork%20-%20Text%20Correction%20-%20Modo%20Demonstra%C3%A7%C3%A3o.pdf" target="_blank" rel="noopener noreferrer">Visualizar exemplo ↗</a>'+
+            '<a class="btn-ghost" href="/visit/demo/Teamwork%20-%20Text%20Correction%20-%20Modo%20Demonstra%C3%A7%C3%A3o.pdf" download="Teamwork - Text Correction - Modo Demonstração.pdf">Baixar PDF ↓</a></div>';
+          anchor.append(section);
+        }
+      }
+    }
+  }
+  // Observe content changes rather than imposing arbitrary delays on asynchronous modules.
+  const contentRoot=document.getElementById('main-content');
+  if(contentRoot){
+    const observer=new MutationObserver(()=>{updateVisitorContent()});
+    observer.observe(contentRoot,{childList:true,subtree:true});
+    updateVisitorContent();
+  }
+
   // Use the portal's existing download controls with explicit demonstration filenames.
   if(window.__dcGuestDemo){
     window.downloadResource=function(filePath){
