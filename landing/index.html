@@ -18,19 +18,47 @@
 (function(){
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],phone='5527997411768';let client=null,weekly=[],exceptions=[],selected=[],demoView='home',tourIndex=-1,answer='',quizIndex=0,score=0;const days=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];const questions=[{q:'I usually ___ English after work.',opts:['speak','speaks','speaking'],correct:0,why:'Com I no present simple usamos speak.'},{q:'Which phrase is a polite request?',opts:['Give me that!','Could you help me, please?','You help.'],correct:1,why:'Could you... please? é um pedido educado.'},{q:'I am interested ___ learning English.',opts:['on','at','in'],correct:2,why:'A preposição correta é interested in.'}];const p=n=>String(n).padStart(2,'0'),iso=d=>[d.getFullYear(),p(d.getMonth()+1),p(d.getDate())].join('-'),toWeek=d=>(d.getDay()+6)%7,escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));function msg(s){alert(s)}function send(s){window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(s),'_blank','noopener,noreferrer')}
 try{client=window.supabase.createClient('https://dgwbjgngewymzgedlzix.supabase.co','sb_publishable_Zlgeqn4PhdY11rZPD6i8-w_T42hrmgN')}catch(e){$('#schedule-status').textContent='Não foi possível carregar a agenda. Entre em contato pelo WhatsApp.'}
+let professorPhotoRequest=0,professorPhotoLastUrl='';
 async function loadProfessorPhoto(){
-  if(!client)return;
+  const photo=$('#teacher-photo'),placeholder=$('#teacher-photo-placeholder');
+  if(!photo||!placeholder||!client)return;
+  const requestId=++professorPhotoRequest;
   try{
-    const {data,error}=await client.from('landing_media').select('image_path,updated_at').eq('id','professor_photo').single();
-    if(error||!data?.image_path)return;
-    const publicUrl=client.storage.from('landing-photos').getPublicUrl(data.image_path)?.data?.publicUrl;
-    if(!publicUrl)return;
-    const photo=$('#teacher-photo'),placeholder=$('#teacher-photo-placeholder');
-    photo.onload=()=>{photo.classList.remove('hidden');placeholder.classList.add('hidden')};
-    photo.onerror=()=>{photo.classList.add('hidden');placeholder.classList.remove('hidden')};
-    photo.src=publicUrl+'?v='+encodeURIComponent(data.updated_at||'1');
-  }catch(e){console.warn('Foto indisponível; exibindo D.C.')}
+    const {data,error}=await client.from('landing_media')
+      .select('image_path,updated_at').eq('id','professor_photo').single();
+    if(requestId!==professorPhotoRequest)return;
+    if(error)throw error;
+    if(!data?.image_path){
+      professorPhotoLastUrl='';
+      photo.removeAttribute('src');
+      photo.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+      return;
+    }
+    const {data:publicData}=client.storage.from('landing-photos').getPublicUrl(data.image_path);
+    if(!publicData?.publicUrl)throw new Error('Endereço público da foto indisponível.');
+    const url=publicData.publicUrl+'?v='+encodeURIComponent(data.updated_at||'1');
+    if(url===professorPhotoLastUrl&&!photo.classList.contains('hidden'))return;
+    // Confirm image is decodable before changing what the visitor sees.
+    const image=new Image();
+    image.onload=()=>{
+      if(requestId!==professorPhotoRequest)return;
+      professorPhotoLastUrl=url;
+      photo.src=url;
+      photo.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    };
+    image.onerror=()=>{if(requestId===professorPhotoRequest)console.warn('Não foi possível carregar a foto publicada. Confira o arquivo no armazenamento.');};
+    image.src=url;
+  }catch(error){console.warn('Falha temporária ao atualizar a foto do professor:',error?.message||error)}
 }
+// Refresh on return to an already-open landing tab, including changes in the admin tab.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadProfessorPhoto()});
+window.addEventListener('focus',loadProfessorPhoto);
+window.addEventListener('storage',event=>{
+  if(event.key==='dc-landing-photo-updated')loadProfessorPhoto();
+});
+
 function dates(){let arr=[],d=new Date();d.setHours(12,0,0,0);for(let i=0;i<21;i++){let x=new Date(d);x.setDate(d.getDate()+i);if(x.getDay()!==0)arr.push(x)}return arr}
 async function loadSchedule(){if(!client)return;const [a,b]=await Promise.all([client.from('landing_weekly_slots').select('weekday,start_time').eq('active',true),client.from('landing_date_overrides').select('slot_date,start_time,kind').gte('slot_date',iso(new Date()))]);if(a.error||b.error){$('#schedule-status').textContent='Não foi possível consultar a agenda agora. Fale conosco pelo WhatsApp.';return}weekly=a.data||[];exceptions=b.data||[];renderSchedule()}
 function renderSchedule(){
