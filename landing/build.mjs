@@ -17,7 +17,7 @@ const pages=['home.html','aluno.html','perfil.html','enviar-material.html','perg
 const scripts=new Set();
 const seen=new Set();
 const scan=source=>{
- for(const match of source.matchAll(/js\\/([a-zA-Z0-9_-]+\\.js)/g)){
+ for(const match of source.matchAll(/js\/([a-zA-Z0-9_-]+\.js)/g)){
   const name=match[1];
   if(name==='supabaseClient.js'||name==='emailConfig.js'||seen.has(name))continue;
   const full=path.join(root,'js',name);
