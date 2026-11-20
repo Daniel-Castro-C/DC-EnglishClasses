@@ -926,7 +926,7 @@ Object.assign(I18N.pt, {
   lessons_type_ppt:'Slides',
   lessons_type_pdf:'PDF',
   lessons_type_ex:'Exercício',
-  lessons_type_rep:'Relatório de desempenho',
+  lessons_type_rep:'Relatório de performance',
   questions_kicker:'SEU CANAL COM O PROFESSOR',
   questions_intro_title:'Um espaço para aprender sem medo de perguntar',
   questions_intro_desc:'Envie suas dúvidas sobre inglês e consulte as respostas sempre que quiser.',
