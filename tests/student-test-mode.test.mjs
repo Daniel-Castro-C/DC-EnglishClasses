@@ -19,7 +19,7 @@ function setup(){
     localStorage, sessionStorage,
     console,
     alert() {},
-    document: { addEventListener() {}, body: { classList: { toggle() {} } } },
+    document: { addEventListener() {}, write() {}, body: { classList: { toggle() {} } } },
     window: { location: { href: '', reload() {} } },
     sb: { auth: { async getUser() { return { data: { user: { id: 'teacher-uid' } }, error: null }; } } },
     async getMyProfile(id) { return { id, role: 'admin', full_name: 'Professor' }; }
