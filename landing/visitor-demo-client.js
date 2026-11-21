@@ -18,6 +18,34 @@
   ];
   lessons.forEach(lesson=>{lesson.resources=resources.filter(r=>r.lesson_id===lesson.id)});
   const word={term:'confidence',definition:'The feeling that you can do something successfully.',example:'I feel more confident when I practice English.'};
+  const demoAssetKeys={
+    'demo/Giving and Receiving Feedback - Modo Demonstração.pdf':'feedback_slides',
+    'demo/Productivity - Modo Demonstração.pdf':'productivity_slides',
+    'demo/Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf':'feedback_report',
+    'demo/Productivity - Relatório de Performance - Modo Demonstração.pdf':'productivity_report',
+    'demo/Teamwork - Text Correction - Modo Demonstração.pdf':'teamwork_correction'
+  };
+  const demoPrefix='https://dgwbjgngewymzgedlzix.supabase.co';
+  let demoAssetsPromise=null;
+  async function demoAssets(){
+    if(!demoAssetsPromise){
+      // Only the public landing_demo_assets table is read. Never connect to student tables.
+      demoAssetsPromise=fetch(demoPrefix+'/rest/v1/landing_demo_assets?select=asset_key,file_path',{
+        headers:{apikey:'sb_publishable_Zlgeqn4PhdY11rZPD6i8-w_T42hrmgN'}
+      }).then(r=>{if(!r.ok)throw new Error('Asset listing unavailable');return r.json()})
+        .then(rows=>Object.fromEntries(rows.map(r=>[r.asset_key,r.file_path])))
+        .catch(()=>({}));
+    }
+    return demoAssetsPromise;
+  }
+  async function demoPdfUrl(file){
+    const key=demoAssetKeys[file];
+    const map=await demoAssets();
+    if(key&&map[key])return demoPrefix+'/storage/v1/object/public/landing-demo-materials/'+map[key].split('/').map(encodeURIComponent).join('/');
+    if(file==='guia-portal-do-aluno.pdf'||key)return '/visit/'+file.split('/').map(encodeURIComponent).join('/');
+    return null;
+  }
+  window.__dcDemoPdfUrl=demoPdfUrl;
   const deny=()=>({data:null,error:{message:'Ação indisponível no modo visitante. Nenhum dado foi enviado.'}});
   const resolveQuery=(table,params,head,single)=>{
     let data=[];
@@ -66,9 +94,10 @@
     from:tableQuery,
     storage:{
       from:()=>({
-        createSignedUrl:async file=> (typeof file==='string' && (file==='guia-portal-do-aluno.pdf' || resources.some(r=>r.file_path===file)))
-          ?{data:{signedUrl:'/visit/'+file.split('/').map(encodeURIComponent).join('/')},error:null}
-          :{data:null,error:{message:'Arquivo indisponível na demonstração.'}},
+        createSignedUrl:async file=>{
+          const url=typeof file==='string'?await demoPdfUrl(file):null;
+          return url?{data:{signedUrl:url},error:null}:{data:null,error:{message:'Arquivo indisponível na demonstração.'}};
+        },
         upload:async()=>deny(),remove:async()=>deny(),download:async()=>deny()
       })
     }
