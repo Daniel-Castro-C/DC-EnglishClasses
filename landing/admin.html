@@ -23,13 +23,19 @@
 </section>
 <div class="columns"><section class="card"><h2>Horário recorrente</h2><form id="weekly-form"><div class="field"><label>Dia</label><select id="weekday"><option value="0">Segunda</option><option value="1">Terça</option><option value="2">Quarta</option><option value="3">Quinta</option><option value="4">Sexta</option><option value="5">Sábado</option></select></div><div class="field"><label>Início da aula</label><input id="weekly-time" type="time" required value="18:00"></div><button type="submit">Adicionar horário</button></form></section>
 <section class="card"><h2>Exceção por data</h2><form id="exception-form"><div class="field"><label>Data específica</label><input id="exception-date" type="date" required></div><div class="field"><label>Horário</label><input id="exception-time" type="time" value="18:00" required></div><div class="field"><label>Operação</label><select id="exception-kind"><option value="blocked">Bloquear este horário nesta data</option><option value="available">Abrir vaga extra nesta data</option></select></div><button type="submit">Salvar exceção</button></form></section></div>
+
+<section class="card" id="demo-files-panel">
+ <h2>Materiais do portal visitante</h2>
+ <p class="muted">Substitua os documentos demonstrativos pelos PDFs originais. Para relatórios e correções, use apenas arquivos fictícios e sem nome ou data do aluno. A alteração aparece na demonstração sem novo deploy.</p>
+ <div id="demo-file-slots">Carregando materiais...</div>
+</section>
 <section class="card"><h2>Horários semanais</h2><div id="weekly-items" class="muted">Carregando...</div></section><section class="card"><h2>Bloqueios e vagas extras</h2><div id="exception-items" class="muted">Carregando...</div></section>
 <section class="card"><div class="row"><h2>Lista de espera</h2><button class="alt" id="refresh">Atualizar</button></div><p class="muted">Os leads são privados; apenas o administrador pode visualizá-los ou alterar seu status.</p><div id="lead-items" class="muted">Carregando...</div></section>
 </div></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
 (function(){const db=window.supabase.createClient('https://dgwbjgngewymzgedlzix.supabase.co','sb_publishable_Zlgeqn4PhdY11rZPD6i8-w_T42hrmgN');const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));const days=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];let admin=false;const time=x=>String(x||'').slice(0,5);
 function notice(s){$('notice').textContent=s;$('notice').classList.remove('hide');setTimeout(()=>$('notice').classList.add('hide'),7000)}
 function loginView(){admin=false;$('login').classList.remove('hide');$('dashboard').classList.add('hide');$('logout').classList.add('hide')}
-async function check(){const {data:{user}}=await db.auth.getUser();if(!user){loginView();return}const {data,error}=await db.from('profiles').select('role').eq('id',user.id).single();if(error||data?.role!=='admin'){await db.auth.signOut();loginView();notice('Esta área é exclusiva do professor administrador.');return}admin=true;$('login').classList.add('hide');$('dashboard').classList.remove('hide');$('logout').classList.remove('hide');await refresh();await refreshPhoto()}
+async function check(){const {data:{user}}=await db.auth.getUser();if(!user){loginView();return}const {data,error}=await db.from('profiles').select('role').eq('id',user.id).single();if(error||data?.role!=='admin'){await db.auth.signOut();loginView();notice('Esta área é exclusiva do professor administrador.');return}admin=true;$('login').classList.add('hide');$('dashboard').classList.remove('hide');$('logout').classList.remove('hide');await refresh();await refreshPhoto();await refreshDemoFiles()}
 $('sign-in').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});b.disabled=false;if(error)return notice('Não foi possível entrar. Confira o e-mail e a senha.');await check()};
 $('logout').onclick=async()=>{await db.auth.signOut();loginView()};
 async function refresh(){if(!admin)return;const [a,b,c]=await Promise.all([db.from('landing_weekly_slots').select('*').order('weekday').order('start_time'),db.from('landing_date_overrides').select('*').gte('slot_date',new Date().toISOString().slice(0,10)).order('slot_date'),db.from('landing_leads').select('*').order('created_at',{ascending:false}).limit(300)]);if(a.error||b.error||c.error){notice('Erro ao carregar dados; confira as permissões.');return}
@@ -99,6 +105,64 @@ $('landing-photo-remove').onclick=async()=>{
   photoStatus('Foto removida. A landing page voltará a exibir D.C.');
   await db.storage.from(PHOTO_BUCKET).remove([previous]);
 };
+
+
+const DEMO_BUCKET='landing-demo-materials';
+const DEMO_SLOTS=[
+ ['feedback_slides','Giving and Receiving Feedback · Slides'],
+ ['productivity_slides','Productivity · Slides'],
+ ['feedback_report','Giving and Receiving Feedback · Relatório de performance'],
+ ['productivity_report','Productivity · Relatório de performance'],
+ ['teamwork_correction','Teamwork · Exemplo de texto corrigido']
+];
+let demoPaths={};
+async function refreshDemoFiles(){
+ if(!admin)return;
+ const {data,error}=await db.from('landing_demo_assets').select('asset_key,file_path,updated_at');
+ if(error){$('demo-file-slots').textContent='Não foi possível consultar os materiais.';return}
+ demoPaths=Object.fromEntries((data||[]).map(x=>[x.asset_key,x.file_path]));
+ $('demo-file-slots').innerHTML=DEMO_SLOTS.map(([key,label])=>{
+   const filePath=demoPaths[key];
+   const url=filePath?db.storage.from(DEMO_BUCKET).getPublicUrl(filePath).data.publicUrl:'';
+   return '<div class="entry" data-demo-key="'+key+'"><div class="row"><div><b>'+label+'</b><small>'+(filePath?'Arquivo personalizado publicado':'Exemplo gerado automaticamente')+'</small></div>'+
+     (url?'<a href="'+url+'" target="_blank" rel="noopener noreferrer">Visualizar PDF ↗</a>':'')+'</div>'+
+     '<div class="controls" style="margin-top:12px"><input type="file" accept=".pdf,application/pdf" data-demo-file="'+key+'" style="max-width:350px;width:100%">'+
+     '<button data-demo-upload="'+key+'">Salvar PDF</button>'+
+     (filePath?'<button class="del" data-demo-remove="'+key+'">Restaurar exemplo</button>':'')+'</div></div>';
+ }).join('');
+}
+document.addEventListener('click',async event=>{
+ const upload=event.target.closest('[data-demo-upload]');
+ const remove=event.target.closest('[data-demo-remove]');
+ if(!admin||(!upload&&!remove))return;
+ const key=(upload||remove).dataset.demoUpload||(upload||remove).dataset.demoRemove;
+ const old=demoPaths[key];
+ if(upload){
+   const file=document.querySelector('[data-demo-file="'+key+'"]')?.files?.[0];
+   if(!file)return notice('Selecione o arquivo PDF que deseja publicar.');
+   if((file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf'))||file.size>15*1024*1024||file.size===0)return notice('O arquivo precisa ser PDF e ter no máximo 15 MB.');
+   upload.disabled=true;
+   try{
+     const path=key+'/'+crypto.randomUUID().replace(/-/g,'')+'.pdf';
+     const result=await db.storage.from(DEMO_BUCKET).upload(path,file,{contentType:'application/pdf',upsert:false});
+     if(result.error)throw result.error;
+     const save=await db.from('landing_demo_assets').upsert({asset_key:key,file_path:path,updated_at:new Date().toISOString()},{onConflict:'asset_key'}).select('file_path').single();
+     if(save.error){await db.storage.from(DEMO_BUCKET).remove([path]);throw save.error}
+     if(old)await db.storage.from(DEMO_BUCKET).remove([old]);
+     notice('Material atualizado no modo visitante.');
+     await refreshDemoFiles();
+   }catch(error){notice('Falha ao publicar PDF: '+(error?.message||'tente novamente'))}
+   finally{upload.disabled=false}
+ }else{
+   if(!confirm('Restaurar o PDF demonstrativo neste item?'))return;
+   remove.disabled=true;
+   const deleted=await db.from('landing_demo_assets').delete().eq('asset_key',key);
+   if(deleted.error){notice('Não foi possível restaurar o PDF.');remove.disabled=false;return}
+   if(old)await db.storage.from(DEMO_BUCKET).remove([old]);
+   notice('Arquivo de demonstração restaurado.');
+   await refreshDemoFiles();
+ }
+});
 
 $('refresh').onclick=refresh;
 $('weekly-form').onsubmit=async e=>{e.preventDefault();if(!admin)return;const {error}=await db.from('landing_weekly_slots').insert({weekday:Number($('weekday').value),start_time:$('weekly-time').value,active:true});notice(error?'Não foi possível salvar. O horário já pode existir.':'Horário cadastrado.');await refresh()};
