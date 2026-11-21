@@ -98,8 +98,8 @@
           section.innerHTML='<div class="student-panel-head"><h2>Exemplo de texto corrigido</h2></div>'+
             '<p class="student-muted">Conheça um exemplo fictício do processo de correção: texto inicial, pontos a revisar e versão corrigida. Nenhuma informação de alunos reais é utilizada.</p>'+
             '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:13px">'+
-            '<a class="btn-dark-sm" href="/visit/demo/Teamwork%20-%20Text%20Correction%20-%20Modo%20Demonstra%C3%A7%C3%A3o.pdf" target="_blank" rel="noopener noreferrer">Visualizar exemplo ↗</a>'+
-            '<a class="btn-ghost" href="/visit/demo/Teamwork%20-%20Text%20Correction%20-%20Modo%20Demonstra%C3%A7%C3%A3o.pdf" download="Teamwork - Text Correction - Modo Demonstração.pdf">Baixar PDF ↓</a></div>';
+            '<a class="btn-dark-sm" href="/visit/demo/Teamwork%20-%20Text%20Correction%20-%20Modo%20Demonstra%C3%A7%C3%A3o.pdf" data-visitor-example="preview" target="_blank" rel="noopener noreferrer">Visualizar exemplo ↗</a>'+
+            '<a class="btn-ghost" href="/visit/demo/Teamwork%20-%20Text%20Correction%20-%20Modo%20Demonstra%C3%A7%C3%A3o.pdf" data-visitor-example="download" download="Teamwork - Text Correction - Modo Demonstração.pdf">Baixar PDF ↓</a></div>';
           anchor.append(section);
         }
       }
@@ -113,9 +113,23 @@
     updateVisitorContent();
   }
 
+
+  document.addEventListener('click',event=>{
+    const a=event.target.closest('[data-visitor-example]');
+    if(!a||!window.__dcDemoPdfUrl)return;
+    event.preventDefault();
+    const file='demo/Teamwork - Text Correction - Modo Demonstração.pdf';
+    const type=a.dataset.visitorExample;
+    const tab=type==='preview'?window.open('about:blank','_blank'):null;
+    window.__dcDemoPdfUrl(file).then(url=>{
+      if(!url){tab?.close();window.__dcDemoReadOnlyNotice?.();return}
+      if(type==='preview'){if(tab){tab.opener=null;tab.location.replace(url)}else window.location.href=url}
+      else{const link=document.createElement('a');link.href=url.startsWith('https:')?url+'?download='+encodeURIComponent('Teamwork - Text Correction - Modo Demonstração.pdf'):url;link.download='Teamwork - Text Correction - Modo Demonstração.pdf';document.body.append(link);link.click();link.remove()}
+    }).catch(()=>tab?.close());
+  });
   // Use the portal's existing download controls with explicit demonstration filenames.
   if(window.__dcGuestDemo){
-    window.downloadResource=function(filePath){
+    window.downloadResource=async function(filePath){
       const safeFiles={
         'demo/Productivity - Modo Demonstração.pdf':'Productivity - Modo Demonstração.pdf',
         'demo/Giving and Receiving Feedback - Modo Demonstração.pdf':'Giving and Receiving Feedback - Modo Demonstração.pdf',
@@ -124,8 +138,10 @@
       };
       const name=safeFiles[filePath];
       if(!name){window.__dcDemoReadOnlyNotice?.();return}
+      const url=await window.__dcDemoPdfUrl(filePath);
+      if(!url){window.__dcDemoReadOnlyNotice?.();return}
       const a=document.createElement('a');
-      a.href='/visit/'+filePath.split('/').map(encodeURIComponent).join('/');
+      a.href=url.startsWith('https:')?url+'?download='+encodeURIComponent(name):url;
       a.download=name;
       document.body.append(a);a.click();a.remove();
     };
