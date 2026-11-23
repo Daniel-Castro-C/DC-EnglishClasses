@@ -85,7 +85,7 @@ async function loadTestimonials(){
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadTestimonials()});
 function dates(){let arr=[],d=new Date();d.setHours(12,0,0,0);for(let i=0;i<21;i++){let x=new Date(d);x.setDate(d.getDate()+i);if(x.getDay()!==0)arr.push(x)}return arr}
-async function loadSchedule(){if(!client)return;const [a,b]=await Promise.all([client.from('landing_weekly_slots').select('weekday,start_time').eq('active',true),client.from('landing_date_overrides').select('slot_date,start_time,kind').gte('slot_date',iso(new Date()))]);if(a.error||b.error){$('#schedule-status').textContent='Não foi possível consultar a agenda agora. Fale conosco pelo WhatsApp.';return}weekly=a.data||[];exceptions=b.data||[];renderSchedule()}
+async function loadSchedule(){if(!client)return;const [a,b]=await Promise.all([client.from('landing_weekly_slots').select('weekday,start_time,starts_on').eq('active',true),client.from('landing_date_overrides').select('slot_date,start_time,kind').gte('slot_date',iso(new Date()))]);if(a.error||b.error){$('#schedule-status').textContent='Não foi possível consultar a agenda agora. Fale conosco pelo WhatsApp.';return}weekly=a.data||[];exceptions=b.data||[];renderSchedule()}
 function timeRange(start){
   const [hour,minute]=start.split(':').map(Number);
   const end=((hour*60+minute+50)%(24*60));
@@ -98,7 +98,7 @@ function renderSchedule(){
   const available=new Map(days.map((_,i)=>[i,new Set()]));
   for(const d of items){
     const day=toWeek(d),date=iso(d),over=exceptions.filter(s=>s.slot_date===date);
-    let times=weekly.filter(s=>s.weekday===day).map(s=>s.start_time.slice(0,5));
+    let times=weekly.filter(s=>s.weekday===day&&(!s.starts_on||date>=s.starts_on)).map(s=>s.start_time.slice(0,5));
     times=[...new Set(times.concat(over.filter(s=>s.kind==='available').map(s=>s.start_time.slice(0,5))))];
     times=times.filter(t=>!over.some(s=>s.kind==='blocked'&&s.start_time.slice(0,5)===t));
     times.forEach(t=>available.get(day).add(t));
