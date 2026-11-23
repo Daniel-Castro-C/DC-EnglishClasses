@@ -21,20 +21,36 @@
     {page:'home.html',target:'.achievements-wall',title:'Mural de conquistas',text:'O mural mostra a quantidade de aulas que você já realizou.'},
     {page:'home.html',target:'.dashboard-hero',title:'Continue aprendendo',text:'Os conteúdos das aulas ficam organizados para você revisar quando quiser.'},
     {page:'aluno.html',target:'.student-lesson-item',title:'Materiais das aulas',text:'Aqui ficam todos os materiais das aulas realizadas.'},
-    {page:'aluno.html',target:'#nav-container',title:'Explore o portal',text:'Use os mesmos menus da área do aluno. Quando terminar, consulte nossos horários disponíveis.'}
+    {page:'aluno.html',target:'.student-material-dropdown',title:'Materiais para experimentar',text:'Disponibilizamos slides e relatórios de performance de demonstração. Abra um material e use “Visualizar” ou “Baixar” para conhecer como são os arquivos.'},
+    {page:'recursos.html?s=texto',target:'.student-writing-page .student-howto',title:'Aprimorando a Escrita',text:'Escreva em inglês e envie seu texto para o professor. Ele aponta os trechos que precisam de revisão e devolve uma correção para você aprender com seus próprios erros.'},
+    {page:'recursos.html?s=texto',target:'#visitor-writing-example',title:'Exemplo de texto corrigido',text:'Este exemplo demonstra como você recebe a correção. Clique em “Visualizar exemplo” para abrir o PDF e conhecer as marcações e orientações.',showExample:true},
+    {page:'recursos.html?s=texto',target:'#nav-container',title:'Explore o portal',text:'Use os mesmos menus da área do aluno. Quando terminar, consulte nossos horários disponíveis.'}
   ];
   const currentPage=location.pathname.split('/').pop();
+  function isOnStepPage(page){
+    const target=new URL(page,location.href);
+    return target.pathname===location.pathname && target.search===location.search;
+  }
   let index=-1,focused=null;
   const tourKey='dcVisitorTourStep',wasStarted='dcVisitorTourStarted';
   function removeHighlight(){if(focused){focused.classList.remove('visitor-tour-focus');focused=null}}
   function close(){removeHighlight();overlay.hidden=true;tip.hidden=true;index=-1;try{sessionStorage.removeItem(tourKey);sessionStorage.setItem(wasStarted,'yes')}catch(_){}}
   function goTo(i){
     if(i<0||i>=steps.length){close();return}
-    if(steps[i].page!==currentPage){
+    if(!isOnStepPage(steps[i].page)){
       try{sessionStorage.setItem(tourKey,String(i))}catch(_){}
       location.href=steps[i].page;return;
     }
-    index=i;tip.dataset.retry='false';overlay.hidden=false;tip.hidden=false;tip.querySelector('.visitor-tour-counter').textContent='ETAPA '+(i+1)+' DE '+steps.length;
+    index=i;tip.dataset.retry='false';overlay.hidden=false;tip.hidden=false;
+    const next=tip.querySelector('[data-tour=example]');
+    if(next)next.remove();
+    if(steps[i].showExample){
+      const btn=document.createElement('button');
+      btn.type='button';btn.className='primary';
+      btn.dataset.tour='example';btn.textContent='Visualizar exemplo ↗';
+      const actions=tip.querySelector('.visitor-tour-actions');
+      actions.insertBefore(btn,actions.querySelector('[data-tour=next]'));
+    }tip.querySelector('.visitor-tour-counter').textContent='ETAPA '+(i+1)+' DE '+steps.length;
     tip.querySelector('h3').textContent=steps[i].title;tip.querySelector('p').textContent=steps[i].text;
     tip.querySelector('.visitor-tour-progress').innerHTML=steps.map((_,k)=>'<i class="'+(k<=i?'on':'')+'"></i>').join('');
     tip.querySelector('[data-tour=back]').disabled=i===0;
@@ -53,6 +69,8 @@
         tip.dataset.retry='true';
         return;
       }
+      // Expand the real lesson resource dropdown to reveal actual preview/download actions.
+      if(i===4 && target.tagName==='DETAILS')target.open=true;
       focused=target;target.classList.add('visitor-tour-focus');
       target.scrollIntoView({block:'nearest',behavior:'instant'});
       position(target);
@@ -71,7 +89,16 @@
   tip.addEventListener('click',e=>{
     const action=e.target.closest('[data-tour]')?.dataset.tour;
     if(!action)return;
-    if(action==='skip')close();else if(action==='back')goTo(index-1);else if(tip.dataset.retry==='true')goTo(index);else goTo(index+1);
+    if(action==='example'){
+      const file='demo/Teamwork - Text Correction - Modo Demonstração.pdf';
+      // Open immediately in the user's click to avoid popup blockers on async asset lookup.
+      const tab=window.open('about:blank','_blank');
+      Promise.resolve(window.__dcDemoPdfUrl?.(file)).then(url=>{
+        if(!url){tab?.close();window.__dcDemoReadOnlyNotice?.();return}
+        if(tab){tab.opener=null;tab.location.replace(url)}
+        else window.location.href=url;
+      }).catch(()=>{tab?.close();window.__dcDemoReadOnlyNotice?.()});
+    }else if(action==='skip')close();else if(action==='back')goTo(index-1);else if(tip.dataset.retry==='true')goTo(index);else goTo(index+1);
   });
   banner.querySelector('#visitor-restart').addEventListener('click',()=>{
     try{sessionStorage.removeItem(wasStarted)}catch(_){}
