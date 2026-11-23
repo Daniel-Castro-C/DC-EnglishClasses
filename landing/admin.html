@@ -166,6 +166,58 @@ document.addEventListener('click',async event=>{
  }
 });
 
+
+async function refreshTestimonials(){
+  if(!admin)return;
+  const box=$('testimonials-admin-list');
+  const {data,error}=await db.from('landing_testimonials')
+    .select('id,full_name,profession,comment,status,publication_consent,created_at,reviewed_at')
+    .order('created_at',{ascending:false}).limit(300);
+  if(error){box.innerHTML='<p class="muted">Não foi possível consultar os depoimentos.</p>';notice('Erro ao consultar depoimentos.');return}
+  const all=data||[],ordered=all.filter(x=>x.status==='pending').concat(all.filter(x=>x.status!=='pending'));
+  if(!ordered.length){box.innerHTML='<p class="muted">Nenhum depoimento enviado. Compartilhe o link com seus alunos.</p>';return}
+  box.innerHTML=ordered.map(item=>{
+    const id=esc(item.id),state=esc(item.status);
+    const label={pending:'Aguardando aprovação',approved:'Publicado',rejected:'Não publicado'}[item.status]||item.status;
+    const when=new Date(item.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
+    const action=item.status==='approved'
+      ?'<button type="button" class="alt" data-testimonial-action="reject" data-testimonial-id="'+id+'">Retirar da página</button>'
+      :'<button type="button" data-testimonial-action="approve" data-testimonial-id="'+id+'">Aprovar e publicar</button>';
+    return '<article class="testimonial-admin-card '+state+'">'+
+      '<div class="row"><div><b>'+esc(item.full_name)+'</b><small style="display:block">'+esc(item.profession)+' · '+when+'</small></div>'+
+      '<span class="testimonial-status '+state+'">'+label+'</span></div>'+
+      '<blockquote>'+esc(item.comment)+'</blockquote>'+
+      '<div class="controls">'+action+
+      (item.status==='pending'?'<button type="button" class="alt" data-testimonial-action="reject" data-testimonial-id="'+id+'">Não publicar</button>':'')+
+      '<button type="button" class="del" data-testimonial-action="delete" data-testimonial-id="'+id+'">Excluir definitivamente</button></div></article>';
+  }).join('');
+}
+$('refresh-testimonials').onclick=refreshTestimonials;
+$('copy-testimonial-link').onclick=async()=>{
+  const url=new URL('depoimento.html',window.location.href).href;
+  try{await navigator.clipboard.writeText(url);notice('Link do formulário copiado!')}
+  catch(e){window.prompt('Copie o link do formulário:',url)}
+};
+document.addEventListener('click',async event=>{
+  const b=event.target.closest('[data-testimonial-action]');
+  if(!admin||!b)return;
+  const id=b.dataset.testimonialId,action=b.dataset.testimonialAction;
+  if(!['approve','reject','delete'].includes(action))return;
+  if(action==='delete'&&!confirm('Excluir definitivamente este depoimento? Esta ação não pode ser desfeita.'))return;
+  if(action==='approve'&&!confirm('Publicar comentário, nome e profissão na landing page?'))return;
+  b.disabled=true;
+  try{
+    const result=action==='delete'
+      ?await db.from('landing_testimonials').delete().eq('id',id).select('id')
+      :await db.from('landing_testimonials').update({
+         status:action==='approve'?'approved':'rejected',
+         reviewed_at:new Date().toISOString()
+       }).eq('id',id).select('id');
+    if(result.error||!result.data?.length)throw result.error||new Error('Registro não encontrado.');
+    notice(action==='approve'?'Depoimento publicado.':action==='delete'?'Depoimento excluído.':'Depoimento retirado da página.');
+    await refreshTestimonials();
+  }catch(err){notice('Não foi possível atualizar o depoimento: '+(err?.message||'tente novamente'));b.disabled=false}
+});
 $('refresh').onclick=refresh;
 $('weekly-form').onsubmit=async e=>{e.preventDefault();if(!admin)return;const {error}=await db.from('landing_weekly_slots').insert({weekday:Number($('weekday').value),start_time:$('weekly-time').value,active:true});notice(error?'Não foi possível salvar. O horário já pode existir.':'Horário cadastrado.');await refresh()};
 $('exception-form').onsubmit=async e=>{e.preventDefault();if(!admin)return;const {error}=await db.from('landing_date_overrides').upsert({slot_date:$('exception-date').value,start_time:$('exception-time').value,kind:$('exception-kind').value},{onConflict:'slot_date,start_time'});notice(error?'Não foi possível salvar a exceção.':'Exceção salva.');await refresh()};
