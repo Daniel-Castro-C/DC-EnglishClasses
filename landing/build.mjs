@@ -10,7 +10,7 @@ const cp=(from,to)=>{
  fs.mkdirSync(path.dirname(dest),{recursive:true});
  fs.cpSync(src,dest,{recursive:true,force:true});return true;
 };
-for(const name of ['index.html','admin.html'])cp('landing/'+name,name);
+for(const name of ['index.html','admin.html','depoimento.html'])cp('landing/'+name,name);
 const pages=['home.html','aluno.html','perfil.html','enviar-material.html','pergunte-ao-daniel.html','guias-gramatica.html','recursos.html'];
 // Discover dependencies from the actual student pages and shared modules,
 // including scripts loaded dynamically with document.write().
