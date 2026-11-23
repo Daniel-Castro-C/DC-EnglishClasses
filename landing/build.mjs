@@ -50,7 +50,7 @@ const styles=[
 '.visitor-tour-progress{display:flex;gap:5px;margin:13px 0}',
 '.visitor-tour-progress i{height:5px;flex:1;background:#dce8f3;border-radius:10px}',
 '.visitor-tour-progress i.on{background:#5b93c4}',
-'.visitor-tour-actions{display:flex;gap:7px;justify-content:flex-end}',
+'.visitor-tour-actions{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}',
 '.visitor-tour-actions button{font:600 12px "IBM Plex Sans",sans-serif;border:1px solid #c1d3e7;background:white;color:#162d4c;border-radius:8px;padding:9px 11px;cursor:pointer}',
 '.visitor-tour-actions button.primary{background:#16213e;color:white}',
 '.visitor-tour-actions button:disabled{opacity:.4}',
