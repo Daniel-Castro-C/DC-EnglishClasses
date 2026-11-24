@@ -1,0 +1,378 @@
+/* ===========================================================
+   D.C ENGLISH CLASSES — SIGNATURE 2027
+   Visual-only pilot for the landing, admin and testimonial pages.
+   No JavaScript, data, URLs, form actions or user flows are changed.
+   =========================================================== */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --signature-forest: #1E3D2F;
+  --signature-porcelain: #F8F9F6;
+  --signature-deep-blue: #223A4B;
+  --signature-champagne: #B69A69;
+  --signature-mist: #DDE7E1;
+  --signature-graphite: #303936;
+  --signature-muted: #5D6F66;
+  --signature-border: #D2E0D6;
+  --signature-surface: #FFFFFF;
+  --signature-focus: #8EBAA3;
+}
+html[data-brand-surface] { color-scheme: light; }
+html[data-brand-surface] body,
+html[data-brand-surface] button,
+html[data-brand-surface] input,
+html[data-brand-surface] select,
+html[data-brand-surface] textarea {
+  font-family: 'Manrope', 'DM Sans', system-ui, sans-serif;
+}
+html[data-brand-surface] :is(button,a,input,select,textarea,summary):focus-visible {
+  outline: 3px solid var(--signature-focus);
+  outline-offset: 3px;
+}
+html[data-brand-surface] :is(input,textarea,select) {
+  accent-color: var(--signature-forest);
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-brand-surface] *, html[data-brand-surface] *::before, html[data-brand-surface] *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* -------- PUBLIC LANDING -------- */
+html[data-brand-surface="landing"] {
+  --navy: var(--signature-forest);
+  --blue: var(--signature-champagne);
+  --pale: var(--signature-porcelain);
+  --ink: var(--signature-graphite);
+  --muted: var(--signature-muted);
+  --line: var(--signature-border);
+  --green: #2B754F;
+}
+html[data-brand-surface="landing"] body { background: var(--signature-porcelain); color: var(--signature-graphite); }
+html[data-brand-surface="landing"] h1,
+html[data-brand-surface="landing"] h2,
+html[data-brand-surface="landing"] h3 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -.025em;
+}
+html[data-brand-surface="landing"] .top {
+  background: #152F24;
+  color: #DBE7DD;
+  letter-spacing: .15em;
+}
+html[data-brand-surface="landing"] .hero {
+  background:
+    radial-gradient(ellipse at 90% 3%, #41654A 0%, transparent 42%),
+    radial-gradient(ellipse at 5% 100%, #294F3D 0%, transparent 45%),
+    linear-gradient(125deg, #163629 0%, #1E3D2F 53%, #102D21 100%);
+  color: var(--signature-porcelain);
+}
+html[data-brand-surface="landing"] .hero:before,
+html[data-brand-surface="landing"] .hero:after { border-color: #B69A6938; }
+html[data-brand-surface="landing"] .brand { letter-spacing: -.02em; }
+html[data-brand-surface="landing"] .logo {
+  background: var(--signature-porcelain);
+  color: var(--signature-forest);
+  border: 1px solid #FFFFFF42;
+  border-radius: 14px;
+  padding: 7px;
+  box-shadow: 0 4px 16px #0B281C40;
+}
+html[data-brand-surface="landing"] .logo img { object-fit: contain; }
+html[data-brand-surface="landing"] .navlinks a { color: #E7F0EA; }
+html[data-brand-surface="landing"] .navlinks a:hover { color: #E2C99F; }
+html[data-brand-surface="landing"] .eyebrow {
+  color: #9A7950;
+  font-size: 11px;
+  letter-spacing: .17em;
+}
+html[data-brand-surface="landing"] .hero .eyebrow { color: #D2B988; }
+html[data-brand-surface="landing"] .hero h1 {
+  color: #FFFFFF;
+  font-size: clamp(38px, 4.4vw, 62px);
+  line-height: 1.12;
+}
+html[data-brand-surface="landing"] .hero p { color: #E4EBE5; }
+html[data-brand-surface="landing"] .hero-note { color: #CEDFD2; }
+html[data-brand-surface="landing"] .btn {
+  background: var(--signature-forest);
+  color: #FFFFFF;
+  border-radius: 10px;
+  box-shadow: none;
+  font-weight: 700;
+  transition: background-color .2s, transform .2s, box-shadow .2s;
+}
+html[data-brand-surface="landing"] .btn:hover {
+  background: #305B43;
+  box-shadow: 0 7px 20px #14322416;
+}
+html[data-brand-surface="landing"] .btn.white {
+  background: var(--signature-porcelain);
+  color: var(--signature-forest);
+}
+html[data-brand-surface="landing"] .btn.white:hover { background: #E9EFE8; }
+html[data-brand-surface="landing"] .btn.outline {
+  background: transparent;
+  border: 1px solid #8EA99A;
+  color: var(--signature-forest);
+}
+html[data-brand-surface="landing"] .btn.outline:hover { background: #E9F0EB; }
+html[data-brand-surface="landing"] .btn.green { background: #2C7851; color: #FFFFFF; }
+html[data-brand-surface="landing"] .section { background: var(--signature-porcelain); }
+html[data-brand-surface="landing"] .section.tint { background: #EAF0EB; }
+html[data-brand-surface="landing"] .section h2 {
+  color: var(--signature-forest);
+  max-width: 930px;
+  line-height: 1.18;
+}
+html[data-brand-surface="landing"] .card,
+html[data-brand-surface="landing"] .detail,
+html[data-brand-surface="landing"] .plan,
+html[data-brand-surface="landing"] .day,
+html[data-brand-surface="landing"] .faq details,
+html[data-brand-surface="landing"] .testimonial-card {
+  background: #FFFFFF;
+  border-color: var(--signature-border);
+  box-shadow: 0 9px 29px #1E3D2F0C;
+}
+html[data-brand-surface="landing"] .card h3,
+html[data-brand-surface="landing"] .detail h3 { color: var(--signature-forest); }
+html[data-brand-surface="landing"] .card .symbol { color: #8A7250; }
+html[data-brand-surface="landing"] .plan.featured {
+  border-color: var(--signature-champagne);
+  box-shadow: 0 12px 35px #1E3D2F0F;
+}
+html[data-brand-surface="landing"] .price { color: var(--signature-forest); }
+html[data-brand-surface="landing"] ul.clean li:before { color: #2D7854; }
+html[data-brand-surface="landing"] .payment-switch {
+  border-color: var(--signature-border);
+  background: #EEF3EF;
+}
+html[data-brand-surface="landing"] .payment-option { color: #436352; }
+html[data-brand-surface="landing"] .payment-option.active {
+  background: var(--signature-forest);
+  color: #FFFFFF;
+}
+html[data-brand-surface="landing"] .plan.featured .payment-switch { border-color: #BFA883; }
+html[data-brand-surface="landing"] .day { border-color: #D0DED4; }
+html[data-brand-surface="landing"] .slot {
+  background: #F8FAF7;
+  color: var(--signature-forest);
+  border-color: #BFD1C3;
+}
+html[data-brand-surface="landing"] .slot:hover { background: #E8EFE8; border-color: #92AF9A; }
+html[data-brand-surface="landing"] .slot[aria-pressed="true"] {
+  background: var(--signature-forest);
+  border-color: var(--signature-forest);
+  color: #FFFFFF;
+}
+html[data-brand-surface="landing"] .info {
+  background: #E4EEE7;
+  color: #315744;
+  border: 1px solid #D2E1D5;
+}
+html[data-brand-surface="landing"] .testimonial-card blockquote { color: #354C40; }
+html[data-brand-surface="landing"] .testimonial-quote-icon { color: #B69A69; }
+html[data-brand-surface="landing"] .testimonial-person { border-top-color: #E4ECE5; }
+html[data-brand-surface="landing"] .testimonial-person strong { color: var(--signature-forest); }
+html[data-brand-surface="landing"] .testimonial-person small { color: #6B7B71; }
+html[data-brand-surface="landing"] .testimonial-empty { background: #FFFFFF; }
+html[data-brand-surface="landing"] .faq summary { color: var(--signature-forest); }
+html[data-brand-surface="landing"] .faq p a,
+html[data-brand-surface="landing"] a[style*="color:#226da8"] { color: #2F694B !important; }
+html[data-brand-surface="landing"] .footer { background: #142E23; color: #EAF1EA; }
+html[data-brand-surface="landing"] .footer small { color: #B9CCBE; }
+html[data-brand-surface="landing"] .float {
+  background: #266A49;
+  color: #FFFFFF;
+  box-shadow: 0 8px 27px #1E3D2F34;
+}
+html[data-brand-surface="landing"] .float:hover { background: #1C5438; }
+html[data-brand-surface="landing"] .teacher-photo-frame {
+  background: linear-gradient(130deg, #DDE7E1, #BACBBE);
+  box-shadow: 0 14px 39px #193D2920;
+}
+html[data-brand-surface="landing"] .teacher-photo-placeholder { color: #3B654C; }
+html[data-brand-surface="landing"] .modal-wrap { background: #0D251BC9; }
+html[data-brand-surface="landing"] .modal {
+  background: var(--signature-porcelain);
+  color: var(--signature-graphite);
+  border: 1px solid var(--signature-border);
+}
+html[data-brand-surface="landing"] .modal h2 { color: var(--signature-forest); }
+html[data-brand-surface="landing"] .field input,
+html[data-brand-surface="landing"] .field textarea,
+html[data-brand-surface="landing"] .field select {
+  background: #FFFFFF;
+  border-color: #B7CFC0;
+  color: var(--signature-graphite);
+}
+html[data-brand-surface="landing"] .checkboxes label {
+  background: #E8F0E8;
+  color: var(--signature-forest);
+}
+html[data-brand-surface="landing"] .demo { background: #F0F4EF; }
+html[data-brand-surface="landing"] .demo-header { background: var(--signature-forest); }
+html[data-brand-surface="landing"] .demo-menu { background: #1C3529; }
+html[data-brand-surface="landing"] .demo-menu button { color: #EBF2EC; }
+html[data-brand-surface="landing"] .demo-menu button.active { background: #3A5D47; }
+html[data-brand-surface="landing"] .demo-panel {
+  background: #FFFFFF;
+  border-color: var(--signature-border);
+}
+html[data-brand-surface="landing"] .tour-backdrop { background: #10291FB8; }
+html[data-brand-surface="landing"] .spotlight {
+  outline-color: #B69A69;
+  color: var(--signature-forest) !important;
+}
+html[data-brand-surface="landing"] .tour-tip {
+  color: var(--signature-deep-blue);
+  border: 1px solid #D5E2D8;
+}
+html[data-brand-surface="landing"] .progress-dots i { background: #D5E3D7; }
+html[data-brand-surface="landing"] .progress-dots i.done { background: #2D7854; }
+html[data-brand-surface="landing"] .quiz-option {
+  border-color: #C5D8C8;
+  color: var(--signature-forest);
+}
+html[data-brand-surface="landing"] .mock {
+  color: var(--signature-deep-blue);
+  background: #F8F9F6;
+  border-color: #C3D8CB;
+}
+html[data-brand-surface="landing"] .mock-head { background: #E0EAE1; }
+html[data-brand-surface="landing"] .mock-nav { background: #1E3D2F; }
+html[data-brand-surface="landing"] .mock-card { border-color: #D6E2D8; }
+
+/* -------- LANDING ADMIN -------- */
+html[data-brand-surface="admin"] body {
+  background: #F0F4EF;
+  color: var(--signature-graphite);
+}
+html[data-brand-surface="admin"] header {
+  background: var(--signature-forest);
+  position: relative;
+  overflow: hidden;
+}
+html[data-brand-surface="admin"] header::before {
+  content: '';
+  position: absolute;
+  right: -18px;
+  top: -28px;
+  width: 155px;
+  height: 120px;
+  opacity: .1;
+  background: #FFFFFF;
+  -webkit-mask: url('signature-mark.svg') center / contain no-repeat;
+  mask: url('signature-mark.svg') center / contain no-repeat;
+  pointer-events: none;
+}
+html[data-brand-surface="admin"] header .row { position: relative; }
+html[data-brand-surface="admin"] h1,
+html[data-brand-surface="admin"] h2 {
+  color: var(--signature-forest);
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -.018em;
+}
+html[data-brand-surface="admin"] header h1 { color: #FFFFFF; }
+html[data-brand-surface="admin"] button {
+  background: var(--signature-forest);
+  color: #FFFFFF;
+  border-radius: 9px;
+}
+html[data-brand-surface="admin"] button:hover:not(:disabled) { background: #315C44; }
+html[data-brand-surface="admin"] button.alt {
+  color: var(--signature-forest);
+  background: #E0EBE3;
+}
+html[data-brand-surface="admin"] button.alt:hover:not(:disabled) { background: #D0DFD4; }
+html[data-brand-surface="admin"] button.del { background: #F9E9E6; color: #8A3935; }
+html[data-brand-surface="admin"] button.del:hover:not(:disabled) { background: #F1D9D5; }
+html[data-brand-surface="admin"] input,
+html[data-brand-surface="admin"] select,
+html[data-brand-surface="admin"] textarea {
+  border: 1px solid #C2D5C7;
+  color: var(--signature-graphite);
+  background: #FFFFFF;
+}
+html[data-brand-surface="admin"] .card,
+html[data-brand-surface="admin"] .testimonial-admin-card {
+  background: #FFFFFF;
+  border-color: var(--signature-border);
+  box-shadow: 0 7px 24px #1E3D2F0B;
+}
+html[data-brand-surface="admin"] .entry { border-bottom-color: #E1EAE3; }
+html[data-brand-surface="admin"] .muted,
+html[data-brand-surface="admin"] .entry small,
+html[data-brand-surface="admin"] .photo-description { color: var(--signature-muted); }
+html[data-brand-surface="admin"] .status,
+html[data-brand-surface="admin"] .testimonial-status,
+html[data-brand-surface="admin"] .share-line {
+  background: #E7EFE8;
+  color: #365B47;
+  border-color: #D4E3D7;
+}
+html[data-brand-surface="admin"] .testimonial-status.pending { background: #FBF0DC; color: #78572C; }
+html[data-brand-surface="admin"] .testimonial-status.approved { background: #E1F2E5; color: #245A3E; }
+html[data-brand-surface="admin"] .notice { background: #FAF1DF; color: #74542B; }
+html[data-brand-surface="admin"] .testimonial-admin-card blockquote { color: #395346; }
+html[data-brand-surface="admin"] a { color: #245B40; }
+html[data-brand-surface="admin"] .photo-preview { border-color: #BFD1C4; background: #E4EFE7; }
+html[data-brand-surface="admin"] .photo-placeholder {
+  background: linear-gradient(140deg, #DDE7E1, #B8CEBB);
+  color: var(--signature-forest);
+}
+
+/* -------- TESTIMONIAL FORM -------- */
+html[data-brand-surface="testimonial"] {
+  --ink: var(--signature-forest);
+  --blue: var(--signature-champagne);
+  --muted: var(--signature-muted);
+  --line: var(--signature-border);
+}
+html[data-brand-surface="testimonial"] body {
+  background:
+    radial-gradient(circle at 98% 0%, #D6E4D9 0%, transparent 42%),
+    linear-gradient(150deg, #F8F9F6, #EDF3ED);
+  color: var(--signature-graphite);
+}
+html[data-brand-surface="testimonial"] h1 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-weight: 400;
+  color: var(--signature-forest);
+}
+html[data-brand-surface="testimonial"] .brand { color: var(--signature-forest); }
+html[data-brand-surface="testimonial"] .brand img {
+  padding: 5px;
+  background: #FFFFFF;
+  border-radius: 12px;
+}
+html[data-brand-surface="testimonial"] .card {
+  background: #FFFFFF;
+  border-color: var(--signature-border);
+  box-shadow: 0 18px 42px #1E3D2F14;
+}
+html[data-brand-surface="testimonial"] .kicker { color: #9B7850; }
+html[data-brand-surface="testimonial"] .field input,
+html[data-brand-surface="testimonial"] .field textarea {
+  border-color: #BFD1C4;
+  color: var(--signature-graphite);
+}
+html[data-brand-surface="testimonial"] .consent {
+  background: #EAF1EB;
+  border-color: var(--signature-border);
+}
+html[data-brand-surface="testimonial"] .consent input { accent-color: var(--signature-forest); }
+html[data-brand-surface="testimonial"] .button {
+  background: var(--signature-forest);
+  color: #FFFFFF;
+}
+html[data-brand-surface="testimonial"] .button:hover:not(:disabled) { background: #305943; }
+html[data-brand-surface="testimonial"] a { color: #29664A; }
+@media (max-width: 650px) {
+  html[data-brand-surface="landing"] .hero h1 { font-size: clamp(34px, 9.3vw, 46px); }
+  html[data-brand-surface="landing"] .logo { padding: 6px; }
+}
