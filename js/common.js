@@ -47,6 +47,16 @@ function isTestStudentProfile(profile){
   return !!(profile && profile.is_test_profile);
 }
 
+function showTestBadgePreview(){
+  // Disponível somente após validar o modo de teste da sessão do professor.
+  if (!window.__dcTeacherTestMode) return;
+  if (typeof previewBadgeCelebration === 'function') {
+    previewBadgeCelebration();
+  } else {
+    window.location.href = 'home.html?preview_badge=1';
+  }
+}
+
 async function enterStudentTestMode(){
   // Confere o papel no servidor antes de ativar o modo; o estado local não é uma permissão.
   const { data: { user }, error } = await sb.auth.getUser();
@@ -830,6 +840,7 @@ function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts, options){
   if (window.__dcTeacherTestMode) {
     html = '<div class="student-test-menu">' +
       '<div class="student-test-label"><span class="student-test-dot"></span> Modo Aluno de Teste</div>' +
+      '<button type="button" class="student-test-badge-preview" onclick="showTestBadgePreview()">✦ Simular conquista de badge</button>' +
       '<button type="button" class="student-test-exit" onclick="leaveStudentTestMode()">← Voltar ao painel do professor</button>' +
       '</div>' + html;
   }
