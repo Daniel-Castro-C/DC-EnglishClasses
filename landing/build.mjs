@@ -14,6 +14,7 @@ for(const name of ['index.html','admin.html','depoimento.html'])cp('landing/'+na
 // Signature 2027: shared visual assets (no changes to student data or workflows).
 cp('landing/signature-2027.css','signature-2027.css');
 cp('landing/signature-mark.svg','signature-mark.svg');
+for(const f of ['logo-principal.svg','logo-reversa.svg','favicon.svg'])cp('landing/'+f,f);
 const pages=['home.html','aluno.html','perfil.html','enviar-material.html','pergunte-ao-daniel.html','guias-gramatica.html','recursos.html'];
 // Discover dependencies from the actual student pages and shared modules,
 // including scripts loaded dynamically with document.write().
