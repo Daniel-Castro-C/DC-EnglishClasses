@@ -382,6 +382,11 @@ function previewBadgeCelebration(){
 
   if (!profile.has_seen_onboarding) {
     document.getElementById('onboarding-modal').classList.add('show');
+  } else if (window.__dcTeacherTestMode &&
+             new URLSearchParams(window.location.search).get('preview_badge') === '1') {
+    // Botão do menu de teste: leva diretamente à Home e abre a simulação.
+    window.history.replaceState(null, '', 'home.html');
+    setTimeout(previewBadgeCelebration, 1250);
   } else if (pendingBadgeCelebration) {
     // Exibe após o splash inicial; não interrompe o carregamento do dashboard.
     setTimeout(maybeCelebrateBadge, 1350);
