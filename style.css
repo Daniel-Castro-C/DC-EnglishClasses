@@ -1179,3 +1179,19 @@ body.dark-mode .badge-celebration-done:hover{background:#6395CC;}
   .badge-celebration-done{transition:none;}
   .badge-celebration-done:hover{transform:none;}
 }
+
+
+/* O simulador de badge fica no próprio quadro Modo Aluno de Teste,
+   visível em qualquer página do portal, e não só abaixo do mural. */
+.student-test-badge-preview{
+  display:flex;justify-content:center;align-items:center;gap:8px;
+  width:100%;min-height:39px;margin:11px 0 8px;padding:10px 8px;
+  border:1px solid #BDD7EF;border-radius:8px;
+  background:#EAF2FA;color:#183D66;
+  font:700 11px/1.35 'IBM Plex Sans',sans-serif;
+  cursor:pointer;text-align:center;
+}
+.student-test-badge-preview:hover{background:#fff;border-color:#fff;color:#172D51;}
+.student-test-badge-preview:focus-visible{outline:3px solid #92C7F3;outline-offset:3px;}
+.student-test-menu .student-test-badge-preview + .student-test-exit{margin-top:0;}
+@media(prefers-reduced-motion:reduce){.student-test-badge-preview{transition:none;}}
