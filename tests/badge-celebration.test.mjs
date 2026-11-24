@@ -107,3 +107,23 @@ test('celebration is readable on mobile, dark mode and with reduced motion',()=>
   assert.match(css,/@media\(max-width:480px\)/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
+
+
+test('test-mode preview button is visible in the sidebar and works from any student page',()=>{
+  const {context}=setup();
+  const common=readFileSync('js/common.js','utf8');
+  const home=readFileSync('home.html','utf8');
+  const css=readFileSync('style.css','utf8');
+  assert.match(common,/class="student-test-badge-preview"/);
+  assert.match(common,/onclick="showTestBadgePreview\(\)"/);
+  assert.match(common,/window\.location\.href = 'home\.html\?preview_badge=1'/);
+  assert.match(home,/new URLSearchParams\(window\.location\.search\)\.get\('preview_badge'\) === '1'/);
+  assert.match(home,/setTimeout\(previewBadgeCelebration, 1250\)/);
+  assert.match(css,/\.student-test-badge-preview\{/);
+  const launch=vm.runInContext('showTestBadgePreview',context);
+  launch(); // never redirect if not in the authenticated test mode
+  assert.equal(context.window.location.href,undefined);
+  context.window.__dcTeacherTestMode=true;
+  launch();
+  assert.equal(context.window.location.href,'home.html?preview_badge=1');
+});
