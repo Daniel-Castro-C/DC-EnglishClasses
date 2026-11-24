@@ -7,7 +7,7 @@
 
 :root {
   --signature-forest: #1E3D2F;
-  --signature-porcelain: #F8F9F6;
+  --signature-porcelain: #F8F9F9;
   --signature-deep-blue: #223A4B;
   --signature-champagne: #B69A69;
   --signature-mist: #DDE7E1;
@@ -376,3 +376,9 @@ html[data-brand-surface="testimonial"] a { color: #29664A; }
   html[data-brand-surface="landing"] .hero h1 { font-size: clamp(34px, 9.3vw, 46px); }
   html[data-brand-surface="landing"] .logo { padding: 6px; }
 }
+
+/* Official logo manual: complete marks at >=120px; preserve intrinsic proportions. */
+html[data-brand-surface] .dc-brand img, html[data-brand-surface] .dc-admin-brand img {display:block;width:136px;height:auto;max-width:none;object-fit:contain;border:0;border-radius:0;background:transparent;padding:0;box-shadow:none;}
+html[data-brand-surface] .dc-brand {padding:12px 20px;flex-shrink:0;}
+html[data-brand-surface="admin"] .dc-admin-brand {display:flex;align-items:center;gap:24px;padding:8px 20px;}
+@media(max-width:480px){html[data-brand-surface] .dc-brand img,html[data-brand-surface] .dc-admin-brand img{width:120px}html[data-brand-surface] .dc-brand,html[data-brand-surface="admin"] .dc-admin-brand{padding:8px 10px;}}
