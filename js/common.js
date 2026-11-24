@@ -47,6 +47,16 @@ function isTestStudentProfile(profile){
   return !!(profile && profile.is_test_profile);
 }
 
+function showTestBadgePreview(){
+  // Disponível somente após validar o modo de teste da sessão do professor.
+  if (!window.__dcTeacherTestMode) return;
+  if (typeof previewBadgeCelebration === 'function') {
+    previewBadgeCelebration();
+  } else {
+    window.location.href = 'home.html?preview_badge=1';
+  }
+}
+
 async function enterStudentTestMode(){
   // Confere o papel no servidor antes de ativar o modo; o estado local não é uma permissão.
   const { data: { user }, error } = await sb.auth.getUser();
@@ -694,6 +704,33 @@ function buildAchievementsSection(lessonCount, opts){
   `;
 }
 
+// Mostra uma conquista apenas uma vez por aluno e por navegador.
+// Os marcos são os mesmos usados pelo mural: nunca geramos badges extras.
+// Marcar somente ao dispensar o diálogo evita perder o aviso após um reload.
+const BADGE_CELEBRATION_STORAGE_PREFIX = 'dc_badge_celebrated_v1_';
+
+function getBadgeToCelebrate(studentId, lessonCount){
+  if (!studentId) return null;
+  const earned = BADGE_MILESTONES.filter(item => Number(lessonCount) >= item.threshold);
+  if (!earned.length) return null;
+  let lastSeen = 0;
+  try {
+    const stored = Number(localStorage.getItem(BADGE_CELEBRATION_STORAGE_PREFIX + studentId));
+    if (Number.isFinite(stored) && stored >= 0) lastSeen = stored;
+  } catch (_) { /* Sem storage: o aviso ainda pode ser mostrado. */ }
+  // Se vários marcos forem alcançados entre acessos, celebrar apenas o mais recente.
+  return [...earned].reverse().find(item => item.threshold > lastSeen) || null;
+}
+
+function recordBadgeCelebration(studentId, threshold){
+  if (!studentId || !BADGE_MILESTONES.some(item => item.threshold === threshold)) return;
+  try {
+    const key = BADGE_CELEBRATION_STORAGE_PREFIX + studentId;
+    const previous = Number(localStorage.getItem(key)) || 0;
+    localStorage.setItem(key, String(Math.max(previous, threshold)));
+  } catch (_) { /* Falha de armazenamento não impede fechar o pop-up. */ }
+}
+
 // ==========================================================
 // ---------- Termo do dia ----------
 // ==========================================================
@@ -803,6 +840,7 @@ function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts, options){
   if (window.__dcTeacherTestMode) {
     html = '<div class="student-test-menu">' +
       '<div class="student-test-label"><span class="student-test-dot"></span> Modo Aluno de Teste</div>' +
+      '<button type="button" class="student-test-badge-preview" onclick="showTestBadgePreview()">✦ Simular conquista de badge</button>' +
       '<button type="button" class="student-test-exit" onclick="leaveStudentTestMode()">← Voltar ao painel do professor</button>' +
       '</div>' + html;
   }
@@ -985,4 +1023,25 @@ Object.assign(I18N.en, {
   writing_step_1:'Write your text',
   writing_step_2:'Send for correction',
   writing_step_3:'Get feedback'
+});
+
+
+// Textos do pop-up de conquista: seguem o idioma escolhido pelo aluno.
+Object.assign(I18N.pt, {
+  badge_celebration_kicker: 'NOVA CONQUISTA',
+  badge_celebration_title: 'Você conseguiu!',
+  badge_celebration_milestone: '{n} aulas',
+  badge_celebration_message: 'Cada aula é mais um passo na sua evolução. Continue assim!',
+  badge_celebration_button: 'Continuar aprendendo',
+  badge_celebration_close: 'Fechar celebração',
+  badge_celebration_preview: 'Simular celebração de badge'
+});
+Object.assign(I18N.en, {
+  badge_celebration_kicker: 'ACHIEVEMENT UNLOCKED',
+  badge_celebration_title: 'You did it!',
+  badge_celebration_milestone: '{n} lessons',
+  badge_celebration_message: 'Every lesson brings you closer to your goals. Keep going!',
+  badge_celebration_button: 'Keep learning',
+  badge_celebration_close: 'Close celebration',
+  badge_celebration_preview: 'Preview badge celebration'
 });

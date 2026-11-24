@@ -69,6 +69,27 @@
   </div>
 </div>
 
+<!-- Celebração de nova badge. Apenas a Home do aluno a apresenta; nenhuma badge é criada aqui. -->
+<div id="badge-celebration-modal" class="badge-celebration-overlay" hidden>
+  <section class="badge-celebration-panel" role="dialog" aria-modal="true"
+           aria-labelledby="badge-celebration-title" aria-describedby="badge-celebration-message">
+    <button class="badge-celebration-close" type="button" onclick="dismissBadgeCelebration()"
+            aria-label="Fechar celebração" id="badge-celebration-close">×</button>
+    <div class="badge-celebration-kicker" id="badge-celebration-kicker"></div>
+    <div class="badge-celebration-art" aria-hidden="true">
+      <span class="badge-celebration-sparkle sparkle-left">✦</span>
+      <span class="badge-celebration-sparkle sparkle-right">✧</span>
+      <span class="badge-celebration-sparkle sparkle-top">✦</span>
+      <img id="badge-celebration-image" src="" alt="">
+    </div>
+    <div class="badge-celebration-milestone" id="badge-celebration-milestone"></div>
+    <h2 id="badge-celebration-title"></h2>
+    <p id="badge-celebration-message"></p>
+    <button type="button" class="badge-celebration-done" onclick="dismissBadgeCelebration()"
+            id="badge-celebration-done"></button>
+  </section>
+</div>
+
 <div id="app-splash" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#EAF2FA;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease;">
   <img src="logo.png" alt="Logo" style="width:84px;height:84px;border-radius:16px;margin-bottom:20px;">
   <div style="font-family:'Baskerville Old Face','Libre Baskerville',Georgia,serif;font-size:17px;color:#16213E;letter-spacing:.2px;text-align:center;padding:0 24px;">
@@ -162,6 +183,96 @@ async function renderRecentDashboardMaterials(studentId){
   }
 }
 
+
+// O aluno recebe o pop-up quando o mural registra um novo marco.
+// Ao existir onboarding, a celebração espera a pessoa fechar as boas-vindas.
+let pendingBadgeCelebration = null;
+let pendingBadgeStudentId = null;
+let badgeCelebrationStudentId = null;
+let activeBadgeCelebration = null;
+let badgeCelebrationIsPreview = false;
+let badgePreviousFocus = null;
+
+function openBadgeCelebration(badge, studentId, previewOnly = false){
+  const modal = document.getElementById('badge-celebration-modal');
+  if (!badge || !modal || !modal.hidden) return;
+  // Preview do professor não é uma conquista real, nem grava um marco.
+  if (!previewOnly && (!studentId || getBadgeToCelebrate(studentId, badge.threshold)?.threshold !== badge.threshold)) return;
+
+  activeBadgeCelebration = badge;
+  badgeCelebrationIsPreview = previewOnly;
+  badgeCelebrationStudentId = previewOnly ? null : studentId;
+  badgePreviousFocus = document.activeElement;
+
+  const image = document.getElementById('badge-celebration-image');
+  image.src = badge.file;
+  image.alt = t('badge_celebration_milestone', { n: badge.threshold });
+  document.getElementById('badge-celebration-kicker').textContent = t('badge_celebration_kicker');
+  document.getElementById('badge-celebration-milestone').textContent = t('badge_celebration_milestone', { n: badge.threshold });
+  document.getElementById('badge-celebration-title').textContent = t('badge_celebration_title');
+  document.getElementById('badge-celebration-message').textContent = t('badge_celebration_message');
+  document.getElementById('badge-celebration-done').textContent = t('badge_celebration_button');
+  document.getElementById('badge-celebration-close').setAttribute('aria-label', t('badge_celebration_close'));
+
+  modal.hidden = false;
+  document.body.classList.add('badge-celebration-open');
+  window.addEventListener('keydown', onBadgeCelebrationKeydown);
+  document.getElementById('badge-celebration-done').focus();
+}
+
+function onBadgeCelebrationKeydown(event){
+  const modal = document.getElementById('badge-celebration-modal');
+  if (!modal || modal.hidden) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    dismissBadgeCelebration();
+  }
+  if (event.key === 'Tab') {
+    const buttons = Array.from(modal.querySelectorAll('button:not([disabled])'));
+    if (!buttons.length) return;
+    const first = buttons[0], last = buttons[buttons.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+}
+
+function dismissBadgeCelebration(){
+  const modal = document.getElementById('badge-celebration-modal');
+  if (!modal || modal.hidden) return;
+  // A conquista é reconhecida apenas após o aluno dispensar a celebração.
+  if (activeBadgeCelebration && !badgeCelebrationIsPreview) {
+    recordBadgeCelebration(badgeCelebrationStudentId, activeBadgeCelebration.threshold);
+  }
+  modal.hidden = true;
+  document.body.classList.remove('badge-celebration-open');
+  window.removeEventListener('keydown', onBadgeCelebrationKeydown);
+  activeBadgeCelebration = null;
+  badgeCelebrationStudentId = null;
+  badgeCelebrationIsPreview = false;
+  if (badgePreviousFocus?.isConnected) badgePreviousFocus.focus();
+  badgePreviousFocus = null;
+}
+
+function maybeCelebrateBadge(){
+  if (!pendingBadgeCelebration) return;
+  if (document.getElementById('onboarding-modal')?.classList.contains('show')) return;
+  const badge = pendingBadgeCelebration;
+  pendingBadgeCelebration = null;
+  openBadgeCelebration(badge, pendingBadgeStudentId);
+}
+
+// Disponível exclusivamente no Modo Aluno de Teste para aprovar o visual,
+// mesmo que o perfil de teste ainda não tenha dez aulas cadastradas.
+function previewBadgeCelebration(){
+  if (!window.__dcTeacherTestMode) return;
+  openBadgeCelebration(BADGE_MILESTONES[1], null, true);
+}
+
 (async function init(){
   const session = await requireSession();
   if (!session) return;
@@ -187,7 +298,9 @@ async function renderRecentDashboardMaterials(studentId){
     ? `<img class="welcome-avatar" src="${profile.avatar_url}" alt="Foto">`
     : `<div class="welcome-avatar"></div>`;
 
-  const { count: lessonCount } = await sb.from('lessons').select('id', { count: 'exact', head: true }).eq('student_id', profile.id);
+  const { count: lessonCount, error: lessonCountError } = await sb.from('lessons').select('id', { count: 'exact', head: true }).eq('student_id', profile.id);
+  pendingBadgeStudentId = profile.id;
+  pendingBadgeCelebration = lessonCountError ? null : getBadgeToCelebrate(profile.id, lessonCount || 0);
   const achievementsHtml = buildAchievementsSection(lessonCount || 0);
 
 
@@ -205,6 +318,7 @@ async function renderRecentDashboardMaterials(studentId){
       </header>
 
       ${achievementsHtml}
+      ${isTestStudentProfile(profile) ? `<div class="badge-preview-tools"><button type="button" onclick="previewBadgeCelebration()">✦ ${t('badge_celebration_preview')}</button></div>` : ''}
 
       <section class="dashboard-hero" aria-label="${t('dashboard_continue')}">
         <div class="dashboard-hero-copy">
@@ -268,6 +382,14 @@ async function renderRecentDashboardMaterials(studentId){
 
   if (!profile.has_seen_onboarding) {
     document.getElementById('onboarding-modal').classList.add('show');
+  } else if (window.__dcTeacherTestMode &&
+             new URLSearchParams(window.location.search).get('preview_badge') === '1') {
+    // Botão do menu de teste: leva diretamente à Home e abre a simulação.
+    window.history.replaceState(null, '', 'home.html');
+    setTimeout(previewBadgeCelebration, 1250);
+  } else if (pendingBadgeCelebration) {
+    // Exibe após o splash inicial; não interrompe o carregamento do dashboard.
+    setTimeout(maybeCelebrateBadge, 1350);
   }
 })();
 
@@ -279,6 +401,7 @@ async function dismissOnboarding(){
   if (session) {
     try { await sb.from('profiles').update({ has_seen_onboarding: true }).eq('id', session.user.id); } catch (e) {}
   }
+  if (pendingBadgeCelebration) setTimeout(maybeCelebrateBadge, 300);
 }
 </script>
 <a href="https://wa.me/5527997411768" target="_blank" rel="noopener" class="whatsapp-fab">
