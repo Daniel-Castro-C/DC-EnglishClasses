@@ -67,7 +67,7 @@ test('every lesson displays its material tiles without selecting a lesson',()=>{
   assert.ok(html.indexOf('<h3>Speaking</h3>') < html.indexOf('<p>Career Goals</p>'));
   assert.ok(html.indexOf('<h3>Grammar</h3>') < html.indexOf('<p>Work Life Balance</p>'));
   assert.match(html,/Slides/);
-  assert.match(html,/Relatório de desempenho/);
+  assert.match(html,/Relatório de performance/);
   assert.match(html,/Exercício/);
   assert.match(html,/previewLessonResource\('resource-1'\)/);
   assert.match(html,/downloadLessonResourceById\('resource-1'\)/);
