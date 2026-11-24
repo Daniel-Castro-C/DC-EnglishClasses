@@ -187,6 +187,7 @@ async function renderRecentDashboardMaterials(studentId){
 // O aluno recebe o pop-up quando o mural registra um novo marco.
 // Ao existir onboarding, a celebração espera a pessoa fechar as boas-vindas.
 let pendingBadgeCelebration = null;
+let pendingBadgeStudentId = null;
 let badgeCelebrationStudentId = null;
 let activeBadgeCelebration = null;
 let badgeCelebrationIsPreview = false;
@@ -262,7 +263,7 @@ function maybeCelebrateBadge(){
   if (document.getElementById('onboarding-modal')?.classList.contains('show')) return;
   const badge = pendingBadgeCelebration;
   pendingBadgeCelebration = null;
-  openBadgeCelebration(badge, badgeCelebrationStudentId);
+  openBadgeCelebration(badge, pendingBadgeStudentId);
 }
 
 // Disponível exclusivamente no Modo Aluno de Teste para aprovar o visual,
@@ -298,7 +299,7 @@ function previewBadgeCelebration(){
     : `<div class="welcome-avatar"></div>`;
 
   const { count: lessonCount, error: lessonCountError } = await sb.from('lessons').select('id', { count: 'exact', head: true }).eq('student_id', profile.id);
-  badgeCelebrationStudentId = profile.id;
+  pendingBadgeStudentId = profile.id;
   pendingBadgeCelebration = lessonCountError ? null : getBadgeToCelebrate(profile.id, lessonCount || 0);
   const achievementsHtml = buildAchievementsSection(lessonCount || 0);
 
