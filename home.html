@@ -65,7 +65,7 @@ body.dark-mode .welcome-signature{filter:invert(1);}
     <p>Este é o seu espaço de aprendizagem, onde você poderá acompanhar sua evolução, acessar os materiais das nossas aulas e explorar todos os outros recursos para desenvolver seu inglês.</p>
     <p>Espero que essa nova jornada seja repleta de aprendizados, conquistas e boas experiências.</p>
     <p>Conte comigo ao longo desse caminho!</p>
-    <div class="welcome-signature-block" style="margin:18px 0 6px;text-align:center;"><img class="welcome-signature" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAABFAgMAAADLKZBqAAAADFBMVEUAAAAAAAAAAAAAAAA16TeWAAAABHRSTlMAVar/oA4xLwAABCBJREFUeNqlWCGT5EQYfZ2pnYiIOYVgqGoEmv4JG0kVZgVjDgQa6ir3DzoKPeLOIzjBFlWDwPc6bNCHiNgr4AoxYkTmbpKH6O6kkx1uezcxu5lJXvK99773dQ8Qf3z3CjOPNVnNQxCGbOZBZCS7c18k0RCfARDz3sKQZD7nLZKcv8zUI+UtDGdBSJZQ8yB0B8h2FgRPgGrmiJrgADxp5hmrAowzeHL7ODZzJCzdSfcIhAvNl1+lXhD9cGUudiRJOkGS8y790PER3dG9cEXxsQhkl9s6WgDip2iEjxkcja2jAZBFc7okybdfc7MpHBsZWQNQsYQIQ/IVsg5Q3Y4dAEXmgIjmVJF8AaxawOxF0QKw75LGcrokuy0AeULCCslvwMLXEdlzmtwCgGqQuRdfkSUAzUNs5Np2UAfok/3s0koaORGE4dHddxDcu67nwVJRxg2fzrGu95m7ZWEfv2KULRJfBqD3qutrs+U0MZHzDPykr6l658fJEQBK/B0n6LYfIu89e4a1ZbOMEvQYziHLijPlIoqKdfgg40tPraMynh7EJQDt65DWUdJL/CE6n4HfhOfP7Z8f8ScAfIr7jZXaTujPmnHmRaSnMKMuKjxE5j6O6LF1IGifUwCU/Wdxf4+J8ZpI0Qkg6NmsxgPx4moK8Tn4RXBNhed2fbME/gWAb/HrtO7tHV/ejplw80vZHhPTxCo4JUePPliSpaQ36U1AKgDgCZCSk/gYc4mCDVbMrdIsAajAm0kDSJJBNwDCjLhMyS1sWkgHYQJB0tat5MK+U33QDMm1YOUWfTmwYGBv2SGxY+oQll7f6baEe2BBvqYN4OEK3SJz0/Jsj/cOEbQlf0kb6zfD9wdI8s33AaETLpVrCtMChs2qA0RYd8rKZnrRu1GYkXd7h1wyT8l61QIp3w+zULGEZm1nb+4UDLkcTiUrTeayBST/GpxlOsAwt+XV57m8HfYBbCFbQPP3bqjjYGGAzDp0mD2+Kn/xgiRryBYJmbWjNDNtkK9yHMzF8E7Cmke1yHjqIZZk3kNIsp7kJdZh82iyBVQHxf3qNIoi3flUaSdcLhnqK8kaUBTkjYdYWi9cOik0+cPIEpO9WMIuByRfk1g1vV4W/WagPLhF7DjWV2+tt9l4iNTVnTnGksm+qeC5FURGsvYQxj2jz3c9avlikgCBtqWD6E2TeOllcJPYcVLGoG0LCyFMf4WxVliSJP/JAeDCkJwGqr+6ArKTfc/bvlEOfn1Jkj9vNk9Jjh0SbCqObuG7DgIiI3OIgvwjXCmfIwIARA4g45unDLopIbvrHXm0KTpasP//wB3vvrW/R0Qi2J4LW9o+fGtlcghX9609xrNHDKUXDmF7345zKpjsX1wUUQjQ058yxG6A3Fxfv7yK2B90D92d3ZHkXfCY/wCsdm6ffKFsAgAAAABJRU5ErkJggg==" alt="Assinatura de Daniel Castro" width="176" height="46" style="display:block;width:176px;max-width:100%;height:auto;margin:0 auto 6px;"><p style="margin:0;text-align:center;color:var(--text);font-weight:600;">Daniel Castro</p></div></div>
+    <div class="welcome-signature-block" style="margin:18px 0 6px;text-align:center;"><img id="welcome-signature-image" hidden class="welcome-signature" alt="Assinatura de Daniel Castro" width="176" height="46" style="width:176px;max-width:100%;height:auto;margin:0 auto 6px;"><p style="margin:0;text-align:center;color:var(--text);font-weight:600;">Daniel Castro</p></div></div>
     <div class="onboarding-actions">
       <button type="button" class="btn-primary" onclick="startWelcomeTour()">Fazer um tour guiado pelo portal →</button>
       <button type="button" class="btn-ghost" style="width:100%;margin-top:10px;" onclick="finishWelcome()">Explorar mais tarde</button>
@@ -401,10 +401,11 @@ function previewBadgeCelebration(){
 
   document.getElementById('welcome-title').textContent = 'Welcome, ' + firstName + '!';
   if (window.__dcTeacherTestMode) {
-    const b=document.createElement('button'); b.type='button'; b.className='btn-ghost'; b.textContent='Simular boas-vindas'; b.onclick=()=>{ welcomePreview=true; document.getElementById('onboarding-modal').classList.add('show'); };
+    const b=document.createElement('button'); b.type='button'; b.className='btn-ghost'; b.textContent='Simular boas-vindas'; b.onclick=async()=>{ welcomePreview=true; await loadWelcomeSignature(); document.getElementById('onboarding-modal').classList.add('show'); };
     document.querySelector('.badge-preview-tools')?.appendChild(b);
   }
-  if (!profile.has_seen_onboarding) {
+  if (!window.__dcTeacherTestMode && !isTestStudentProfile(profile) && profile.role === 'student' && profile.welcome_pending === true && await claimWelcome(profile.id)) {
+    await loadWelcomeSignature();
     document.getElementById('onboarding-modal').classList.add('show');
   } else if (window.__dcTeacherTestMode &&
              new URLSearchParams(window.location.search).get('preview_badge') === '1') {
@@ -418,6 +419,23 @@ function previewBadgeCelebration(){
 })();
 
 let welcomePreview=false, welcomeTourIndex=0;
+let welcomeSignatureUrl=null;
+async function loadWelcomeSignature(){
+  const img=document.getElementById('welcome-signature-image');
+  if(welcomeSignatureUrl) return;
+  try {
+    const {data,error}=await sb.storage.from('welcome-assets').download('signature.png');
+    if(error||!data) return;
+    welcomeSignatureUrl=URL.createObjectURL(data);
+    img.src=welcomeSignatureUrl; img.hidden=false; img.style.display='block';
+  } catch(e){ console.warn('Welcome signature unavailable'); }
+}
+async function claimWelcome(studentId){
+  try {
+    const {data,error}=await sb.from('profiles').update({welcome_pending:false,has_seen_onboarding:true}).eq('id',studentId).eq('role','student').eq('welcome_pending',true).select('id').maybeSingle();
+    return !error && !!data;
+  } catch(e){ return false; }
+}
 const welcomeSteps=[
  ['.dashboard-heading','Visão geral','Este é o seu espaço de aprendizagem.'],
  ['.achievements-wall','Mural de conquistas','Acompanhe seu progresso e suas conquistas a cada marco de aulas.'],
