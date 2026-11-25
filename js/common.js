@@ -237,6 +237,7 @@ const I18N = {
     file_hint: 'Aceita PPT, PDF, Word, imagens, etc.',
     link_label: 'Ou, em vez de um arquivo, um link (opcional)',
     link_placeholder: 'https://... (ex: link de um artigo ou vídeo)',
+    material_link_invalid: 'Informe um endereço válido de um site, começando com https:// ou com o domínio.',
     usage_label: 'Como você gostaria de usar esse material?',
     usage_placeholder: 'Conte pra gente como imagina usar esse material na aula — por exemplo: simular uma apresentação, praticar vocabulário, treinar leitura em voz alta, conversar sobre o assunto, tirar dúvidas específicas, etc.',
     notify_btn: 'Avisar ao professor',
@@ -418,6 +419,7 @@ const I18N = {
     file_hint: 'Accepts PPT, PDF, Word, images, etc.',
     link_label: 'Or, instead of a file, a link (optional)',
     link_placeholder: 'https://... (e.g. a link to an article or video)',
+    material_link_invalid: 'Enter a valid website address, starting with https:// or the domain name.',
     usage_label: 'How would you like to use this material?',
     usage_placeholder: 'Tell us how you imagine using this material in the lesson — for example: simulate a presentation, practice vocabulary, train reading aloud, talk about the topic, clear up specific doubts, etc.',
     notify_btn: 'Notify teacher',
@@ -1045,3 +1047,21 @@ Object.assign(I18N.en, {
   badge_celebration_close: 'Close celebration',
   badge_celebration_preview: 'Preview badge celebration'
 });
+
+/* Material requests accept external web URLs only. Legacy links without a
+   scheme are normalized at display time; never resolve against the portal. */
+function normalizeMaterialExternalLink(value){
+  const raw=String(value??'').trim();
+  if(!raw || /[\s\u0000-\u001f\u007f]/u.test(raw)) return null;
+  let candidate=raw;
+  if(raw.startsWith('//')) candidate='https:'+raw;
+  else if(!/^https?:\/\//i.test(raw)){
+    if(!/^[\p{L}\p{N}](?:[\p{L}\p{N}.-]*\.)[\p{L}]{2,}(?::\d+)?(?:[/?#]|$)/u.test(raw)) return null;
+    candidate='https://'+raw;
+  }
+  try{
+    const url=new URL(candidate);
+    if(!['http:','https:'].includes(url.protocol)||!url.hostname||url.username||url.password) return null;
+    return url.href;
+  }catch(e){return null;}
+}

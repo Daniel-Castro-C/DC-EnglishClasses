@@ -74,7 +74,9 @@ function showFeedback(msg, ok){
 
 async function submitRequest(){
   const date = document.getElementById('req-date').value || null;
-  const link = document.getElementById('req-link').value.trim() || null;
+  const rawLink = document.getElementById('req-link').value.trim();
+  const link = normalizeMaterialExternalLink(rawLink);
+  if (rawLink && !link) { showFeedback(t('material_link_invalid'), false); return; }
   const notes = document.getElementById('req-notes').value.trim() || null;
   const fileInput = document.getElementById('req-file');
   const file = fileInput.files[0] || null;
