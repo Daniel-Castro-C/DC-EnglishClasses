@@ -299,9 +299,17 @@ function previewBadgeCelebration(){
     : `<div class="welcome-avatar"></div>`;
 
   const { count: lessonCount, error: lessonCountError } = await sb.from('lessons').select('id', { count: 'exact', head: true }).eq('student_id', profile.id);
+  let completedCount = lessonCount || 0, completedError = lessonCountError;
+  if (!isTestStudentProfile(profile)) {
+    try {
+      const result = await sb.rpc('completed_lesson_count',{p_student:profile.id});
+      if (result.error || result.data == null) throw result.error || new Error('Completion count unavailable');
+      completedCount = Number(result.data) || 0; completedError = null;
+    } catch(err) { console.warn('Completion count unavailable; preserving legacy count',err); completedError = err; }
+  }
   pendingBadgeStudentId = profile.id;
-  pendingBadgeCelebration = lessonCountError ? null : getBadgeToCelebrate(profile.id, lessonCount || 0);
-  const achievementsHtml = buildAchievementsSection(lessonCount || 0);
+  pendingBadgeCelebration = completedError ? null : getBadgeToCelebrate(profile.id, completedCount);
+  const achievementsHtml = buildAchievementsSection(completedCount);
 
 
   document.getElementById('main-content').innerHTML = `
