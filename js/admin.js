@@ -156,12 +156,17 @@ function openTodayClassCall(studentId){
   }
 }
 
+let crmHomeRequest=0;
 async function renderHome(){
   currentStudent = null;
   currentView = 'home';
   renderNav();
   const today = adminToday();
-  const classes = ccAgenda(today);
+  const homeRequest = ++crmHomeRequest;
+  let completedIds = new Set(), agendaLoadError = false;
+  try { const {data,error}=await sb.from('lessons').select('student_id').eq('lesson_date',today.date); if(error)throw error; completedIds=new Set((data||[]).map(l=>l.student_id)); } catch(error){console.error('Agenda: falha ao consultar aulas cadastradas',error);agendaLoadError=true;}
+  if(currentView!=='home'||homeRequest!==crmHomeRequest)return;
+  const classes = ccAgenda(today,completedIds,true);
   const main = document.getElementById('main-content');
   main.innerHTML = `
 
@@ -169,11 +174,11 @@ async function renderHome(){
     <section class="crm-kpis">
      ${crmKpi('Alunos ativos',students.filter(s=>!s.is_test_profile).length,'users')}
      ${crmKpi('Aulas hoje',classes.length,'calendar')}
-     ${crmKpi('Reposições pendentes',students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+ccPending(ccData(s)),0),'refresh')}
+     ${crmKpi('Reposições pendentes',students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+ccPending(ccData(s)),0),'refresh','crm-replacement-stat')}
      ${crmKpi('Relatórios pendentes','—','file','report-pending-stat')}
     </section>
     <section class="crm-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3><button class="crm-link" onclick="ccGlobalView()">Ver agenda completa →</button></div>
-    <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Ações</th></tr></thead><tbody>${classes.map(student=>`<tr><td class="crm-time">${escapeHtml(student.lesson_time.slice(0,5)||'—')}</td><td>${studentDashboardLabel(student)}</td><td><span class="crm-kind ${student.ccType.startsWith('Reposição')?'is-replacement':''}">${escapeHtml(student.ccType)}</span></td><td><div class="crm-row-actions"><button class="crm-icon-btn" title="Videochamada" onclick="openTodayClassCall('${student.id}')">${crmIcon('video')}</button><button class="crm-icon-btn" title="Calendário" onclick="ccOpenDate('${student.id}','${student.ccDate}')">${crmIcon('calendar')}</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>'}</tbody></table></div></section>
+    <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${classes.map(student=>`<tr><td class="crm-time">${escapeHtml(student.lesson_time.slice(0,5)||'—')}</td><td>${studentDashboardLabel(student)}</td><td><span class="crm-kind ${student.ccType.startsWith('Reposição')?'is-replacement':''}">${escapeHtml(student.ccType)}</span></td><td>${ccQuickStatus(student)}</td><td><div class="crm-row-actions"><button class="crm-icon-btn" title="Videochamada" onclick="openTodayClassCall('${student.id}')">${crmIcon('video')}</button><button class="crm-icon-btn" title="Calendário" onclick="ccOpenDate('${student.id}','${student.ccDate}')">${crmIcon('calendar')}</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>'}</tbody></table></div><p id="crm-agenda-feedback" class="crm-muted crm-agenda-feedback" role="status">${agendaLoadError?'Não foi possível consultar as aulas cadastradas. O status será verificado antes de salvar.':'Altere o status diretamente na tabela. O registro será salvo no calendário individual.'}</p></section>
     <div class="crm-lower">
       <section class="crm-panel" id="crm-pendencias"><div class="crm-panel-head"><h3>Central de pendências</h3><span class="crm-muted" id="report-pending-count">—</span></div><div id="crm-other-pending">${crmOtherPending()}</div><div id="report-pending-list" aria-live="polite"><p class="crm-empty">Verificando relatórios...</p></div></section>
       <section class="crm-panel"><div class="crm-panel-head"><h3>Atividades recentes</h3></div><div id="admin-recent-activity-list" aria-live="polite"><p class="crm-empty">Carregando atividades...</p></div></section>
