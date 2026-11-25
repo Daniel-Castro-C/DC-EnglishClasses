@@ -84,14 +84,17 @@ async function refreshPendingCounts(){
 
 function renderNav(){
   const items = [
-    { key:'home', label:'Início', icon:'home', action:'renderHome()' },
+    { key:'home', label:'Visão geral', icon:'home', action:'renderHome()' },
+    { key:'alunos', label:'Alunos', icon:'home', action:'ccRoster()' },
+    { key:'agenda', label:'Agenda', icon:'home', action:'ccGlobalView()' },
     { key:'controle', label:'Controle de Aulas', icon:'home', action:'ccOverview()' },
     { key:'comunicados', label:'Comunicados', icon:'comunicados', action:'openComunicados()' },
     { key:'guias', label:'Guias de Gramática', icon:'gramatica', action:'openGuias()' },
     { key:'daniel', label:'Pergunte ao Daniel', icon:'daniel', action:'openDanielModule()' }
   ];
-  let html = '<div class="nav-label">Área do professor</div>';
+  let html = '<div class="nav-label">GESTÃO ACADÊMICA</div>';
   items.forEach(item => {
+    if(item.key==='comunicados') html += '<div class="nav-label">PEDAGÓGICO</div>';
     const active = currentView === item.key;
     const badge = item.key === 'daniel' && danielPendingTotal > 0
       ? '<span class="pill nav-badge">' + danielPendingTotal + '</span>' : '';
@@ -200,15 +203,14 @@ async function renderHome(){
   currentView = 'home';
   renderNav();
   const today = adminToday();
-  const classes = students.filter(s => !s.is_test_profile && Number(s.lesson_weekday) === today.day && s.lesson_time)
-    .sort((a,b) => a.lesson_time.localeCompare(b.lesson_time));
+  const classes = ccAgenda(today);
   const main = document.getElementById('main-content');
   main.innerHTML = `
 
     <header class="topline admin-topline">
       <div>
         <div class="dashboard-kicker">VISÃO GERAL</div>
-        <h1>Painel do professor</h1>
+        <h1>Visão geral</h1>
         <div class="sub">Acompanhe sua agenda, seus alunos e o que precisa de atenção.</div>
       </div>
       <nav class="admin-landing-actions" aria-label="Acessos à landing page">
@@ -228,26 +230,20 @@ async function renderHome(){
         </a>
       </nav>
     </header>
-    <div class="ec-admin-intro" aria-label="Resumo do dia">
-      <div class="ec-admin-kicker">SEU ESPAÇO DE GESTÃO</div>
-      <strong>Suas aulas, organizadas em um só lugar.</strong>
-      <p>Confira a agenda do dia, acompanhe os relatórios e gerencie seus alunos com facilidade.</p>
-    </div>
     <section class="admin-overview-stats" aria-label="Indicadores do portal">
-      <div class="admin-stat"><span>Aulas hoje</span><strong>${classes.length}</strong><small>Horários fixos cadastrados</small></div>
+      <div class="admin-stat"><span>Aulas hoje</span><strong>${classes.length}</strong><small>Agenda integrada ao calendário</small></div>
       <div class="admin-stat"><span>Alunos</span><strong>${students.filter(s => !s.is_test_profile).length}</strong><small>Perfis de estudantes</small></div>
+      <div class="admin-stat"><span>Reposições pendentes (teste)</span><strong>${students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+ccPending(ccData(s)),0)}</strong><small>Consulte o calendário individual</small></div>
       <div class="admin-stat"><span>Relatórios pendentes</span><strong id="report-pending-stat">—</strong><small>Necessitam de acompanhamento</small></div>
     </section>
-    <div class="admin-dashboard-grid">
+    <div class="admin-dashboard-grid crm-dashboard-grid">
       <section class="box admin-panel">
         <div class="admin-panel-heading"><h3>Agenda de hoje</h3><span class="admin-panel-count">${classes.length} aula(s)</span></div>
-        ${classes.length ? classes.map(student => `
-          <button class="admin-dashboard-line" onclick="openTodayClassCall('${student.id}')" title="Abrir videochamada da aula">
-            <span>${studentDashboardLabel(student)}</span><strong>${escapeHtml(student.lesson_time.slice(0,5))}</strong>
-          </button>`).join('') : '<div class="small-note">Nenhuma aula com horário fixo cadastrada para hoje.</div>'}
+        ${classes.length ? '<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Ações</th></tr></thead><tbody>'+classes.map(student => `
+          <tr><td>${escapeHtml(student.lesson_time.slice(0,5)||'—')}</td><td>${studentDashboardLabel(student)}</td><td>${escapeHtml(student.ccType)}</td><td><button class="btn-ghost" onclick="openTodayClassCall('${student.id}')">Vídeo</button> <button class="btn-ghost" onclick="ccOpenDate('${student.id}','${student.ccDate}')">Calendário</button></td></tr>`).join('')+'</tbody></table></div>' : '<div class="small-note">Nenhuma aula prevista para hoje.</div>'}
       </section>
       <section class="box admin-panel">
-        <div class="admin-panel-heading"><h3>Pendências</h3><span class="admin-panel-count" id="report-pending-count">—</span></div>
+        <div class="admin-panel-heading"><h3>Relatórios pendentes</h3><span class="admin-panel-count" id="report-pending-count">—</span></div>
         <div id="report-pending-list" aria-live="polite"><div class="small-note">Verificando relatórios de desempenho...</div></div>
       </section>
     </div>
@@ -799,10 +795,11 @@ function renderStudentDetail(){
         <h1>${escapeHtml(s.full_name || s.email)}</h1>
         <div class="sub">${s.is_test_profile ? 'Perfil vinculado ao seu login · dados para testes' : escapeHtml(s.email) + ' · visível apenas para você e para o aluno'}</div>
       </div>
-      <button class="btn-dark-sm" onclick="renderHome()">← Todos os alunos</button>
+      <button class="btn-dark-sm" onclick="ccRoster()">← Todos os alunos</button>
     </div>
 
-    <div class="role-switch" style="max-width:760px;margin-bottom:26px;">
+    <div class="crm-student-actions"><button class="btn-dark-sm" onclick="switchTab('nova')">+ Cadastrar aula</button><button class="btn-ghost" onclick="ccOpenDate(currentStudent.id,adminToday().date)">Registrar aula / falta</button><button class="btn-ghost" onclick="openTodayClassCall(currentStudent.id)">Videochamada</button></div>
+    <div class="role-switch crm-tabs" style="margin-bottom:18px;">
       <button class="${currentTab === 'perfil' ? 'active' : ''}" onclick="switchTab('perfil')">Perfil</button>
       <button class="${currentTab === 'calendario' ? 'active' : ''}" onclick="ccSelected='';switchTab('calendario')">Calendário</button>
       <button class="${currentTab === 'nova' ? 'active' : ''}" onclick="switchTab('nova')">Cadastrar nova aula</button>
