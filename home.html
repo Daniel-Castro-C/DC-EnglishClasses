@@ -47,6 +47,9 @@
   .word-of-day-definition{font-size:14px;color:#AEBBD2;margin-bottom:10px;line-height:1.55;position:relative;max-width:520px;}
   .word-of-day-example{font-size:14px;font-style:italic;color:#7FA8D9;line-height:1.55;position:relative;max-width:520px;}
 body.dark-mode .welcome-signature{filter:invert(1);}
+html.welcome-tour-active,html.welcome-tour-active body{overflow:hidden!important;overscroll-behavior:none!important;scroll-behavior:auto!important;}
+#welcome-tour:not([hidden]){pointer-events:auto!important;touch-action:none;overscroll-behavior:none;}
+#welcome-tour-card{touch-action:manipulation;}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16213E">
@@ -445,20 +448,37 @@ const welcomeSteps=[
  ['.nav-item[href="enviar-material.html"]','Enviar material','Compartilhe materiais para nossas aulas.'],
  ['.nav-resource-trigger','Recursos','Explore vocabulário e aprimore sua escrita.']
 ];
-function startWelcomeTour(){document.getElementById('onboarding-modal').classList.remove('show');welcomeTourIndex=0;document.getElementById('welcome-tour').hidden=false;renderWelcomeTour();}
+function startWelcomeTour(){document.getElementById('onboarding-modal').classList.remove('show');welcomeTourIndex=0;document.documentElement.classList.add('welcome-tour-active');document.getElementById('welcome-tour').hidden=false;renderWelcomeTour();document.getElementById('welcome-tour-next').focus({preventScroll:true});}
 function renderWelcomeTour(){
  const s=welcomeSteps[welcomeTourIndex], target=document.querySelector(s[0]), card=document.getElementById('welcome-tour-card'), shade=document.getElementById('welcome-tour-shade');
  document.getElementById('welcome-tour-count').textContent='Passo '+(welcomeTourIndex+1)+' de '+welcomeSteps.length;
  document.getElementById('welcome-tour-title').textContent=s[1];document.getElementById('welcome-tour-text').textContent=s[2];document.getElementById('welcome-tour-next').textContent=welcomeTourIndex===welcomeSteps.length-1?'Concluir':'Próximo →';
- if(target && target.getBoundingClientRect().width) target.scrollIntoView({block:'nearest'});
+ if(target && target.getBoundingClientRect().width) target.scrollIntoView({block:'nearest',behavior:'instant'});
  const r=target?.getBoundingClientRect(), w=card.offsetWidth, h=card.offsetHeight;
  if(r && r.right>0 && r.left<innerWidth && r.bottom>0 && r.top<innerHeight){Object.assign(shade.style,{display:'block',left:Math.max(0,r.left-4)+'px',top:Math.max(0,r.top-4)+'px',width:(r.width+8)+'px',height:(r.height+8)+'px'});let x=r.right+18;if(x+w>innerWidth-16)x=Math.max(16,r.left-w-18);let y=r.top;if(x===16 && r.left< w+34)y=r.bottom+16;Object.assign(card.style,{left:Math.min(innerWidth-w-16,Math.max(16,x))+'px',top:Math.max(16,Math.min(innerHeight-h-16,y))+'px'});}
  else{Object.assign(shade.style,{display:'block',left:'0',top:'0',width:'0',height:'0'});Object.assign(card.style,{left:Math.max(16,(innerWidth-w)/2)+'px',top:Math.max(16,(innerHeight-h)/2)+'px'});}
 }
 function advanceWelcomeTour(){if(++welcomeTourIndex>=welcomeSteps.length)finishWelcome();else renderWelcomeTour();}
-function finishWelcome(){document.getElementById('welcome-tour').hidden=true;document.getElementById('onboarding-modal').classList.remove('show');if(welcomePreview||window.__dcTeacherTestMode){welcomePreview=false;return;}dismissOnboarding();}
+function finishWelcome(){document.documentElement.classList.remove('welcome-tour-active');document.getElementById('welcome-tour').hidden=true;document.getElementById('onboarding-modal').classList.remove('show');if(welcomePreview||window.__dcTeacherTestMode){welcomePreview=false;return;}dismissOnboarding();}
 window.addEventListener('resize',()=>{if(!document.getElementById('welcome-tour').hidden)renderWelcomeTour();});
-window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('welcome-tour').hidden)finishWelcome();});
+function welcomeTourActive(){return !document.getElementById('welcome-tour').hidden;}
+function preventTourScroll(e){if(welcomeTourActive() && e.cancelable)e.preventDefault();}
+window.addEventListener('wheel',preventTourScroll,{passive:false,capture:true});
+window.addEventListener('touchmove',preventTourScroll,{passive:false,capture:true});
+window.addEventListener('keydown',e=>{
+ if(!welcomeTourActive())return;
+ if(e.key==='Escape'){e.preventDefault();finishWelcome();return;}
+ const card=document.getElementById('welcome-tour-card');
+ if(e.key==='Tab'){
+   const buttons=Array.from(card.querySelectorAll('button:not([disabled])'));
+   if(buttons.length){e.preventDefault();const index=buttons.indexOf(document.activeElement);buttons[(index<0?(e.shiftKey?buttons.length-1:0):(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length)].focus({preventScroll:true});}
+   return;
+ }
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End',' '].includes(e.key)){
+   if(e.key===' ' && card.contains(document.activeElement) && document.activeElement.tagName==='BUTTON')return;
+   e.preventDefault();
+ }
+},true);
 // Fecha o pop-up de boas-vindas e marca como já visto (não aparece mais, em nenhum aparelho)
 async function dismissOnboarding(){
   const modal = document.getElementById('onboarding-modal');
