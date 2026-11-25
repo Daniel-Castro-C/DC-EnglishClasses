@@ -29,17 +29,7 @@
     };
   }
 
-  if (typeof buildStudentTopNav === 'function') {
-    const origNav = window.buildStudentTopNav;
-    window.buildStudentTopNav = function (activeKey, showGrammar, notifCounts) {
-      let html = origNav(activeKey, showGrammar, notifCounts);
-      if (notifCounts && notifCounts.recursos && typeof NOTIF_BELL_SVG !== 'undefined') {
-        // coloca o sininho dentro do item "Recursos" (o item é criado pelo recursos-module.js)
-        html = html.replace(/(onclick="window\.location\.href='recursos\.html'"><span>[^<]*<\/span>)/, '$1' + NOTIF_BELL_SVG);
-      }
-      return html;
-    };
-  }
+  // O sininho de Recursos é renderizado por buildStudentTopNav (common.js).
 
   // ---------- 2) PROFESSOR: módulo "Textos para correção" ----------
   let pendingTotal = 0;
