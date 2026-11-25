@@ -22,6 +22,15 @@
   .welcome-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--sky-soft);}
   .welcome-row{display:flex;align-items:center;gap:16px;margin-bottom:34px;}
 
+  .home-lesson-call{display:flex;align-items:center;gap:14px;margin:0 0 24px;padding:18px 20px;background:var(--paper-card);border:1px solid var(--line);border-radius:12px;}
+  .home-lesson-call-icon{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:10px;background:var(--sky-soft);color:var(--ink);}
+  .home-lesson-call-icon svg,.home-lesson-call-action svg{width:22px;height:22px;}
+  .home-lesson-call-copy{flex:1;min-width:0;}
+  .home-lesson-call-copy h2{font:700 16px/1.4 'IBM Plex Sans',sans-serif;margin:0 0 4px;color:var(--text);}
+  .home-lesson-call-copy p{font-size:13.5px;color:var(--text-soft);margin:0;line-height:1.5;}
+  .home-lesson-call-action.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;flex:none;padding:13px 20px;text-decoration:none;text-align:center;}
+  @media(max-width:600px){.home-lesson-call{flex-wrap:wrap;padding:16px;gap:12px;}.home-lesson-call-action.btn-primary{width:100%;}}
+
   /* Onboarding (pop-up de boas-vindas no primeiro acesso) */
   .onboarding-overlay{position:fixed;inset:0;background:rgba(14,21,36,0.55);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;}
   .onboarding-overlay.show{display:flex;}
@@ -46,6 +55,10 @@
   .word-of-day-term{font-family:'Baskerville Old Face','Libre Baskerville',Georgia,serif;font-size:26px;font-weight:700;color:#F1F0EA;margin-bottom:8px;text-transform:capitalize;position:relative;}
   .word-of-day-definition{font-size:14px;color:#AEBBD2;margin-bottom:10px;line-height:1.55;position:relative;max-width:520px;}
   .word-of-day-example{font-size:14px;font-style:italic;color:#7FA8D9;line-height:1.55;position:relative;max-width:520px;}
+body.dark-mode .welcome-signature{filter:invert(1);}
+html.welcome-tour-active,html.welcome-tour-active body{overflow:hidden!important;overscroll-behavior:none!important;scroll-behavior:auto!important;}
+#welcome-tour:not([hidden]){pointer-events:auto!important;touch-action:none;overscroll-behavior:none;}
+#welcome-tour-card{touch-action:manipulation;}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16213E">
@@ -59,16 +72,26 @@
 <div id="onboarding-modal" class="onboarding-overlay">
   <div class="onboarding-box">
     <img src="logo.png" alt="Logo" class="onboarding-logo">
-    <h2 data-i18n="onboarding_title">Seja bem-vindo(a) à D.C English Classes!</h2>
-    <p data-i18n="onboarding_p1">Preparamos um guia rápido para você conhecer todos os cantos do portal — login, materiais de aula, como tirar dúvidas comigo e muito mais.</p>
-    <p data-i18n="onboarding_p2">Baixe e guarde para consultar sempre que precisar.</p>
+    <h2 id="welcome-title">Welcome!</h2>
+    <div id="welcome-letter"><p>Que bom ter você aqui!</p>
+    <p>Este é o seu espaço de aprendizagem, onde você poderá acompanhar sua evolução, acessar os materiais das nossas aulas e explorar todos os outros recursos para desenvolver seu inglês.</p>
+    <p>Espero que essa nova jornada seja repleta de aprendizados, conquistas e boas experiências.</p>
+    <p>Conte comigo ao longo desse caminho!</p>
+    <div class="welcome-signature-block" style="margin:18px 0 6px;text-align:center;"><img id="welcome-signature-image" hidden class="welcome-signature" alt="Assinatura de Daniel Castro" width="176" height="46" style="width:176px;max-width:100%;height:auto;margin:0 auto 6px;"><p style="margin:0;text-align:center;color:var(--text);font-weight:600;">Daniel Castro</p></div></div>
     <div class="onboarding-actions">
-      <a href="guia-portal-do-aluno.pdf" download class="btn-primary" style="text-decoration:none;display:block;text-align:center;" onclick="dismissOnboarding()" data-i18n="onboarding_download_btn">Baixar guia em PDF</a>
-      <button type="button" class="btn-ghost" style="width:100%;margin-top:10px;" onclick="dismissOnboarding()" data-i18n="onboarding_close_btn">Já vi, pode fechar</button>
+      <button type="button" class="btn-primary" onclick="startWelcomeTour()">Fazer um tour guiado pelo portal →</button>
+      <button type="button" class="btn-ghost" style="width:100%;margin-top:10px;" onclick="finishWelcome()">Explorar mais tarde</button>
     </div>
   </div>
 </div>
 
+<div id="welcome-tour" hidden style="position:fixed;inset:0;z-index:2100;pointer-events:none">
+  <div id="welcome-tour-shade" style="position:absolute;border-radius:12px;box-shadow:0 0 0 200vmax rgba(14,21,36,.65);outline:2px solid #91BDE6"></div>
+  <section id="welcome-tour-card" role="dialog" aria-labelledby="welcome-tour-title" style="position:absolute;pointer-events:auto;width:min(340px,calc(100vw - 32px));background:var(--paper-card);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 12px 40px #0004">
+    <div id="welcome-tour-count" style="font-size:12px;color:var(--text-soft)"></div><h2 id="welcome-tour-title" style="font-size:20px;margin:10px 0"></h2><p id="welcome-tour-text" style="font-size:14px;line-height:1.6"></p>
+    <button class="btn-primary" id="welcome-tour-next" onclick="advanceWelcomeTour()">Próximo →</button><button class="btn-ghost" style="width:100%;margin-top:8px" onclick="finishWelcome()">Encerrar tour</button>
+  </section>
+</div>
 <!-- Celebração de nova badge. Apenas a Home do aluno a apresenta; nenhuma badge é criada aqui. -->
 <div id="badge-celebration-modal" class="badge-celebration-overlay" hidden>
   <section class="badge-celebration-panel" role="dialog" aria-modal="true"
@@ -310,6 +333,24 @@ function previewBadgeCelebration(){
   pendingBadgeStudentId = profile.id;
   pendingBadgeCelebration = completedError ? null : getBadgeToCelebrate(profile.id, completedCount);
   const achievementsHtml = buildAchievementsSection(completedCount);
+  const isEnglish = getLang() === 'en';
+  const isDemoCall = isTestStudentProfile(profile);
+  let callUrl = '';
+  try {
+    const raw = String(profile.permanent_lesson_link || '').trim();
+    if (raw) {
+      const parsed = new URL(raw);
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') callUrl = parsed.href;
+    }
+  } catch (_) {}
+  const callIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3"/></svg>';
+  const lessonCallHtml = callUrl || isDemoCall ? `
+    <section class="home-lesson-call" aria-label="${isEnglish ? 'Online lesson' : 'Aula online'}">
+      <span class="home-lesson-call-icon">${callIcon}</span>
+      <div class="home-lesson-call-copy"><h2>${isEnglish ? 'Your online lesson' : 'Sua aula online'}</h2><p>${isEnglish ? 'Access your lesson video call directly.' : 'Acesse diretamente a videochamada da sua aula.'}</p></div>
+      ${callUrl ? `<a class="btn-primary home-lesson-call-action" href="${escapeHtml(callUrl)}" target="_blank" rel="noopener noreferrer">${callIcon}${isEnglish ? 'Join video call' : 'Entrar na videochamada'}</a>` : `<button type="button" class="btn-primary home-lesson-call-action" onclick="alert(getLang()==='en'?'Example button: no real video call is opened in test mode.':'Botão demonstrativo: nenhuma videochamada real é aberta no modo de teste.')">${callIcon}${isEnglish ? 'Join video call' : 'Entrar na videochamada'}</button>`}
+    </section>` : '';
+
 
 
   document.getElementById('main-content').innerHTML = `
@@ -325,6 +366,7 @@ function previewBadgeCelebration(){
         </div>
       </header>
 
+      ${lessonCallHtml}
       ${achievementsHtml}
       ${isTestStudentProfile(profile) ? `<div class="badge-preview-tools"><button type="button" onclick="previewBadgeCelebration()">✦ ${t('badge_celebration_preview')}</button></div>` : ''}
 
@@ -388,7 +430,13 @@ function previewBadgeCelebration(){
   const wordEntry = await getTodayWordOfDay();
   document.getElementById('word-of-day-container').innerHTML = buildWordOfDayCard(wordEntry);
 
-  if (!profile.has_seen_onboarding) {
+  document.getElementById('welcome-title').textContent = 'Welcome, ' + firstName + '!';
+  if (window.__dcTeacherTestMode) {
+    const b=document.createElement('button'); b.type='button'; b.className='btn-ghost'; b.textContent='Simular boas-vindas'; b.onclick=async()=>{ welcomePreview=true; await loadWelcomeSignature(); document.getElementById('onboarding-modal').classList.add('show'); };
+    document.querySelector('.badge-preview-tools')?.appendChild(b);
+  }
+  if (!window.__dcTeacherTestMode && !isTestStudentProfile(profile) && profile.role === 'student' && profile.welcome_pending === true && await claimWelcome(profile.id)) {
+    await loadWelcomeSignature();
     document.getElementById('onboarding-modal').classList.add('show');
   } else if (window.__dcTeacherTestMode &&
              new URLSearchParams(window.location.search).get('preview_badge') === '1') {
@@ -401,6 +449,64 @@ function previewBadgeCelebration(){
   }
 })();
 
+let welcomePreview=false, welcomeTourIndex=0;
+let welcomeSignatureUrl=null;
+async function loadWelcomeSignature(){
+  const img=document.getElementById('welcome-signature-image');
+  if(welcomeSignatureUrl) return;
+  try {
+    const {data,error}=await sb.storage.from('welcome-assets').download('signature.png');
+    if(error||!data) return;
+    welcomeSignatureUrl=URL.createObjectURL(data);
+    img.src=welcomeSignatureUrl; img.hidden=false; img.style.display='block';
+  } catch(e){ console.warn('Welcome signature unavailable'); }
+}
+async function claimWelcome(studentId){
+  try {
+    const {data,error}=await sb.from('profiles').update({welcome_pending:false,has_seen_onboarding:true}).eq('id',studentId).eq('role','student').eq('welcome_pending',true).select('id').maybeSingle();
+    return !error && !!data;
+  } catch(e){ return false; }
+}
+const welcomeSteps=[
+ ['.dashboard-heading','Visão geral','Este é o seu espaço de aprendizagem.'],
+ ['.achievements-wall','Mural de conquistas','Acompanhe seu progresso e suas conquistas a cada marco de aulas.'],
+ ['.home-card[href="aluno.html"]','Minhas aulas','Acesse os slides, relatórios e exercícios das nossas aulas.'],
+ ['.nav-item[href="perfil.html"]','Perfil','Gerencie seus dados e preferências.'],
+ ['.nav-item[href="pergunte-ao-daniel.html"]','Pergunte ao Daniel','Envie suas dúvidas diretamente ao professor.'],
+ ['.nav-item[href="enviar-material.html"]','Enviar material','Compartilhe materiais para nossas aulas.'],
+ ['.nav-resource-trigger','Recursos','Explore vocabulário e aprimore sua escrita.']
+];
+function startWelcomeTour(){document.getElementById('onboarding-modal').classList.remove('show');welcomeTourIndex=0;document.documentElement.classList.add('welcome-tour-active');document.getElementById('welcome-tour').hidden=false;renderWelcomeTour();document.getElementById('welcome-tour-next').focus({preventScroll:true});}
+function renderWelcomeTour(){
+ const s=welcomeSteps[welcomeTourIndex], target=document.querySelector(s[0]), card=document.getElementById('welcome-tour-card'), shade=document.getElementById('welcome-tour-shade');
+ document.getElementById('welcome-tour-count').textContent='Passo '+(welcomeTourIndex+1)+' de '+welcomeSteps.length;
+ document.getElementById('welcome-tour-title').textContent=s[1];document.getElementById('welcome-tour-text').textContent=s[2];document.getElementById('welcome-tour-next').textContent=welcomeTourIndex===welcomeSteps.length-1?'Concluir':'Próximo →';
+ if(target && target.getBoundingClientRect().width) target.scrollIntoView({block:'nearest',behavior:'instant'});
+ const r=target?.getBoundingClientRect(), w=card.offsetWidth, h=card.offsetHeight;
+ if(r && r.right>0 && r.left<innerWidth && r.bottom>0 && r.top<innerHeight){Object.assign(shade.style,{display:'block',left:Math.max(0,r.left-4)+'px',top:Math.max(0,r.top-4)+'px',width:(r.width+8)+'px',height:(r.height+8)+'px'});let x=r.right+18;if(x+w>innerWidth-16)x=Math.max(16,r.left-w-18);let y=r.top;if(x===16 && r.left< w+34)y=r.bottom+16;Object.assign(card.style,{left:Math.min(innerWidth-w-16,Math.max(16,x))+'px',top:Math.max(16,Math.min(innerHeight-h-16,y))+'px'});}
+ else{Object.assign(shade.style,{display:'block',left:'0',top:'0',width:'0',height:'0'});Object.assign(card.style,{left:Math.max(16,(innerWidth-w)/2)+'px',top:Math.max(16,(innerHeight-h)/2)+'px'});}
+}
+function advanceWelcomeTour(){if(++welcomeTourIndex>=welcomeSteps.length)finishWelcome();else renderWelcomeTour();}
+function finishWelcome(){document.documentElement.classList.remove('welcome-tour-active');document.getElementById('welcome-tour').hidden=true;document.getElementById('onboarding-modal').classList.remove('show');if(welcomePreview||window.__dcTeacherTestMode){welcomePreview=false;return;}dismissOnboarding();}
+window.addEventListener('resize',()=>{if(!document.getElementById('welcome-tour').hidden)renderWelcomeTour();});
+function welcomeTourActive(){return !document.getElementById('welcome-tour').hidden;}
+function preventTourScroll(e){if(welcomeTourActive() && e.cancelable)e.preventDefault();}
+window.addEventListener('wheel',preventTourScroll,{passive:false,capture:true});
+window.addEventListener('touchmove',preventTourScroll,{passive:false,capture:true});
+window.addEventListener('keydown',e=>{
+ if(!welcomeTourActive())return;
+ if(e.key==='Escape'){e.preventDefault();finishWelcome();return;}
+ const card=document.getElementById('welcome-tour-card');
+ if(e.key==='Tab'){
+   const buttons=Array.from(card.querySelectorAll('button:not([disabled])'));
+   if(buttons.length){e.preventDefault();const index=buttons.indexOf(document.activeElement);buttons[(index<0?(e.shiftKey?buttons.length-1:0):(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length)].focus({preventScroll:true});}
+   return;
+ }
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End',' '].includes(e.key)){
+   if(e.key===' ' && card.contains(document.activeElement) && document.activeElement.tagName==='BUTTON')return;
+   e.preventDefault();
+ }
+},true);
 // Fecha o pop-up de boas-vindas e marca como já visto (não aparece mais, em nenhum aparelho)
 async function dismissOnboarding(){
   const modal = document.getElementById('onboarding-modal');
