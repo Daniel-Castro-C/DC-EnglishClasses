@@ -782,7 +782,7 @@ function renderPerfilTab(){
         <p class="small-note">Os comunicados selecionados para este perfil chegam a ${escapeHtml(TEACHER_TEST_EMAIL)}. Outros testes não disparam e-mails.</p>
       </div>
       <div class="box"><h3>Mural de conquistas — teste</h3>
-        ${buildAchievementsSection(currentLessons.length, {title:''}) || '<p class="small-note">Os emblemas aparecem após 10 aulas de teste.</p>'}
+        ${buildAchievementsSection(crmCompletedLocalCount(), {title:''}) || '<p class="small-note">Os emblemas aparecem após 10 aulas de teste.</p>'}
       </div>
       <div class="box"><h3>Status de estudo — teste</h3><div id="grammar-status-box">Carregando...</div></div>
     `;
@@ -1760,7 +1760,7 @@ function renderMaterialExternalLink(raw){
 
 function crmStudyTab(){
  const s=currentStudent;
- document.getElementById('tab-content').innerHTML='<section class="box"><h3>Mural de conquistas</h3>'+ (buildAchievementsSection(currentLessons.length,{title:''})||'<p class="small-note">Ainda sem conquistas.</p>')+'</section><section class="box"><h3>Status de estudo — Guias de Gramática</h3><div id="grammar-status-box">Carregando...</div></section>';
+ document.getElementById('tab-content').innerHTML='<section class="box"><h3>Mural de conquistas</h3>'+ (buildAchievementsSection(crmCompletedLocalCount(),{title:''})||'<p class="small-note">Ainda sem conquistas.</p>')+'</section><section class="box"><h3>Status de estudo — Guias de Gramática</h3><div id="grammar-status-box">Carregando...</div></section>';
  renderGrammarStatusBox(s.id);
 }
 async function crmStudentInboxTab(tab){
@@ -1830,4 +1830,9 @@ function crmEditLesson(id){
   }catch(error){console.error(error);status.textContent='Não foi possível salvar as alterações. Tente novamente.';}finally{btn.disabled=false;}
  });
  form.elements.topic.focus();
+}
+
+function crmCompletedLocalCount(){
+ const dates=new Set(currentLessons.map(l=>l.lesson_date).filter(Boolean));
+ return currentLessons.length+ccManualDoneDates(ccData(currentStudent)).filter(d=>!dates.has(d)).length;
 }
