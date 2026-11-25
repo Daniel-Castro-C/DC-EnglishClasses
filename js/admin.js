@@ -96,7 +96,7 @@ async function crmRefreshIndicators(){
   if(nav)nav.innerHTML=crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas');
 }
 function renderNav(){
- const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['agenda','Agenda','calendar','ccGlobalView()'],['controle','Controle de aulas','chart','ccOverview()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
+ const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['agenda','Agenda','calendar','ccGlobalView()'],['controle','Controle de aulas','chart','ccOverview()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['materiais-busca','Buscador de materiais','file','crmMaterialSearch()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
  document.getElementById('nav-container').innerHTML=groups.map(([label,items])=>'<div class="nav-label">'+label+'</div>'+items.map(([key,name,icon,action])=>{const active=currentView===key||(key==='alunos'&&currentView==='student');return '<button type="button" class="nav-item crm-nav'+(active?' active':'')+'" onclick="'+escapeHtml(action)+'">'+crmIcon(icon)+'<span class="nav-item-label">'+name+'</span>'+(key==='daniel'&&danielPendingTotal?'<span class="pill">'+danielPendingTotal+'</span>':'')+(key==='alunos'?'<span data-crm-nav-inbox>'+crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas')+'</span>':'')+'</button>'}).join('')).join('');
 }
 function filterAdminStudentNav(query){
@@ -719,7 +719,7 @@ function renderStudentDetail(){
   const lessonsHtml = currentLessons.map(l => {
     const rows = (l.resources || []).map(r => resourceRowWithEditHtml(l, r)).join('') || `<div class="empty-state">Nenhum material nesta aula ainda.</div>`;
 
-    return `<div class="lesson-card">
+    return `<div class="lesson-card" id="crm-lesson-${escapeAttr(l.id)}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div>
           <h3>${escapeHtml(l.title)}</h3>
@@ -737,7 +737,7 @@ function renderStudentDetail(){
   const metrics=crmStudentMetrics(s,currentLessons);
   document.getElementById('main-content').innerHTML = `
     <div class="crm-dossier">
-    <div class="crm-dossier-top"><button class="crm-link crm-back" onclick="ccRoster()">← Todos os alunos</button><button class="btn-dark-sm" onclick="switchTab('nova')">${crmIcon('plus')} Cadastrar aula</button></div>
+    <div class="crm-dossier-top"><button class="crm-link crm-back" onclick="ccRoster()">← Todos os alunos</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-ghost" onclick="crmMaterialSearch(currentStudent.id)">Buscar material</button><button class="btn-dark-sm" onclick="switchTab('nova')">${crmIcon('plus')} Cadastrar aula</button></div></div>
     <section class="crm-profile-head crm-dossier-head"><span class="crm-avatar">${s.avatar_url?'<img src="'+escapeAttr(s.avatar_url)+'" alt="" class="crm-dossier-photo">':escapeHtml((s.full_name||s.email||'A').charAt(0).toUpperCase())}</span><div class="crm-dossier-identity"><h1>${escapeHtml(s.full_name||s.email)}</h1><p>${crmPlan(ccData(s))} · ${escapeHtml(s.email||'')}</p><small class="crm-muted">${s.is_test_profile?'Perfil de teste':(s.lesson_weekday?WEEKDAY_LABELS[s.lesson_weekday-1]+' · '+escapeHtml((s.lesson_time||'').slice(0,5)):'Horário habitual não definido')}</small></div><button class="btn-ghost" onclick="openTodayClassCall(currentStudent.id)">${crmIcon('video')} Videochamada</button></section>
     <section class="crm-kpis crm-kpis-three">${crmKpi('Carga anual',metrics.count+'/'+(metrics.target??'—'),'chart')}${crmKpi('Reposições',metrics.pending,'refresh')}${crmKpi('Frequência',metrics.frequency,'calendar')}</section>
     <div class="crm-dossier-layout"><nav class="crm-dossier-nav" aria-label="Ficha do aluno">
@@ -1769,4 +1769,39 @@ async function crmStudentInboxTab(tab){
  if(!el.isConnected||currentStudent?.id!==id||currentTab!==tab)return;
  const rows=result.data||[];
  el.innerHTML='<section class="box"><h3>'+(questions?'Dúvidas do aluno':'Textos para correção')+'</h3><p class="small-note">Consulte os envios deste aluno. Use o módulo pedagógico para responder ou corrigir.</p><button class="btn-dark-sm" onclick="'+(questions?'openDanielModule()':'openTextosModule()')+'">Abrir módulo de atendimento</button>'+ (result.error?'<p>Não foi possível carregar os envios.</p>':rows.map(r=>'<div class="resource-row">'+crmIcon(questions?'message':'file')+'<div class="resource-info"><div class="name">'+(questions?(r.answer==null?'Aguardando resposta':'Respondida'):(r.status==='pending'?'Aguardando correção':'Correção disponível'))+'</div><div class="desc">'+escapeHtml(new Date(r.created_at).toLocaleString('pt-BR'))+'</div></div></div>').join('')||'<p class="small-note">Nenhum envio registrado.</p>')+'</section>';
+}
+
+function crmMaterialNormalize(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();}
+function crmMaterialSearch(studentId=''){
+ currentStudent=null;currentView='materiais-busca';renderNav();
+ const root=document.getElementById('main-content');
+ root.innerHTML='<div class="topline"><div><h1>Buscador de materiais</h1><p class="sub">Consulte o histórico de temas utilizados em aulas cadastradas.</p></div></div><section class="box crm-material-search"><form id="crm-material-form" class="crm-search-fields"><label>Tópico da aula<input id="crm-material-query" required placeholder="Ex.: Productivity, Future, Travel"></label><label>Aluno para verificar repetição<select id="crm-material-student"><option value="">Todos os alunos</option>'+students.filter(s=>!s.is_test_profile).map(s=>'<option value="'+escapeAttr(s.id)+'">'+escapeHtml(s.full_name||s.email)+'</option>').join('')+'</select></label><button type="submit" class="btn-dark-sm">Buscar</button></form><div id="crm-material-results" aria-live="polite"><p class="small-note">Digite um tópico para consultar todas as ocorrências. Selecione um aluno para destacar os temas que ele já estudou.</p></div></section>';
+ root.querySelector('#crm-material-student').value=studentId;
+ root.querySelector('#crm-material-form').addEventListener('submit',e=>{e.preventDefault();crmMaterialResults();});
+ root.querySelector('#crm-material-student').addEventListener('change',()=>{if(root.querySelector('#crm-material-query').value.trim())crmMaterialResults();});
+ root.querySelector('#crm-material-query').focus();
+}
+let crmMaterialRequest=0;
+async function crmMaterialResults(){
+ const root=document.getElementById('crm-material-results'),query=crmMaterialNormalize(document.getElementById('crm-material-query').value),target=document.getElementById('crm-material-student').value,request=++crmMaterialRequest;
+ if(!query){root.textContent='Digite um tópico para buscar.';return;}
+ root.innerHTML='<p>Consultando histórico...</p>';
+ try{
+  const byId=new Map(students.filter(s=>!s.is_test_profile).map(s=>[s.id,s]));
+  const rows=[];const size=500;
+  for(let offset=0;;offset+=size){
+    const {data,error}=await sb.from('lessons').select('id,student_id,title,topic,lesson_date').order('id',{ascending:true}).range(offset,offset+size-1);
+    if(error)throw error;
+    if(!root.isConnected||request!==crmMaterialRequest)return;
+    const batch=data||[];
+    rows.push(...batch.filter(l=>byId.has(l.student_id)&&crmMaterialNormalize(l.topic).includes(query)));
+    if(batch.length<size)break;
+  }
+  rows.sort((a,b)=>(b.lesson_date||'').localeCompare(a.lesson_date||'')||String(a.id).localeCompare(String(b.id)));
+  const own=rows.filter(l=>l.student_id===target),student=byId.get(target);
+  const summary='<div class="crm-search-result-summary"><strong>'+rows.length+' ocorrência(s) · '+new Set(rows.map(l=>l.student_id)).size+' aluno(s)</strong></div>';
+  const warning=student?'<div class="box" style="padding:12px;margin:10px 0;border-left:4px solid '+(own.length?'var(--amber)':'var(--sage)')+'"><strong>'+escapeHtml(student.full_name||student.email)+'</strong> — '+(own.length?'Já possui '+own.length+' aula(s) com tópico correspondente. Confira as datas destacadas abaixo.':'Nenhuma aula com tópico correspondente foi encontrada no histórico cadastrado.')+'</div>':'';
+  root.innerHTML=summary+warning+(rows.length?'<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Tópico</th><th>Aluno</th><th>Data</th><th>Aula</th><th>Ações</th></tr></thead><tbody>'+rows.map(l=>'<tr class="'+(l.student_id===target?'crm-repeat-match':'')+'"><td><strong>'+escapeHtml(l.topic||'')+'</strong></td><td>'+escapeHtml(byId.get(l.student_id).full_name||byId.get(l.student_id).email)+'</td><td>'+escapeHtml(l.lesson_date?formatDate(l.lesson_date):'Sem data')+'</td><td>'+escapeHtml(l.title||'')+'</td><td><button class="btn-ghost" data-crm-open-lesson="'+escapeAttr(l.id)+'" data-crm-student="'+escapeAttr(l.student_id)+'">Ver aula e materiais</button></td></tr>').join('')+'</tbody></table></div>':'<p class="small-note">Nenhum tópico correspondente encontrado.</p>');
+  root.querySelectorAll('[data-crm-open-lesson]').forEach(btn=>btn.addEventListener('click',async()=>{const id=btn.dataset.crmStudent,lesson=btn.dataset.crmOpenLesson;await openStudent(id);if(currentStudent?.id!==id||currentView!=='student')return;switchTab('cadastradas');const card=document.getElementById('crm-lesson-'+lesson);if(card){card.scrollIntoView({block:'center'});card.style.outline='2px solid var(--crm-blue)';}}));
+ }catch(error){console.error(error);if(root.isConnected&&request===crmMaterialRequest)root.innerHTML='<p role="alert">Não foi possível consultar o histórico completo. Tente novamente.</p>';}
 }
