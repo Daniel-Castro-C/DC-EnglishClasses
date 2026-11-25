@@ -947,7 +947,7 @@ Object.assign(I18N.en, {
 Object.assign(I18N.pt, {
   nav_recursos:'Recursos',
   recursos_texto:'Aprimorando a Escrita',
-  recursos_vocab:'Expandindo seu vocabulário',
+  recursos_vocab:'Expandindo o vocabulário',
   recursos_vocab_sub:'Palavras que você ainda não costuma usar — transforme vocabulário em prática.',
   recursos_count:'{n} palavras',
   recursos_empty:'Nenhuma palavra pendente de revisão por enquanto.',
