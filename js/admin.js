@@ -38,6 +38,7 @@ let quickLessonFiles = [];
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(profile.id);
 
   await loadStudents();
+  try { await ccLoadCloud(); } catch(error) { console.error(error); alert('Não foi possível carregar o calendário do Supabase. As alterações do calendário estão bloqueadas até recarregar a página.'); }
   await refreshPendingCounts();
   renderNav();
   renderHome();
