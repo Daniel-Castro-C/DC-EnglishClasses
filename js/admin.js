@@ -16,6 +16,8 @@ let currentTab = 'geral';
 let currentView = 'home'; // 'home' | 'comunicados' | 'student'
 let danielPendingTotal = 0;
 let pendingCountsByStudent = {};
+let crmInbox = {};
+let crmInboxError = false;
 // Arquivos selecionados em diferentes pastas antes de cadastrar a aula.
 let quickLessonFiles = [];
 
@@ -39,6 +41,8 @@ let quickLessonFiles = [];
   await refreshPendingCounts();
   renderNav();
   renderHome();
+  window.addEventListener('focus',crmRefreshIndicators);
+  setInterval(()=>{if(!document.hidden)crmRefreshIndicators();},60000);
 })();
 
 async function loadStudents(){
@@ -69,22 +73,31 @@ function sortStudentsBySchedule(){
 }
 
 async function refreshPendingCounts(){
-  const { data: pendingQuestions } = await sb.from('daniel_questions').select('student_id').is('answer', null);
-  const { data: materialReqs } = await sb.from('material_requests').select('student_id');
-
-  const counts = {};
-  (pendingQuestions || []).forEach(q => { counts[q.student_id] = (counts[q.student_id] || 0) + 1; });
-  (materialReqs || []).forEach(r => { counts[r.student_id] = (counts[r.student_id] || 0) + 1; });
-
-  pendingCountsByStudent = counts;
-  danielPendingTotal = (pendingQuestions || []).filter(q =>
-    !teacherTestProfile || q.student_id !== teacherTestProfile.id).length;
+  const queries=await Promise.all([
+    sb.from('daniel_questions').select('id,student_id').is('answer',null),
+    sb.from('material_requests').select('id,student_id'),
+    sb.from('text_submissions').select('id,student_id').eq('status','pending')
+  ]);
+  crmInboxError=queries.some(q=>q.error);
+  const next={},counts={};
+  const kinds=['questions','materials','texts'];
+  queries.forEach((q,i)=>{if(q.error)return;(q.data||[]).forEach(r=>{const entry=next[r.student_id]??=( {questions:[],materials:[],texts:[]} );entry[kinds[i]].push(r.id);if(i<2)counts[r.student_id]=(counts[r.student_id]||0)+1;});});
+  crmInbox=next;
+  pendingCountsByStudent=counts;
+  danielPendingTotal=(queries[0].data||[]).filter(q=>!teacherTestProfile||q.student_id!==teacherTestProfile.id).length;
 }
-
-
+function crmInboxFor(id){return crmInbox[id]||{questions:[],materials:[],texts:[]}}
+function crmInboxCount(id){const e=crmInboxFor(id);return e.questions.length+e.materials.length+e.texts.length}
+function crmCountBadge(n,label){return n?'<span class="crm-inbox-count" aria-label="'+escapeHtml(label)+': '+n+'">'+n+'</span>':''}
+async function crmRefreshIndicators(){
+  await refreshPendingCounts();
+  document.querySelectorAll('[data-crm-inbox]').forEach(el=>{const e=crmInboxFor(el.dataset.crmInbox),k=el.dataset.crmKind;const n=k?e[k].length:crmInboxCount(el.dataset.crmInbox);el.innerHTML=crmCountBadge(n,'Pendências');});
+  const nav=document.querySelector('[data-crm-nav-inbox]');
+  if(nav)nav.innerHTML=crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas');
+}
 function renderNav(){
  const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['agenda','Agenda','calendar','ccGlobalView()'],['controle','Controle de aulas','chart','ccOverview()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
- document.getElementById('nav-container').innerHTML=groups.map(([label,items])=>'<div class="nav-label">'+label+'</div>'+items.map(([key,name,icon,action])=>{const active=currentView===key||(key==='alunos'&&currentView==='student');return '<button type="button" class="nav-item crm-nav'+(active?' active':'')+'" onclick="'+escapeHtml(action)+'">'+crmIcon(icon)+'<span class="nav-item-label">'+name+'</span>'+(key==='daniel'&&danielPendingTotal?'<span class="pill">'+danielPendingTotal+'</span>':'')+'</button>'}).join('')).join('');
+ document.getElementById('nav-container').innerHTML=groups.map(([label,items])=>'<div class="nav-label">'+label+'</div>'+items.map(([key,name,icon,action])=>{const active=currentView===key||(key==='alunos'&&currentView==='student');return '<button type="button" class="nav-item crm-nav'+(active?' active':'')+'" onclick="'+escapeHtml(action)+'">'+crmIcon(icon)+'<span class="nav-item-label">'+name+'</span>'+(key==='daniel'&&danielPendingTotal?'<span class="pill">'+danielPendingTotal+'</span>':'')+(key==='alunos'?'<span data-crm-nav-inbox>'+crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas')+'</span>':'')+'</button>'}).join('')).join('');
 }
 function filterAdminStudentNav(query){
   const value = (query || '').trim().toLocaleLowerCase('pt-BR');
@@ -680,7 +693,8 @@ async function openStudent(studentId){
   currentView = 'student';
   currentTab = 'resumo';
   renderNav();
-  await loadLessonsFor(studentId);
+  await Promise.all([loadLessonsFor(studentId),refreshPendingCounts()]);
+  if(currentView!=='student'||currentStudent?.id!==studentId)return;
   renderStudentDetail();
 }
 
@@ -722,15 +736,22 @@ function renderStudentDetail(){
 
   const metrics=crmStudentMetrics(s,currentLessons);
   document.getElementById('main-content').innerHTML = `
-    <button class="crm-link crm-back" onclick="ccRoster()">← Todos os alunos</button>
-    <section class="crm-profile-head"><span class="crm-avatar">${escapeHtml((s.full_name||s.email||'A').charAt(0).toUpperCase())}</span><div><h1>${escapeHtml(s.full_name||s.email)}</h1><p>${crmPlan(ccData(s))} · ${escapeHtml(s.email||'')}</p><small class="crm-muted">${s.is_test_profile?'Perfil de teste':'Perfil cadastrado'}</small></div><button class="crm-icon-btn crm-profile-edit" title="Cadastro" onclick="switchTab('perfil')">${crmIcon('settings')}</button></section>
+    <div class="crm-dossier">
+    <div class="crm-dossier-top"><button class="crm-link crm-back" onclick="ccRoster()">← Todos os alunos</button><button class="btn-dark-sm" onclick="switchTab('nova')">${crmIcon('plus')} Cadastrar aula</button></div>
+    <section class="crm-profile-head crm-dossier-head"><span class="crm-avatar">${s.avatar_url?'<img src="'+escapeAttr(s.avatar_url)+'" alt="" class="crm-dossier-photo">':escapeHtml((s.full_name||s.email||'A').charAt(0).toUpperCase())}</span><div class="crm-dossier-identity"><h1>${escapeHtml(s.full_name||s.email)}</h1><p>${crmPlan(ccData(s))} · ${escapeHtml(s.email||'')}</p><small class="crm-muted">${s.is_test_profile?'Perfil de teste':(s.lesson_weekday?WEEKDAY_LABELS[s.lesson_weekday-1]+' · '+escapeHtml((s.lesson_time||'').slice(0,5)):'Horário habitual não definido')}</small></div><button class="btn-ghost" onclick="openTodayClassCall(currentStudent.id)">${crmIcon('video')} Videochamada</button></section>
     <section class="crm-kpis crm-kpis-three">${crmKpi('Carga anual',metrics.count+'/'+(metrics.target??'—'),'chart')}${crmKpi('Reposições',metrics.pending,'refresh')}${crmKpi('Frequência',metrics.frequency,'calendar')}</section>
-    <nav class="crm-tabs-v3" aria-label="Ficha do aluno">${[['resumo','Resumo'],['calendario','Calendário'],['cadastradas','Aulas e materiais'],['pedidos','Materiais do aluno'],['atividade','Atividades'],['perfil','Cadastro'],['nova','Nova aula']].map(([k,label])=>`<button class="${currentTab===k?'active':''}" onclick="switchTab('${k}')">${label}</button>`).join('')}</nav>
-    <div id="tab-content"></div>
+    <div class="crm-dossier-layout"><nav class="crm-dossier-nav" aria-label="Ficha do aluno">
+    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário','calendar'],['cadastradas','Aulas e materiais','book'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation']]],['CAIXA DE ENTRADA',[['pedidos','Materiais recebidos','file','materials'],['duvidas','Dúvidas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings'],['nova','Cadastrar aula','plus']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
+    </nav><div class="crm-dossier-content">
+    <div id="tab-content"></div></div></div></div>
   `;
 
   if (currentTab === 'resumo') {
     crmStudentSummary();
+  } else if (currentTab === 'estudos') {
+    crmStudyTab();
+  } else if (currentTab === 'duvidas' || currentTab === 'textos-aluno') {
+    crmStudentInboxTab(currentTab);
   } else if (currentTab === 'perfil') {
     renderPerfilTab();
   } else if (currentTab === 'calendario') {
@@ -768,16 +789,6 @@ function renderPerfilTab(){
     return;
   }
   document.getElementById('tab-content').innerHTML = `
-    <div class="box">
-      <h3>Mural de conquistas</h3>
-      ${buildAchievementsSection(currentLessons.length, { title: '' }) || `<div class="small-note" style="margin-top:0;">Ainda sem emblemas — aparece aqui assim que o aluno completar 10 aulas.</div>`}
-    </div>
-
-    <div class="box">
-      <h3>Status de estudo — Guias de Gramática</h3>
-      <div id="grammar-status-box"><div class="small-note" style="margin-top:0;">Carregando...</div></div>
-    </div>
-
     <div class="box">
       <h3>Perfil do aluno</h3>
       <div class="row" style="align-items:center;">
@@ -836,7 +847,6 @@ function renderPerfilTab(){
 
   document.getElementById('student-avatar-file').addEventListener('change', uploadStudentAvatar);
 
-  renderGrammarStatusBox(s.id);
 }
 
 async function renderGrammarStatusBox(studentId){
@@ -1745,4 +1755,18 @@ function escapeAttr(str){ return escapeHtml(str); }
 function renderMaterialExternalLink(raw){
   const url=normalizeMaterialExternalLink(raw);
   return '<div class="resource-row"><div class="resource-icon ic-pdf">Link</div><div class="resource-info" style="min-width:0"><div class="name">Link enviado pelo aluno</div><div class="desc" style="overflow-wrap:anywhere">'+escapeHtml(String(raw))+'</div></div>'+(url?'<a class="resource-action" href="'+escapeHtml(url)+'" target="_blank" rel="noopener noreferrer">Abrir link</a>':'<span class="small-note">Endereço inválido. Solicite o link completo ao aluno.</span>')+'</div>';
+}
+
+function crmStudyTab(){
+ const s=currentStudent;
+ document.getElementById('tab-content').innerHTML='<section class="box"><h3>Mural de conquistas</h3>'+ (buildAchievementsSection(currentLessons.length,{title:''})||'<p class="small-note">Ainda sem conquistas.</p>')+'</section><section class="box"><h3>Status de estudo — Guias de Gramática</h3><div id="grammar-status-box">Carregando...</div></section>';
+ renderGrammarStatusBox(s.id);
+}
+async function crmStudentInboxTab(tab){
+ const id=currentStudent.id,el=document.getElementById('tab-content'),questions=tab==='duvidas';
+ el.innerHTML='<section class="box"><h3>'+(questions?'Dúvidas do aluno':'Textos para correção')+'</h3><p>Carregando...</p></section>';
+ const result=await sb.from(questions?'daniel_questions':'text_submissions').select(questions?'id,created_at,answer':'id,created_at,status').eq('student_id',id).order('created_at',{ascending:false});
+ if(!el.isConnected||currentStudent?.id!==id||currentTab!==tab)return;
+ const rows=result.data||[];
+ el.innerHTML='<section class="box"><h3>'+(questions?'Dúvidas do aluno':'Textos para correção')+'</h3><p class="small-note">Consulte os envios deste aluno. Use o módulo pedagógico para responder ou corrigir.</p><button class="btn-dark-sm" onclick="'+(questions?'openDanielModule()':'openTextosModule()')+'">Abrir módulo de atendimento</button>'+ (result.error?'<p>Não foi possível carregar os envios.</p>':rows.map(r=>'<div class="resource-row">'+crmIcon(questions?'message':'file')+'<div class="resource-info"><div class="name">'+(questions?(r.answer==null?'Aguardando resposta':'Respondida'):(r.status==='pending'?'Aguardando correção':'Correção disponível'))+'</div><div class="desc">'+escapeHtml(new Date(r.created_at).toLocaleString('pt-BR'))+'</div></div></div>').join('')||'<p class="small-note">Nenhum envio registrado.</p>')+'</section>';
 }
