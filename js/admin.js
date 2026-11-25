@@ -726,6 +726,7 @@ function renderStudentDetail(){
           <div class="meta">${escapeHtml(l.topic || '')}${l.lesson_date ? ' · ' + formatDate(l.lesson_date) : ''}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn-ghost" onclick="crmEditLesson('${l.id}')">Editar aula</button>
           <button class="btn-ghost" onclick="openAddMaterialToLesson('${l.id}')">+ Adicionar material</button>
           <button class="resource-action" onclick="deleteLesson('${l.id}')">Excluir aula</button>
         </div>
@@ -1804,4 +1805,29 @@ async function crmMaterialResults(){
   root.innerHTML=summary+warning+(rows.length?'<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Tópico</th><th>Aluno</th><th>Data</th><th>Aula</th><th>Ações</th></tr></thead><tbody>'+rows.map(l=>'<tr class="'+(l.student_id===target?'crm-repeat-match':'')+'"><td><strong>'+escapeHtml(l.topic||'')+'</strong></td><td>'+escapeHtml(byId.get(l.student_id).full_name||byId.get(l.student_id).email)+'</td><td>'+escapeHtml(l.lesson_date?formatDate(l.lesson_date):'Sem data')+'</td><td>'+escapeHtml(l.title||'')+'</td><td><button class="btn-ghost" data-crm-open-lesson="'+escapeAttr(l.id)+'" data-crm-student="'+escapeAttr(l.student_id)+'">Ver aula e materiais</button></td></tr>').join('')+'</tbody></table></div>':'<p class="small-note">Nenhum tópico correspondente encontrado.</p>');
   root.querySelectorAll('[data-crm-open-lesson]').forEach(btn=>btn.addEventListener('click',async()=>{const id=btn.dataset.crmStudent,lesson=btn.dataset.crmOpenLesson;await openStudent(id);if(currentStudent?.id!==id||currentView!=='student')return;switchTab('cadastradas');const card=document.getElementById('crm-lesson-'+lesson);if(card){card.scrollIntoView({block:'center'});card.style.outline='2px solid var(--crm-blue)';}}));
  }catch(error){console.error(error);if(root.isConnected&&request===crmMaterialRequest)root.innerHTML='<p role="alert">Não foi possível consultar o histórico completo. Tente novamente.</p>';}
+}
+
+function crmEditLesson(id){
+ const lesson=currentLessons.find(l=>l.id===id&&l.student_id===currentStudent?.id);if(!lesson)return;
+ const card=document.getElementById('crm-lesson-'+id);if(!card)return;
+ if(card.querySelector('.crm-lesson-edit'))return;
+ const form=document.createElement('form');form.className='box crm-lesson-edit';form.style.margin='12px 0';
+ form.innerHTML='<h3>Editar aula · '+escapeHtml(lesson.title||'')+'</h3><label>Tópico da aula<input name="topic" value="'+escapeAttr(lesson.topic||'')+'"></label><label>Data da aula<input type="date" name="date" value="'+escapeAttr(lesson.lesson_date||'')+'"></label><div class="row" style="margin-top:10px"><button type="submit" class="btn-dark-sm">Salvar alterações</button><button type="button" class="btn-ghost">Cancelar</button></div><p role="status" class="small-note"></p>';
+ card.appendChild(form);form.querySelector('button[type=button]').onclick=()=>form.remove();
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();const sid=lesson.student_id,date=form.elements.date.value||null,topic=form.elements.topic.value.trim(),status=form.querySelector('[role=status]'),btn=form.querySelector('button[type=submit]');
+  if(currentStudent?.id!==sid)return;
+  const x=ccData(currentStudent),old=lesson.lesson_date;
+  const linked=old&&old!==date&&(x.events[old]?.original||Object.values(x.events).some(r=>r.original===old));
+  if(linked){status.textContent='Esta data possui vínculo de reposição no calendário. Desvincule ou ajuste o registro antes de alterar a data, para preservar o histórico.';return;}
+  btn.disabled=true;status.textContent='Salvando...';
+  try{
+   const {data,error}=await sb.from('lessons').update({topic,lesson_date:date}).eq('id',id).eq('student_id',sid).select('id').single();
+   if(error||!data)throw error||new Error('Aula não atualizada');
+   if(currentStudent?.id!==sid||currentView!=='student')return;
+   currentLessons=sortLessonsByDate(currentLessons.map(l=>l.id===id?{...l,topic,lesson_date:date}:l),false);
+   if(currentTab==='cadastradas'){renderStudentDetail();document.getElementById('crm-lesson-'+id)?.scrollIntoView({block:'nearest'});}
+  }catch(error){console.error(error);status.textContent='Não foi possível salvar as alterações. Tente novamente.';}finally{btn.disabled=false;}
+ });
+ form.elements.topic.focus();
 }
