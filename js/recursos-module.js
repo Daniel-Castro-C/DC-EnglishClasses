@@ -14,7 +14,7 @@
   Object.assign(I18N.pt, {
     nav_recursos: 'Recursos',
     card_recursos_desc: 'Vocabulários e outros recursos para estudar no seu ritmo.',
-    recursos_vocab: 'Novos Vocabulários',
+    recursos_vocab: 'Expandindo o vocabulário',
     recursos_vocab_sub: 'Palavras do Termo do dia que você marcou como "ainda não uso"',
     recursos_empty: 'Nenhuma palavra por aqui ainda. Quando você marcar "Ainda não uso essa palavra" no Termo do dia, ela aparece nesta lista.',
     recursos_load_error: 'Não foi possível carregar suas palavras.',
@@ -31,7 +31,7 @@
   Object.assign(I18N.en, {
     nav_recursos: 'Resources',
     card_recursos_desc: 'Vocabulary and other resources to study at your own pace.',
-    recursos_vocab: 'New Vocabulary',
+    recursos_vocab: 'Expanding your vocabulary',
     recursos_vocab_sub: 'Words of the day you marked as "I don\'t use it yet"',
     recursos_empty: 'No words here yet. When you mark "I don\'t use this word yet" on the Word of the day, it shows up in this list.',
     recursos_load_error: 'Couldn\'t load your words.',
@@ -46,13 +46,7 @@
     word_dock_expand: 'Expand',
   });
 
-  // ---------- 2) Menu lateral: item "Recursos" ----------
-  const origNav = window.buildStudentTopNav;
-  window.buildStudentTopNav = function (activeKey, showGrammar, notifCounts) {
-    const html = origNav(activeKey, showGrammar, notifCounts);
-    const active = activeKey === 'recursos' ? 'active' : '';
-    return html + `<div class="nav-item ${active}" onclick="window.location.href='recursos.html'"><span>${t('nav_recursos')}</span></div>`;
-  };
+  // O menu Recursos é renderizado exclusivamente por buildStudentTopNav (common.js).
 
   // O card antigo (estático, no fim da home) é substituído pelo card flutuante
   window.buildWordOfDayCard = function () { return ''; };
