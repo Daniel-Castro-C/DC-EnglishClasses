@@ -83,51 +83,9 @@ async function refreshPendingCounts(){
 
 
 function renderNav(){
-  const items = [
-    { key:'home', label:'Visão geral', icon:'home', action:'renderHome()' },
-    { key:'alunos', label:'Alunos', icon:'home', action:'ccRoster()' },
-    { key:'agenda', label:'Agenda', icon:'home', action:'ccGlobalView()' },
-    { key:'controle', label:'Controle de Aulas', icon:'home', action:'ccOverview()' },
-    { key:'comunicados', label:'Comunicados', icon:'comunicados', action:'openComunicados()' },
-    { key:'guias', label:'Guias de Gramática', icon:'gramatica', action:'openGuias()' },
-    { key:'daniel', label:'Pergunte ao Daniel', icon:'daniel', action:'openDanielModule()' }
-  ];
-  let html = '<div class="nav-label">GESTÃO ACADÊMICA</div>';
-  items.forEach(item => {
-    if(item.key==='comunicados') html += '<div class="nav-label">PEDAGÓGICO</div>';
-    const active = currentView === item.key;
-    const badge = item.key === 'daniel' && danielPendingTotal > 0
-      ? '<span class="pill nav-badge">' + danielPendingTotal + '</span>' : '';
-    html += '<button type="button" class="nav-item' + (active ? ' active' : '') +
-      '" onclick="' + item.action + '"' + (active ? ' aria-current="page"' : '') + '>' +
-      portalNavIcon(item.icon) + '<span class="nav-item-label">' + item.label + '</span>' + badge + '</button>';
-  });
-  html += '<div class="nav-label nav-students-label">Alunos <span class="nav-student-count">' + students.filter(s => !s.is_test_profile).length + '</span></div>';
-  if (!students.length) {
-    html += '<p class="sidebar-empty">Nenhum aluno cadastrado.</p>';
-  } else {
-    html += '<input class="sidebar-student-search" type="search" aria-label="Buscar aluno no menu" placeholder="Buscar aluno..." oninput="filterAdminStudentNav(this.value)">';
-  }
-  students.forEach(student => {
-    const active = currentView === 'student' && currentStudent && currentStudent.id === student.id;
-    const pending = pendingCountsByStudent[student.id] || 0;
-    const badge = pending > 0
-      ? '<span class="pill nav-badge">' + pending + '</span>'
-      : '<span class="dot" aria-hidden="true"></span>';
-    const schedule = student.lesson_weekday != null && student.lesson_time
-      ? WEEKDAY_SHORT[student.lesson_weekday - 1] + ' ' + student.lesson_time.slice(0,5) : '';
-    const name = student.full_name || student.email || 'Aluno sem nome';
-    html += '<button type="button" class="nav-item admin-student-nav' + (active ? ' active' : '') +
-      '" data-search-name="' + escapeHtml(name.toLocaleLowerCase('pt-BR')) +
-      '" onclick="openStudent(&quot;' + student.id + '&quot;)">' +
-      '<span class="nav-student-avatar" aria-hidden="true">' + escapeHtml(name.trim().charAt(0).toUpperCase()) + '</span>' +
-      '<span class="nav-student-text"><span class="nav-item-label">' + escapeHtml(name) + '</span>' +
-      (student.is_test_profile ? '<small>Ambiente de teste</small>' : (schedule ? '<small>' + escapeHtml(schedule) + '</small>' : '')) +
-      '</span>' + (student.is_test_profile ? '<span class="test-mode-mini">TESTE</span>' : badge) + '</button>';
-  });
-  document.getElementById('nav-container').innerHTML = html;
+ const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['agenda','Agenda','calendar','ccGlobalView()'],['controle','Controle de aulas','chart','ccOverview()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
+ document.getElementById('nav-container').innerHTML=groups.map(([label,items])=>'<div class="nav-label">'+label+'</div>'+items.map(([key,name,icon,action])=>{const active=currentView===key||(key==='alunos'&&currentView==='student');return '<button type="button" class="nav-item crm-nav'+(active?' active':'')+'" onclick="'+escapeHtml(action)+'">'+crmIcon(icon)+'<span class="nav-item-label">'+name+'</span>'+(key==='daniel'&&danielPendingTotal?'<span class="pill">'+danielPendingTotal+'</span>':'')+'</button>'}).join('')).join('');
 }
-
 function filterAdminStudentNav(query){
   const value = (query || '').trim().toLocaleLowerCase('pt-BR');
   document.querySelectorAll('.admin-student-nav').forEach(item => {
@@ -207,50 +165,19 @@ async function renderHome(){
   const main = document.getElementById('main-content');
   main.innerHTML = `
 
-    <header class="topline admin-topline">
-      <div>
-        <div class="dashboard-kicker">VISÃO GERAL</div>
-        <h1>Visão geral</h1>
-        <div class="sub">Acompanhe sua agenda, seus alunos e o que precisa de atenção.</div>
-      </div>
-      <nav class="admin-landing-actions" aria-label="Acessos à landing page">
-        <a class="admin-landing-link admin-landing-public"
-           href="https://dc-english-classes-leads.vercel.app/"
-           target="_blank" rel="noopener noreferrer"
-           title="Abrir a landing page pública em uma nova aba">
-          <span class="admin-landing-link-icon" aria-hidden="true">↗</span>
-          <span>Visitar a landing page</span>
-        </a>
-        <a class="admin-landing-link admin-landing-manage"
-           href="https://dc-english-classes-leads.vercel.app/admin.html"
-           target="_blank" rel="noopener noreferrer"
-           title="Gerenciar leads, disponibilidade e foto da landing page em uma nova aba">
-          <span class="admin-landing-link-icon" aria-hidden="true">⚙</span>
-          <span>Acessar a área de administrador</span>
-        </a>
-      </nav>
-    </header>
-    <section class="admin-overview-stats" aria-label="Indicadores do portal">
-      <div class="admin-stat"><span>Aulas hoje</span><strong>${classes.length}</strong><small>Agenda integrada ao calendário</small></div>
-      <div class="admin-stat"><span>Alunos</span><strong>${students.filter(s => !s.is_test_profile).length}</strong><small>Perfis de estudantes</small></div>
-      <div class="admin-stat"><span>Reposições pendentes (teste)</span><strong>${students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+ccPending(ccData(s)),0)}</strong><small>Consulte o calendário individual</small></div>
-      <div class="admin-stat"><span>Relatórios pendentes</span><strong id="report-pending-stat">—</strong><small>Necessitam de acompanhamento</small></div>
+    <header class="crm-heading"><div><h1>Visão geral</h1><p>Painel de gestão acadêmica</p></div><div class="crm-heading-tools"><button class="crm-icon-btn" aria-label="Ver pendências" onclick="document.getElementById('crm-pendencias').scrollIntoView({behavior:'smooth'})">${crmIcon('bell')}</button><span class="crm-avatar crm-avatar-small">DC</span></div></header>
+    <section class="crm-kpis">
+     ${crmKpi('Alunos ativos',students.filter(s=>!s.is_test_profile).length,'users')}
+     ${crmKpi('Aulas hoje',classes.length,'calendar')}
+     ${crmKpi('Reposições pendentes',students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+ccPending(ccData(s)),0),'refresh')}
+     ${crmKpi('Relatórios pendentes','—','file','report-pending-stat')}
     </section>
-    <div class="admin-dashboard-grid crm-dashboard-grid">
-      <section class="box admin-panel">
-        <div class="admin-panel-heading"><h3>Agenda de hoje</h3><span class="admin-panel-count">${classes.length} aula(s)</span></div>
-        ${classes.length ? '<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Ações</th></tr></thead><tbody>'+classes.map(student => `
-          <tr><td>${escapeHtml(student.lesson_time.slice(0,5)||'—')}</td><td>${studentDashboardLabel(student)}</td><td>${escapeHtml(student.ccType)}</td><td><button class="btn-ghost" onclick="openTodayClassCall('${student.id}')">Vídeo</button> <button class="btn-ghost" onclick="ccOpenDate('${student.id}','${student.ccDate}')">Calendário</button></td></tr>`).join('')+'</tbody></table></div>' : '<div class="small-note">Nenhuma aula prevista para hoje.</div>'}
-      </section>
-      <section class="box admin-panel">
-        <div class="admin-panel-heading"><h3>Relatórios pendentes</h3><span class="admin-panel-count" id="report-pending-count">—</span></div>
-        <div id="report-pending-list" aria-live="polite"><div class="small-note">Verificando relatórios de desempenho...</div></div>
-      </section>
+    <section class="crm-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3><button class="crm-link" onclick="ccGlobalView()">Ver agenda completa →</button></div>
+    <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Ações</th></tr></thead><tbody>${classes.map(student=>`<tr><td class="crm-time">${escapeHtml(student.lesson_time.slice(0,5)||'—')}</td><td>${studentDashboardLabel(student)}</td><td><span class="crm-kind ${student.ccType.startsWith('Reposição')?'is-replacement':''}">${escapeHtml(student.ccType)}</span></td><td><div class="crm-row-actions"><button class="crm-icon-btn" title="Videochamada" onclick="openTodayClassCall('${student.id}')">${crmIcon('video')}</button><button class="crm-icon-btn" title="Calendário" onclick="ccOpenDate('${student.id}','${student.ccDate}')">${crmIcon('calendar')}</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>'}</tbody></table></div></section>
+    <div class="crm-lower">
+      <section class="crm-panel" id="crm-pendencias"><div class="crm-panel-head"><h3>Central de pendências</h3><span class="crm-muted" id="report-pending-count">—</span></div><div id="crm-other-pending">${crmOtherPending()}</div><div id="report-pending-list" aria-live="polite"><p class="crm-empty">Verificando relatórios...</p></div></section>
+      <section class="crm-panel"><div class="crm-panel-head"><h3>Atividades recentes</h3></div><div id="admin-recent-activity-list" aria-live="polite"><p class="crm-empty">Carregando atividades...</p></div></section>
     </div>
-    <section class="box admin-recent-activity">
-      <div class="admin-panel-heading"><h3>Atividades recentes</h3><span class="admin-panel-count">Últimas ações dos alunos</span></div>
-      <div id="admin-recent-activity-list" aria-live="polite"><div class="small-note">Carregando atividades...</div></div>
-    </section>
   `;
   renderRecentAdminActivity();
   try {
@@ -261,10 +188,9 @@ async function renderHome(){
     document.getElementById('report-pending-stat').textContent = String(pendencies.length);
     document.getElementById('report-pending-list').innerHTML = pendencies.length
       ? pendencies.map(({lesson, studentName}) => `
-        <div class="admin-dashboard-line">
-          <span><strong>${escapeHtml(studentName)}</strong> sem relatório de desempenho para a aula do dia
+        <div class="crm-pending-row">${crmIcon("file")}<div class="crm-pending-text"><strong>${escapeHtml(studentName)}</strong><small>Relatório pendente · aula do dia
           ${lesson.lesson_date ? escapeHtml(formatDate(lesson.lesson_date)) : 'não informado'}
-          ${lesson.lesson_date ? '' : `(${escapeHtml(lesson.title)})`}</span>
+          ${lesson.lesson_date ? '' : `(${escapeHtml(lesson.title)})`}</small></div>
           <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
             <button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
             <button class="resource-action" onclick="dismissReportPending('${lesson.id}')" aria-label="Descartar pendência da aula ${escapeAttr(lesson.title)}">Descartar pendência</button>
@@ -747,7 +673,7 @@ async function refreshStudents(){
 async function openStudent(studentId){
   currentStudent = students.find(s => s.id === studentId);
   currentView = 'student';
-  currentTab = 'perfil';
+  currentTab = 'resumo';
   renderNav();
   await loadLessonsFor(studentId);
   renderStudentDetail();
@@ -789,29 +715,18 @@ function renderStudentDetail(){
     </div>`;
   }).join('') || `<div class="empty-state">Nenhuma aula cadastrada para ${escapeHtml(s.full_name || s.email)} ainda.</div>`;
 
+  const metrics=crmStudentMetrics(s,currentLessons);
   document.getElementById('main-content').innerHTML = `
-    <div class="topline">
-      <div>
-        <h1>${escapeHtml(s.full_name || s.email)}</h1>
-        <div class="sub">${s.is_test_profile ? 'Perfil vinculado ao seu login · dados para testes' : escapeHtml(s.email) + ' · visível apenas para você e para o aluno'}</div>
-      </div>
-      <button class="btn-dark-sm" onclick="ccRoster()">← Todos os alunos</button>
-    </div>
-
-    <div class="crm-student-actions"><button class="btn-dark-sm" onclick="switchTab('nova')">+ Cadastrar aula</button><button class="btn-ghost" onclick="ccOpenDate(currentStudent.id,adminToday().date)">Registrar aula / falta</button><button class="btn-ghost" onclick="openTodayClassCall(currentStudent.id)">Videochamada</button></div>
-    <div class="role-switch crm-tabs" style="margin-bottom:18px;">
-      <button class="${currentTab === 'perfil' ? 'active' : ''}" onclick="switchTab('perfil')">Perfil</button>
-      <button class="${currentTab === 'calendario' ? 'active' : ''}" onclick="ccSelected='';switchTab('calendario')">Calendário</button>
-      <button class="${currentTab === 'nova' ? 'active' : ''}" onclick="switchTab('nova')">Cadastrar nova aula</button>
-      <button class="${currentTab === 'cadastradas' ? 'active' : ''}" onclick="switchTab('cadastradas')">Aulas cadastradas</button>
-      <button class="${currentTab === 'pedidos' ? 'active' : ''}" onclick="switchTab('pedidos')">Materiais do aluno</button>
-      <button class="${currentTab === 'atividade' ? 'active' : ''}" onclick="switchTab('atividade')">Atividade</button>
-    </div>
-
+    <button class="crm-link crm-back" onclick="ccRoster()">← Todos os alunos</button>
+    <section class="crm-profile-head"><span class="crm-avatar">${escapeHtml((s.full_name||s.email||'A').charAt(0).toUpperCase())}</span><div><h1>${escapeHtml(s.full_name||s.email)}</h1><p>${crmPlan(ccData(s))} · ${escapeHtml(s.email||'')}</p><small class="crm-muted">${s.is_test_profile?'Perfil de teste':'Perfil cadastrado'}</small></div><button class="crm-icon-btn crm-profile-edit" title="Cadastro" onclick="switchTab('perfil')">${crmIcon('settings')}</button></section>
+    <section class="crm-kpis crm-kpis-three">${crmKpi('Carga anual',metrics.count+'/'+(metrics.target??'—'),'chart')}${crmKpi('Reposições',metrics.pending,'refresh')}${crmKpi('Frequência',metrics.frequency,'calendar')}</section>
+    <nav class="crm-tabs-v3" aria-label="Ficha do aluno">${[['resumo','Resumo'],['calendario','Calendário'],['cadastradas','Aulas e materiais'],['pedidos','Materiais do aluno'],['atividade','Atividades'],['perfil','Cadastro'],['nova','Nova aula']].map(([k,label])=>`<button class="${currentTab===k?'active':''}" onclick="switchTab('${k}')">${label}</button>`).join('')}</nav>
     <div id="tab-content"></div>
   `;
 
-  if (currentTab === 'perfil') {
+  if (currentTab === 'resumo') {
+    crmStudentSummary();
+  } else if (currentTab === 'perfil') {
     renderPerfilTab();
   } else if (currentTab === 'calendario') {
     ccRender();
