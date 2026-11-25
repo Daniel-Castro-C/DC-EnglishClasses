@@ -56,18 +56,21 @@
   function ensureNavItem() {
     const container = document.getElementById('nav-container');
     if (!container) return;
+    const anchor = Array.from(container.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick') === 'openDanielModule()');
+    if (!anchor) return;
     let el = document.getElementById('nav-textos');
     if (!el) {
-      el = document.createElement('div');
+      el = document.createElement('button');
+      el.type = 'button';
       el.id = 'nav-textos';
       el.addEventListener('click', () => window.openTextosModule());
-      const label = container.querySelector('.nav-label');
-      if (label) container.insertBefore(el, label); else container.appendChild(el);
     }
+    if (anchor.nextElementSibling !== el) anchor.after(el);
     const active = (typeof currentView !== 'undefined' && currentView === 'textos');
-    el.className = 'nav-item' + (active ? ' active' : '');
-    el.innerHTML = `<span>Textos para correção</span>` +
-      (pendingTotal > 0 ? `<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;">${pendingTotal}</span>` : '');
+    el.className = 'nav-item crm-nav' + (active ? ' active' : '');
+    if (active) el.setAttribute('aria-current','page'); else el.removeAttribute('aria-current');
+    el.innerHTML = (typeof crmIcon === 'function' ? crmIcon('file') : '') + '<span class="nav-item-label">Textos para correção</span>' +
+      (pendingTotal > 0 ? '<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;">' + pendingTotal + '</span>' : '');
   }
 
   async function refreshPending() {
