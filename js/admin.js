@@ -1120,7 +1120,7 @@ async function renderPedidosTab(){
         <button class="resource-action" onclick="deleteMaterialRequest('${r.id}')">Excluir</button>
       </div>
       ${r.notes ? `<p style="font-size:14px;margin:10px 0;">${escapeHtml(r.notes)}</p>` : ''}
-      ${r.external_link ? `<div class="resource-row"><div class="resource-icon ic-pdf">Link</div><div class="resource-info"><div class="name">Link enviado pelo aluno</div></div><button class="resource-action" onclick="window.open('${escapeAttr(r.external_link)}','_blank')">Abrir link</button></div>` : ''}
+      ${r.external_link ? renderMaterialExternalLink(r.external_link) : ''}
       ${r.file_path ? `<div class="resource-row"><div class="resource-icon ic-pdf">Arq</div><div class="resource-info"><div class="name">${escapeHtml(r.file_name || 'Arquivo enviado')}</div></div>${isPdfPath(r.file_path) ? `<button class="resource-action" onclick="previewFile('${r.file_path}')">Visualizar</button>` : ''}<button class="resource-action" onclick="downloadRequestFile('${r.file_path}')">Baixar</button></div>` : ''}
     </div>
   `).join('');
@@ -1741,3 +1741,8 @@ function formatDate(isoDate){
 }
 
 function escapeAttr(str){ return escapeHtml(str); }
+
+function renderMaterialExternalLink(raw){
+  const url=normalizeMaterialExternalLink(raw);
+  return '<div class="resource-row"><div class="resource-icon ic-pdf">Link</div><div class="resource-info" style="min-width:0"><div class="name">Link enviado pelo aluno</div><div class="desc" style="overflow-wrap:anywhere">'+escapeHtml(String(raw))+'</div></div>'+(url?'<a class="resource-action" href="'+escapeHtml(url)+'" target="_blank" rel="noopener noreferrer">Abrir link</a>':'<span class="small-note">Endereço inválido. Solicite o link completo ao aluno.</span>')+'</div>';
+}
