@@ -85,6 +85,7 @@ async function refreshPendingCounts(){
 function renderNav(){
   const items = [
     { key:'home', label:'Início', icon:'home', action:'renderHome()' },
+    { key:'controle', label:'Controle de Aulas', icon:'home', action:'ccOverview()' },
     { key:'comunicados', label:'Comunicados', icon:'comunicados', action:'openComunicados()' },
     { key:'guias', label:'Guias de Gramática', icon:'gramatica', action:'openGuias()' },
     { key:'daniel', label:'Pergunte ao Daniel', icon:'daniel', action:'openDanielModule()' }
@@ -803,6 +804,7 @@ function renderStudentDetail(){
 
     <div class="role-switch" style="max-width:760px;margin-bottom:26px;">
       <button class="${currentTab === 'perfil' ? 'active' : ''}" onclick="switchTab('perfil')">Perfil</button>
+      <button class="${currentTab === 'calendario' ? 'active' : ''}" onclick="ccSelected='';switchTab('calendario')">Calendário</button>
       <button class="${currentTab === 'nova' ? 'active' : ''}" onclick="switchTab('nova')">Cadastrar nova aula</button>
       <button class="${currentTab === 'cadastradas' ? 'active' : ''}" onclick="switchTab('cadastradas')">Aulas cadastradas</button>
       <button class="${currentTab === 'pedidos' ? 'active' : ''}" onclick="switchTab('pedidos')">Materiais do aluno</button>
@@ -814,6 +816,8 @@ function renderStudentDetail(){
 
   if (currentTab === 'perfil') {
     renderPerfilTab();
+  } else if (currentTab === 'calendario') {
+    ccRender();
   } else if (currentTab === 'nova') {
     renderNovaAulaTab();
   } else if (currentTab === 'cadastradas') {
