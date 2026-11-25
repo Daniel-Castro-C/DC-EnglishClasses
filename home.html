@@ -59,16 +59,26 @@
 <div id="onboarding-modal" class="onboarding-overlay">
   <div class="onboarding-box">
     <img src="logo.png" alt="Logo" class="onboarding-logo">
-    <h2 data-i18n="onboarding_title">Seja bem-vindo(a) à D.C English Classes!</h2>
-    <p data-i18n="onboarding_p1">Preparamos um guia rápido para você conhecer todos os cantos do portal — login, materiais de aula, como tirar dúvidas comigo e muito mais.</p>
-    <p data-i18n="onboarding_p2">Baixe e guarde para consultar sempre que precisar.</p>
+    <h2 id="welcome-title">Welcome!</h2>
+    <div id="welcome-letter"><p>Que bom ter você aqui!</p>
+    <p>Este é o seu espaço de aprendizagem, onde você poderá acompanhar sua evolução, acessar os materiais das nossas aulas e explorar recursos para desenvolver seu inglês.</p>
+    <p>Espero que essa nova jornada seja repleta de aprendizados, conquistas e boas experiências.</p>
+    <p>Conte comigo ao longo desse caminho!</p>
+    <p style="font-family:'Baskerville Old Face','Libre Baskerville',Georgia,serif;font-style:italic;font-size:18px;color:var(--text);margin-top:18px">Daniel Castro</p></div>
     <div class="onboarding-actions">
-      <a href="guia-portal-do-aluno.pdf" download class="btn-primary" style="text-decoration:none;display:block;text-align:center;" onclick="dismissOnboarding()" data-i18n="onboarding_download_btn">Baixar guia em PDF</a>
-      <button type="button" class="btn-ghost" style="width:100%;margin-top:10px;" onclick="dismissOnboarding()" data-i18n="onboarding_close_btn">Já vi, pode fechar</button>
+      <button type="button" class="btn-primary" onclick="startWelcomeTour()">Conhecer meu portal →</button>
+      <button type="button" class="btn-ghost" style="width:100%;margin-top:10px;" onclick="finishWelcome()">Explorar mais tarde</button>
     </div>
   </div>
 </div>
 
+<div id="welcome-tour" hidden style="position:fixed;inset:0;z-index:2100;pointer-events:none">
+  <div id="welcome-tour-shade" style="position:absolute;border-radius:12px;box-shadow:0 0 0 200vmax rgba(14,21,36,.65);outline:2px solid #91BDE6"></div>
+  <section id="welcome-tour-card" role="dialog" aria-labelledby="welcome-tour-title" style="position:absolute;pointer-events:auto;width:min(340px,calc(100vw - 32px));background:var(--paper-card);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 12px 40px #0004">
+    <div id="welcome-tour-count" style="font-size:12px;color:var(--text-soft)"></div><h2 id="welcome-tour-title" style="font-size:20px;margin:10px 0"></h2><p id="welcome-tour-text" style="font-size:14px;line-height:1.6"></p>
+    <button class="btn-primary" id="welcome-tour-next" onclick="advanceWelcomeTour()">Próximo →</button><button class="btn-ghost" style="width:100%;margin-top:8px" onclick="finishWelcome()">Encerrar tour</button>
+  </section>
+</div>
 <!-- Celebração de nova badge. Apenas a Home do aluno a apresenta; nenhuma badge é criada aqui. -->
 <div id="badge-celebration-modal" class="badge-celebration-overlay" hidden>
   <section class="badge-celebration-panel" role="dialog" aria-modal="true"
@@ -388,6 +398,11 @@ function previewBadgeCelebration(){
   const wordEntry = await getTodayWordOfDay();
   document.getElementById('word-of-day-container').innerHTML = buildWordOfDayCard(wordEntry);
 
+  document.getElementById('welcome-title').textContent = 'Welcome, ' + firstName + '!';
+  if (window.__dcTeacherTestMode) {
+    const b=document.createElement('button'); b.type='button'; b.className='btn-ghost'; b.textContent='Simular boas-vindas'; b.onclick=()=>{ welcomePreview=true; document.getElementById('onboarding-modal').classList.add('show'); };
+    document.querySelector('.badge-preview-tools')?.appendChild(b);
+  }
   if (!profile.has_seen_onboarding) {
     document.getElementById('onboarding-modal').classList.add('show');
   } else if (window.__dcTeacherTestMode &&
@@ -401,6 +416,30 @@ function previewBadgeCelebration(){
   }
 })();
 
+let welcomePreview=false, welcomeTourIndex=0;
+const welcomeSteps=[
+ ['.dashboard-heading','Visão geral','Este é o seu espaço de aprendizagem.'],
+ ['.achievements-wall','Mural de conquistas','Acompanhe seu progresso e suas conquistas a cada marco de aulas.'],
+ ['.home-card[href="aluno.html"]','Minhas aulas','Acesse os slides, relatórios e exercícios das nossas aulas.'],
+ ['.nav-item[href="perfil.html"]','Perfil','Gerencie seus dados e preferências.'],
+ ['.nav-item[href="pergunte-ao-daniel.html"]','Pergunte ao Daniel','Envie suas dúvidas diretamente ao professor.'],
+ ['.nav-item[href="enviar-material.html"]','Enviar material','Compartilhe materiais para nossas aulas.'],
+ ['.nav-resource-trigger','Recursos','Explore vocabulário e aprimore sua escrita.']
+];
+function startWelcomeTour(){document.getElementById('onboarding-modal').classList.remove('show');welcomeTourIndex=0;document.getElementById('welcome-tour').hidden=false;renderWelcomeTour();}
+function renderWelcomeTour(){
+ const s=welcomeSteps[welcomeTourIndex], target=document.querySelector(s[0]), card=document.getElementById('welcome-tour-card'), shade=document.getElementById('welcome-tour-shade');
+ document.getElementById('welcome-tour-count').textContent='Passo '+(welcomeTourIndex+1)+' de '+welcomeSteps.length;
+ document.getElementById('welcome-tour-title').textContent=s[1];document.getElementById('welcome-tour-text').textContent=s[2];document.getElementById('welcome-tour-next').textContent=welcomeTourIndex===welcomeSteps.length-1?'Concluir':'Próximo →';
+ if(target && target.getBoundingClientRect().width) target.scrollIntoView({block:'nearest'});
+ const r=target?.getBoundingClientRect(), w=card.offsetWidth, h=card.offsetHeight;
+ if(r && r.right>0 && r.left<innerWidth && r.bottom>0 && r.top<innerHeight){Object.assign(shade.style,{display:'block',left:Math.max(0,r.left-4)+'px',top:Math.max(0,r.top-4)+'px',width:(r.width+8)+'px',height:(r.height+8)+'px'});let x=r.right+18;if(x+w>innerWidth-16)x=Math.max(16,r.left-w-18);let y=r.top;if(x===16 && r.left< w+34)y=r.bottom+16;Object.assign(card.style,{left:Math.min(innerWidth-w-16,Math.max(16,x))+'px',top:Math.max(16,Math.min(innerHeight-h-16,y))+'px'});}
+ else{Object.assign(shade.style,{display:'block',left:'0',top:'0',width:'0',height:'0'});Object.assign(card.style,{left:Math.max(16,(innerWidth-w)/2)+'px',top:Math.max(16,(innerHeight-h)/2)+'px'});}
+}
+function advanceWelcomeTour(){if(++welcomeTourIndex>=welcomeSteps.length)finishWelcome();else renderWelcomeTour();}
+function finishWelcome(){document.getElementById('welcome-tour').hidden=true;document.getElementById('onboarding-modal').classList.remove('show');if(welcomePreview||window.__dcTeacherTestMode){welcomePreview=false;return;}dismissOnboarding();}
+window.addEventListener('resize',()=>{if(!document.getElementById('welcome-tour').hidden)renderWelcomeTour();});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('welcome-tour').hidden)finishWelcome();});
 // Fecha o pop-up de boas-vindas e marca como já visto (não aparece mais, em nenhum aparelho)
 async function dismissOnboarding(){
   const modal = document.getElementById('onboarding-modal');
