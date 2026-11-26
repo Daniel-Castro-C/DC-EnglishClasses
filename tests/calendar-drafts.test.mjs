@@ -98,7 +98,8 @@ test('saving group sends all dates and both revisions in a single transactional 
  await run("ccSaveAll()");
  assert.equal(ctx.calls.length,1);
  assert.equal(ctx.calls[0].name,'portal_group_calendar_save');
- assert.equal(ctx.calls[0].args.p_schedule,null);
+ assert.equal(ctx.calls[0].args.p_schedule.calendar_events['2026-11-23'].status,'rescheduled');
+ assert.equal(ctx.calls[0].args.p_schedule.calendar_events['2026-11-30'].skip,true);
  for(const change of ctx.calls[0].args.p_changes){
   assert.equal(change.revision,2);
   assert.equal(change.payload.events['2026-11-30'].skip,true);
@@ -150,7 +151,7 @@ test('saving refuses dates published since draft was created',async()=>{
 test('published lesson details include number and topic in both calendars',()=>{
  for(const group of [false,true]){
   const {run,ctx}=setup({group});const el={innerHTML:''};
-  ctx.document={getElementById:()=>el};
+  ctx.document={getElementById:()=>el,querySelectorAll:()=>[]};
   const lesson={student_id:'s1',lesson_date:'2026-11-24',title:'Class #23',topic:'Managing different personalities'};
   ctx.fixture=group?[{...lesson,group_id:'g1'},{...lesson,student_id:'s2',group_id:'g1'}]:[lesson];
   run((group?'tgSelected.calendarLessons=fixture;':'currentLessons=fixture;')+"ccSelected='2026-11-24';ccEditor()");
@@ -161,7 +162,7 @@ test('published lesson details include number and topic in both calendars',()=>{
  }
 });
 test('individual calendar shows registered topic even when the lesson belongs to a group',()=>{
- const {run,ctx}=setup();const el={innerHTML:''};ctx.document={getElementById:()=>el};
+ const {run,ctx}=setup();const el={innerHTML:''};ctx.document={getElementById:()=>el,querySelectorAll:()=>[]};
  run("tgGroups=[{id:'g1',name:'Turma',members:['s1','s2'],start:'2026-11-01',days:'1',time:'18:00'}];currentLessons=[{student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #23',topic:'Teamwork'}];ccSelected='2026-11-23';ccEditor()");
  assert.match(el.innerHTML,/<strong>Tema:<\/strong> Teamwork/);
  assert.match(el.innerHTML,/Abrir calendário da turma/);
@@ -173,4 +174,51 @@ test('published topics are escaped and missing topic is clearly indicated',()=>{
  const html=run("ccPublishedDetails(ctx,'2026-11-24')");
  assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);
  assert.match(html,/Não cadastrado/);
+});
+test('group is the source for shared dates, individual absence never changes a colleague',()=>{
+ const {run}=setup({group:true});
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'19:30','Conversation','');tgSelected.calendar_events=draft.schedule.events;for(const id of tgSelected.members)ccCloud.set(id,{revision:3,payload:draft.payloads[id]})");
+ assert.equal(run("tgSelected.calendar_events['2026-11-23'].status"),'done');
+ assert.equal(run("ccData(students[1]).events['2026-11-23'].time"),'19:30');
+ assert.equal(run("ccData(students[1]).events['2026-11-23'].notes"),'Conversation');
+ run("currentView='student';currentStudent=students[0];ctx=ccContext();draft=ccDraft(ctx);ccIndividualAttendance(ctx,draft,'2026-11-23',tgSelected,'absent');ccCloud.set('s1',{revision:4,payload:draft.payloads.s1})");
+ assert.equal(run("ccData(students[0]).events['2026-11-23'].status"),'absent');
+ assert.equal(run("ccData(students[1]).events['2026-11-23'].status"),'done');
+ assert.equal(run("tgGroupReplacementEligible('g1','2026-11-23')"),false);
+ run("currentStudent=students[1];ctx=ccContext();draft=ccDraft(ctx);ccIndividualAttendance(ctx,draft,'2026-11-23',tgSelected,'absent');ccCloud.set('s2',{revision:4,payload:draft.payloads.s2})");
+ assert.equal(run("tgGroupReplacementEligible('g1','2026-11-23')"),true);
+ assert.equal(run("ccData(students[0]).events['2026-11-23'].status"),'owed');
+ assert.equal(run("ccData(students[1]).events['2026-11-23'].status"),'owed');
+ run("ccIndividualAttendance(ctx,draft,'2026-11-23',tgSelected,'inherit');ccCloud.set('s2',{revision:5,payload:draft.payloads.s2})");
+ assert.equal(run("ccData(students[0]).events['2026-11-23'].status"),'absent');
+ assert.equal(run("ccData(students[1]).events['2026-11-23'].status"),'done');
+ assert.equal(run("tgGroupReplacementEligible('g1','2026-11-23')"),false);
+});
+test('shared edits retain attendance exceptions and cancellation supersedes them',()=>{
+ const {run}=setup({group:true});
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true);ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'20:00','Updated','')");
+ assert.equal(run("draft.schedule.events['2026-11-23'].time"),'20:00');
+ assert.equal(run("draft.payloads.s1.events['2026-11-23'].status"),'absent');
+ assert.equal(run("draft.payloads.s2.events['2026-11-23'].status"),'done');
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','holiday',{},'20:00','','')");
+ assert.equal(run("draft.payloads.s1.events['2026-11-23'].status"),'holiday');
+ assert.equal(run("draft.payloads.s1.events['2026-11-23'].attendance_override"),undefined);
+ assert.equal(run("draft.payloads.s2.events['2026-11-23'].status"),'holiday');
+});
+test('an individual absence on a habitual class is editable and does not infer collective absence',()=>{
+ const {run,ctx}=setup({group:true});const elements=new Map();
+ ctx.document={getElementById:id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',value:''});return elements.get(id);},querySelectorAll:()=>[]};
+ run("currentView='student';ctx=ccContext();draft=ccDraft(ctx);ccSelected='2026-11-23';ccEditor()");
+ assert.match(elements.get('cc-edit').innerHTML,/Frequência deste aluno/);
+ run("ccIndividualAttendance(ctx,draft,'2026-11-23',tgSelected,'absent');ccCloud.set('s1',{revision:3,payload:draft.payloads.s1});currentView='turmas';ctx=ccContext();draft=ccDraft(ctx)");
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'planned');
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-23').rows[0].status"),'absent');
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-23').rows[1].status"),'planned');
+});
+test('published colleague does not block recording individual absence; published own lesson remains protected',()=>{
+ const {run}=setup({group:true});
+ run("tgSelected.calendarLessons=[{group_id:'g1',student_id:'s2',lesson_date:'2026-11-23'}];currentView='student';ctx=ccContext();draft=ccDraft(ctx);ccIndividualAttendance(ctx,draft,'2026-11-23',tgSelected,'absent');ccCloud.set('s1',{revision:3,payload:draft.payloads.s1})");
+ assert.equal(run("tgGroupReplacementEligible('g1','2026-11-23')"),false);
+ run("currentStudent=students[1];currentLessons=tgSelected.calendarLessons;ctx=ccContext();draft=ccDraft(ctx)");
+ assert.throws(()=>run("ccIndividualAttendance(ctx,draft,'2026-11-23',tgSelected,'absent')"),/materiais cadastrados/);
 });
