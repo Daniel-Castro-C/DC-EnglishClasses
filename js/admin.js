@@ -1677,7 +1677,7 @@ function resourceRowWithEditHtml(l, r){
     <div class="row">
       <input id="resource-edit-file-${r.id}" type="file">
     </div>
-    <div class="small-note" style="margin-top:0;">Deixe o campo de arquivo em branco para manter o arquivo já enviado — só o nome será atualizado.</div>
+    <div class="small-note" style="margin-top:0;">Deixe o campo de arquivo em branco para manter o arquivo já enviado — só o nome será atualizado. ${r.file_path.startsWith('turmas/')?'Alterações neste perfil não modificam os materiais dos demais integrantes.':''}</div>
     <div class="row" style="margin-top:10px;">
       <button class="btn-dark-sm" onclick="saveResourceEdit('${r.id}','${r.file_path}','${l.id}')">Salvar alterações</button>
       <button class="btn-ghost" onclick="toggleEditResource('${r.id}')">Cancelar</button>
@@ -1720,7 +1720,7 @@ async function saveResourceEdit(resourceId, oldFilePath, lessonId){
     updates.file_path = newFilePath;
   }
 
-  const { error } = await sb.from('resources').update(updates).eq('id', resourceId);
+  const { data: changed, error } = await sb.from('resources').update(updates).eq('id', resourceId).eq('file_path', oldFilePath).select('id').single();
   if (error) {
     feedbackEl.className = 'feedback show err';
     feedbackEl.textContent = 'Não foi possível salvar as alterações.';
@@ -1728,22 +1728,31 @@ async function saveResourceEdit(resourceId, oldFilePath, lessonId){
     return;
   }
 
-  // Só remove o arquivo antigo depois que o novo já está salvo com sucesso
-  if (newFile && oldFilePath) {
-    await sb.storage.from(STORAGE_BUCKET).remove([oldFilePath]);
-  }
+  // Arquivos de turma podem ter vários vínculos. O banco também bloqueia a remoção física enquanto houver referências.
+  if (newFile && oldFilePath) await removeUnreferencedLessonFile(oldFilePath);
 
   await loadLessonsFor(currentStudent.id);
   renderStudentDetail();
 }
 
+async function removeUnreferencedLessonFile(path){
+ if(!path)return;
+ const {count,error}=await sb.from('resources').select('id',{count:'exact',head:true}).eq('file_path',path);
+ if(error||count!==0)return;
+ // Nunca apagar automaticamente um objeto coletivo: evita corrida com novos vínculos.
+ // A política restritiva no Storage protege arquivos coletivos referenciados inclusive de clientes antigos.
+ if(path.startsWith('turmas/'))return;
+ const result=await sb.storage.from(STORAGE_BUCKET).remove([path]);
+ if(result.error)console.warn('Arquivo sem vínculo mantido no armazenamento:',result.error);
+}
 async function deleteResource(resourceId, filePath){
-  if (!confirm('Excluir este material?')) return;
-  await sb.storage.from(STORAGE_BUCKET).remove([filePath]);
-  const { error } = await sb.from('resources').delete().eq('id', resourceId);
-  if (error) { alert('Não foi possível excluir.'); return; }
-  await loadLessonsFor(currentStudent.id);
-  renderStudentDetail();
+ const shared=filePath.startsWith('turmas/');
+ if(!confirm(shared?'Excluir este material somente da aula deste aluno? O material dos demais será preservado.':'Excluir este material?'))return;
+ const {data,error}=await sb.from('resources').delete().eq('id',resourceId).eq('file_path',filePath).select('id').single();
+ if(error||!data){alert('Não foi possível excluir o vínculo. Atualize a página e tente novamente.');return;}
+ await removeUnreferencedLessonFile(filePath);
+ await loadLessonsFor(currentStudent.id);
+ renderStudentDetail();
 }
 
 function formatDate(isoDate){
