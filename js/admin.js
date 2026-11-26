@@ -122,31 +122,35 @@ function studentDashboardLabel(student){
 }
 
 async function loadReportPendencies(){
-  // Busca todas as aulas, não apenas as 1.000 primeiras retornadas pelo Supabase.
-  const pending = [];
-  const studentById = new Map(students.map(student => [student.id, student]));
-  const batchSize = 500;
-  for (let offset = 0; ; offset += batchSize) {
-    const { data, error } = await sb.from('lessons')
-      .select('id, student_id, lesson_date, title, report_pending_dismissed, resources(type)')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + batchSize - 1);
-    if (error) throw error;
-    const batch = data || [];
-    for (const lesson of batch) {
-      if (teacherTestProfile && lesson.student_id === teacherTestProfile.id) continue;
-      if (lesson.report_pending_dismissed || (lesson.resources || []).some(resource => resource.type === 'rep')) continue;
-      const student = studentById.get(lesson.student_id);
-      pending.push({
-        lesson,
-        studentName: student ? (student.full_name || student.email || 'Aluno sem nome') : 'Aluno não encontrado'
-      });
+  const pending=[], registered=new Set();
+  const studentById=new Map(students.filter(s=>!s.is_test_profile).map(s=>[s.id,s]));
+  for(let offset=0;;offset+=500){
+    const {data,error}=await sb.from('lessons').select('id,student_id,lesson_date,title,report_pending_dismissed,resources(type)').order('id',{ascending:true}).range(offset,offset+499);
+    if(error)throw error;
+    const batch=data||[];
+    for(const lesson of batch){
+      const student=studentById.get(lesson.student_id);
+      if(!student)continue;
+      if(lesson.lesson_date)registered.add(lesson.student_id+'|'+lesson.lesson_date);
+      // Cadastro existente já conta como realizada na regra vigente do calendário.
+      if(lesson.report_pending_dismissed||(lesson.resources||[]).some(r=>r.type==='rep'))continue;
+      pending.push({lesson,studentName:student.full_name||student.email||'Aluno',missingLesson:false});
     }
-    if (batch.length < batchSize) break;
+    if(batch.length<500)break;
   }
-  return pending.sort((a,b) =>
-    (b.lesson.lesson_date || '').localeCompare(a.lesson.lesson_date || '') ||
-    a.studentName.localeCompare(b.studentName, 'pt-BR'));
+  for(const student of studentById.values()){
+    for(const date of ccManualDoneDates(ccData(student))){
+      if(registered.has(student.id+'|'+date))continue;
+      pending.push({lesson:{student_id:student.id,lesson_date:date,title:'Aula realizada'},studentName:student.full_name||student.email||'Aluno',missingLesson:true});
+    }
+  }
+  return pending.sort((a,b)=>(b.lesson.lesson_date||'').localeCompare(a.lesson.lesson_date||'')||a.studentName.localeCompare(b.studentName,'pt-BR'));
+}
+async function openMissingLesson(studentId,date){
+  await openStudent(studentId);
+  switchTab('nova');
+  const input=document.getElementById('new-lesson-date');
+  if(input)input.value=date;
 }
 
 // Abre a videochamada da aula diretamente, sem navegar para o perfil.
@@ -189,7 +193,7 @@ async function renderHome(){
      ${crmKpi('Alunos ativos',students.filter(s=>!s.is_test_profile).length,'users')}
      ${crmKpi('Aulas hoje',classes.length,'calendar')}
      ${crmKpi('Reposições pendentes',students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+ccPending(ccData(s)),0),'refresh','crm-replacement-stat')}
-     ${crmKpi('Relatórios pendentes','—','file','report-pending-stat')}
+     ${crmKpi('Pendências de aulas e relatórios','—','file','report-pending-stat')}
     </section>
     <section class="crm-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3><button class="crm-link" onclick="ccGlobalView()">Ver agenda completa →</button></div>
     <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${classes.map(student=>`<tr><td class="crm-time">${escapeHtml(student.lesson_time.slice(0,5)||'—')}</td><td>${studentDashboardLabel(student)}</td><td><span class="crm-kind ${student.ccType.startsWith('Reposição')?'is-replacement':''}">${escapeHtml(student.ccType)}</span></td><td>${ccQuickStatus(student)}</td><td><div class="crm-row-actions"><button class="crm-icon-btn" title="Videochamada" onclick="openTodayClassCall('${student.id}')">${crmIcon('video')}</button><button class="crm-icon-btn" title="Calendário" onclick="ccOpenDate('${student.id}','${student.ccDate}')">${crmIcon('calendar')}</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>'}</tbody></table></div><p id="crm-agenda-feedback" class="crm-muted crm-agenda-feedback" role="status">${agendaLoadError?'Não foi possível consultar as aulas cadastradas. O status será verificado antes de salvar.':'Altere o status diretamente na tabela. O registro será salvo no calendário individual.'}</p></section>
@@ -206,16 +210,16 @@ async function renderHome(){
     document.getElementById('report-pending-count').textContent = String(pendencies.length);
     document.getElementById('report-pending-stat').textContent = String(pendencies.length);
     document.getElementById('report-pending-list').innerHTML = pendencies.length
-      ? pendencies.map(({lesson, studentName}) => `
-        <div class="crm-pending-row">${crmIcon("file")}<div class="crm-pending-text"><strong>${escapeHtml(studentName)}</strong><small>Relatório pendente · aula do dia
+      ? pendencies.map(({lesson, studentName, missingLesson}) => `
+        <div class="crm-pending-row">${crmIcon("file")}<div class="crm-pending-text"><strong>${escapeHtml(studentName)}</strong><small>${missingLesson?'Cadastro da aula e relatório pendentes':'Relatório pendente'} · aula do dia
           ${lesson.lesson_date ? escapeHtml(formatDate(lesson.lesson_date)) : 'não informado'}
           ${lesson.lesson_date ? '' : `(${escapeHtml(lesson.title)})`}</small></div>
           <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
-            <button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
-            <button class="resource-action" onclick="dismissReportPending('${lesson.id}')" aria-label="Descartar pendência da aula ${escapeAttr(lesson.title)}">Descartar pendência</button>
+            ${missingLesson ? `<button class="btn-ghost" onclick="openMissingLesson(\'${lesson.student_id}\', \'${lesson.lesson_date}\')">Cadastrar aula</button>` : `<button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
+            <button class="resource-action" onclick="dismissReportPending('${lesson.id}')" aria-label="Descartar pendência da aula ${escapeAttr(lesson.title)}">Descartar pendência</button>`}
           </div>
         </div>`).join('')
-      : '<div class="small-note">Todas as aulas cadastradas possuem relatório de desempenho.</div>';
+      : '<div class="small-note">Nenhuma aula realizada aguarda cadastro ou relatório.</div>';
   } catch(error) {
     console.error('Falha ao consultar pendências de relatórios:', error);
     if (currentView !== 'home') return;
