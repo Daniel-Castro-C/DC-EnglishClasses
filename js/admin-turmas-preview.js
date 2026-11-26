@@ -43,7 +43,7 @@ async function tgLoad(){
   if(le)throw le;lessons.push(...(batch||[]));if((batch||[]).length<500)break;
  }
  const old=tgSelected?.id;
- tgGroups=(data||[]).map(row=>{const g={...row,days:'',time:'',start:'',end:'',...row.schedule,events:{},lessons:[],calendarLessons:lessons.filter(l=>row.members.includes(l.student_id))};for(const id of g.members){const s=students.find(s=>s.id===id);if(!s)continue;for(const [date,e] of Object.entries(ccData(s).events||{}))if(e.group_id===g.id)(g.events[date]??={})[id]=e.status;}const by=new Map();for(const l of (lessons||[]).filter(l=>l.group_id===g.id)){const k=l.lesson_date;let a=by.get(k);if(!a){a={id:l.id,date:k,title:l.title,topic:l.topic,slides:[],exercises:[],reports:{}};by.set(k,a);}for(const r of l.resources||[]){if(r.type==='rep')a.reports[l.student_id]=materialDisplayName(r);else{const arr=r.type==='ex'?a.exercises:a.slides;if(!arr.includes(r.name))arr.push(r.name);}}a.reports[l.student_id]??='Pendente';}g.lessons=[...by.values()];return g;});tgSelected=tgGroups.find(g=>g.id===old)||null;
+ tgGroups=(data||[]).map(row=>{const g={...row,days:'',time:'',start:'',end:'',...row.schedule,events:{},lessons:[],calendarLessons:lessons.filter(l=>row.members.includes(l.student_id))};const by=new Map();for(const l of (lessons||[]).filter(l=>l.group_id===g.id)){const k=l.lesson_date;let a=by.get(k);if(!a){a={id:l.id,date:k,title:l.title,topic:l.topic,slides:[],exercises:[],reports:{}};by.set(k,a);}for(const r of l.resources||[]){if(r.type==='rep')a.reports[l.student_id]=materialDisplayName(r);else{const arr=r.type==='ex'?a.exercises:a.slides;if(!arr.includes(r.name))arr.push(r.name);}}a.reports[l.student_id]??='Pendente';}g.lessons=[...by.values()];return g;});for(const g of tgGroups)for(const id of g.members){const s=students.find(s=>s.id===id);if(!s)continue;for(const [date,e] of Object.entries(ccData(s).events||{}))if(e.group_id===g.id&&!e.skip)(g.events[date]??={})[id]=e.status;}tgSelected=tgGroups.find(g=>g.id===old)||null;
 }
 function tgOpenMissing(groupId,date){tgSelected=tgGroups.find(g=>g.id===groupId);if(!tgSelected)return;currentView='turmas';renderNav();tgRender();tgSwitch('lesson');document.getElementById('tg-lesson-date').value=date;}
 
@@ -53,7 +53,7 @@ function tgNormalizeAttendance(members,attendance){
 }
 function tgGroupReplacementEligible(groupId,date){
  const g=tgGroups.find(v=>v.id===groupId);if(!g)return false;
- return g.members.every(id=>{const e=ccRead(id).events?.[date];return e?.group_id===groupId&&['absent','owed'].includes(e.status);});
+ return g.members.every(id=>{const e=ccRead(id).events?.[date];return !g.calendarLessons?.some(l=>l.student_id===id&&l.lesson_date===date&&l.group_id===groupId)&&e?.group_id===groupId&&['absent','owed'].includes(ccAttendanceStatus(g.calendar_events?.[date]?.status||e.status,e.attendance_override));});
 }
 function tgGroupReplacementRows(){
  const result=[];
@@ -77,7 +77,8 @@ function tgStageReplacement(original,done){
  try{
   ccDestinationFree(ctx,d,date);
   if(!ctx.members.every(s=>{const x=d.payloads[s.id];return x.events[original]?.group_id===ctx.group.id&&['absent','owed'].includes(x.events[original]?.status)&&ccReplacementAvailable(x,original,date,ctx.lessons.filter(l=>l.student_id===s.id),true);}))throw Error('Reposição coletiva indisponível.');
-  for(const s of ctx.members)d.payloads[s.id].events[date]={status:done?'done':'planned',original,time,group_id:ctx.group.id};
+  d.schedule.events[date]={status:done?'done':'planned',original,time};
+  for(const s of ctx.members)d.payloads[s.id].events[date]={...d.schedule.events[date],group_id:ctx.group.id,group_status:d.schedule.events[date].status};
   ccMarkDirty(ctx,d);ccJump(date);
  }catch(e){alert(e.message);}
 }
