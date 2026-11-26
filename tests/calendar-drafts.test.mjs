@@ -222,3 +222,25 @@ test('published colleague does not block recording individual absence; published
  run("currentStudent=students[1];currentLessons=tgSelected.calendarLessons;ctx=ccContext();draft=ccDraft(ctx)");
  assert.throws(()=>run("ccIndividualAttendance(ctx,draft,'2026-11-23',tgSelected,'absent')"),/materiais cadastrados/);
 });
+
+test('group details deduplicate legacy per-student lessons without group_id while preserving distinct lessons',()=>{
+ const {run}=setup({group:true});
+ run(`ctx.lessons.push(
+  {student_id:'s1',lesson_date:'2026-11-05',title:'Class #39',topic:'Movie Critics'},
+  {student_id:'s2',lesson_date:'2026-11-05',group_id:null,title:' Class #39 ',topic:'Movie Critics '},
+  {student_id:'s2',lesson_date:'2026-11-05',group_id:'g1',title:'Class #39',topic:'Movie Critics'},
+  {student_id:'s2',lesson_date:'2026-11-05',title:'Class #40',topic:'Teamwork'},
+  {student_id:'s2',lesson_date:'2026-11-12',title:'Class #41',topic:'Food'}
+ )`);
+ const html=run("ccPublishedDetails(ctx,'2026-11-05')");
+ assert.equal((html.match(/Class #39/g)||[]).length,1);
+ assert.equal((html.match(/Movie Critics/g)||[]).length,1);
+ assert.match(html,/Class #40/);
+ assert.match(html,/Teamwork/);
+ assert.doesNotMatch(html,/Class #41/);
+});
+test('individual details are not grouped or deduplicated',()=>{
+ const {run}=setup();
+ run(`ctx.lessons.push({student_id:'s1',lesson_date:'2026-11-05',title:'Class #39',topic:'Movie Critics'},{student_id:'s1',lesson_date:'2026-11-05',title:'Class #39',topic:'Movie Critics'})`);
+ assert.equal((run("ccPublishedDetails(ctx,'2026-11-05')").match(/Class #39/g)||[]).length,2);
+});

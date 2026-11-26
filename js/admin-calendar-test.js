@@ -312,8 +312,9 @@ function ccPublishedDetails(ctx,date){
  const seen=new Set();
  return ctx.lessons.filter(l=>l.lesson_date===date).map(l=>{
   const title=String(l.title||'Aula realizada').trim(),topic=String(l.topic||'').trim();
-  // The same published group lesson is represented once per participant.
-  if(ctx.group&&l.group_id===ctx.group.id){
+  // Group details show one copy of each title/topic for the selected day.
+  // Older shared lessons were registered separately per student, without a group_id.
+  if(ctx.group){
    const key=JSON.stringify([title,topic]);
    if(seen.has(key))return '';
    seen.add(key);
