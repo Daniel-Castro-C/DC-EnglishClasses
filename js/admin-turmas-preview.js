@@ -45,13 +45,13 @@ function tgPendingSummary(){
    if(ids.length)rows.push({g,date,ids,type:'replacement'});
   }
  }
- return rows;
+ return rows.map(r=>({...r,ids:r.ids.filter(id=>!r.g.dismissedAlerts?.[tgAlertKey(r.type,r.l?.id||r.date,id)])})).filter(r=>r.ids.length);
 }
 function tgPendingHtml(){
  const rows=tgPendingSummary();
  if(!tgGroups.length)return '';
  const name=id=>tgEsc(students.find(s=>s.id===id)?.full_name||'Aluno');
- return '<div class="box" style="margin-top:16px"><h3>Turmas — pendências de teste</h3><p class="small-note">Simulação separada dos registros reais · '+rows.reduce((n,r)=>n+r.ids.length,0)+' pendência(s) individual(is).</p>'+ (rows.map(r=>'<div class="crm-pending-row">'+crmIcon(r.type==='replacement'?'refresh':'file')+'<div class="crm-pending-text"><strong>'+tgEsc(r.g.name)+'</strong><small>'+(r.type==='report'?'Relatório pendente · '+tgEsc(r.l.title)+' · '+tgEsc(r.l.date):r.type==='missing'?'Cadastro da aula e relatório pendentes · '+tgEsc(r.date):'Reposição pendente · '+tgEsc(r.date))+' · '+r.ids.length+' de '+r.g.members.length+' alunos</small>'+r.ids.map(id=>'<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>'+name(id)+'</span>'+(r.type==='report'?'<button class="btn-ghost" onclick="tgResolveReport(&quot;'+r.g.id+'&quot;,&quot;'+r.l.id+'&quot;,&quot;'+id+'&quot;)">Adicionar relatório</button>':r.type==='missing'?'<button class="btn-ghost" onclick="tgOpenMissing(&quot;'+r.g.id+'&quot;,&quot;'+r.date+'&quot;)">Cadastrar aula</button>':'<button class="btn-ghost" onclick="tgResolveReplacement(&quot;'+r.g.id+'&quot;,&quot;'+r.date+'&quot;,&quot;'+id+'&quot;)">Registrar reposição</button>')+'</div>').join('')+'</div></div>').join('')||'<p class="small-note">Nenhuma pendência simulada.</p>')+'</div>';
+ return '<div class="box" style="margin-top:16px"><h3>Turmas — pendências de teste</h3><p class="small-note">Simulação separada dos registros reais · '+rows.reduce((n,r)=>n+r.ids.length,0)+' pendência(s) individual(is).</p>'+ (rows.map(r=>'<div class="crm-pending-row">'+crmIcon(r.type==='replacement'?'refresh':'file')+'<div class="crm-pending-text"><strong>'+tgEsc(r.g.name)+'</strong><small>'+(r.type==='report'?'Relatório pendente · '+tgEsc(r.l.title)+' · '+tgEsc(r.l.date):r.type==='missing'?'Cadastro da aula e relatório pendentes · '+tgEsc(r.date):'Reposição pendente · '+tgEsc(r.date))+' · '+r.ids.length+' de '+r.g.members.length+' alunos</small>'+r.ids.map(id=>'<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>'+name(id)+'</span>'+(r.type==='report'?'<button class="btn-ghost" onclick="tgResolveReport(&quot;'+r.g.id+'&quot;,&quot;'+r.l.id+'&quot;,&quot;'+id+'&quot;)">Adicionar relatório</button>':r.type==='missing'?'<button class="btn-ghost" onclick="tgOpenMissing(&quot;'+r.g.id+'&quot;,&quot;'+r.date+'&quot;)">Cadastrar aula</button>':'<button class="btn-ghost" onclick="tgResolveReplacement(&quot;'+r.g.id+'&quot;,&quot;'+r.date+'&quot;,&quot;'+id+'&quot;)">Registrar reposição</button>')+'<button class="resource-action" onclick="tgDismissAlert(&quot;'+r.g.id+'&quot;,&quot;'+r.type+'&quot;,&quot;'+(r.l?.id||r.date)+'&quot;,&quot;'+id+'&quot;)">Descartar pendência</button></div>').join('')+'</div></div>').join('')||'<p class="small-note">Nenhuma pendência simulada.</p>')+'</div>';
 }
 function tgRefreshPending(){const el=document.getElementById('tg-home-pending');if(el)el.innerHTML=tgPendingHtml();}
 function tgResolveReport(groupId,lessonId,studentId){
@@ -68,3 +68,6 @@ function tgResolveReplacement(groupId,date,studentId){
 }
 
 function tgOpenMissing(groupId,date){tgSelected=tgGroups.find(g=>g.id===groupId);if(!tgSelected)return;tgOpen();tgSwitch('lesson');document.getElementById('tg-lesson-date').value=date;}
+
+function tgAlertKey(type,ref,id){return [type,ref,id].join('|');}
+function tgDismissAlert(groupId,type,ref,id){const g=tgGroups.find(v=>v.id===groupId);if(!g||!confirm('Descartar este aviso individual? Os registros da aula serão preservados.'))return;g.dismissedAlerts??={};g.dismissedAlerts[tgAlertKey(type,ref,id)]=true;tgRefreshPending();}
