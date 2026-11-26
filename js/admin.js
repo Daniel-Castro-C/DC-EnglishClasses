@@ -199,17 +199,20 @@ async function renderHome(){
     </section>
     <section class="crm-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3><button class="crm-link" onclick="ccGlobalView()">Ver agenda completa →</button></div>
     <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${classes.map(student=>`<tr><td class="crm-time">${escapeHtml(student.lesson_time.slice(0,5)||'—')}</td><td>${studentDashboardLabel(student)}</td><td><span class="crm-kind ${student.ccType.startsWith('Reposição')?'is-replacement':''}">${escapeHtml(student.ccType)}</span></td><td>${ccQuickStatus(student)}</td><td><div class="crm-row-actions"><button class="crm-icon-btn" title="Videochamada" onclick="openTodayClassCall('${student.id}')">${crmIcon('video')}</button><button class="crm-icon-btn" title="Calendário" onclick="ccOpenDate('${student.id}','${student.ccDate}')">${crmIcon('calendar')}</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>'}</tbody></table></div><p id="crm-agenda-feedback" class="crm-muted crm-agenda-feedback" role="status">${agendaLoadError?'Não foi possível consultar as aulas cadastradas. O status será verificado antes de salvar.':'Altere o status diretamente na tabela. O registro será salvo no calendário individual.'}</p></section>
+    <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
     <div class="crm-lower">
       <section class="crm-panel" id="crm-pendencias"><div class="crm-panel-head"><h3>Central de pendências</h3><span class="crm-muted" id="report-pending-count">—</span></div><div id="crm-other-pending">${crmOtherPending()}</div><div id="report-pending-list" aria-live="polite"><p class="crm-empty">Verificando relatórios...</p></div><div id="tg-home-pending">${tgPendingHtml()}</div></section>
       <section class="crm-panel"><div class="crm-panel-head"><h3>Atividades recentes</h3></div><div id="admin-recent-activity-list" aria-live="polite"><p class="crm-empty">Carregando atividades...</p></div></section>
     </div>
   `;
   renderRecentAdminActivity();
+  const groupsReady=tgLoad();
+  crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),groupsReady);
   try {
-    await tgLoad();
+    await groupsReady;
     const pendencies = await loadReportPendencies();
     // Evita sobrescrever outra tela se o usuário navegar durante o carregamento.
-    if (currentView !== 'home' || !document.getElementById('report-pending-list')) return;
+    if (currentView !== 'home' || homeRequest!==crmHomeRequest || !document.getElementById('report-pending-list')) return;
     document.getElementById('report-pending-count').textContent = String(pendencies.length);
     document.getElementById('report-pending-stat').textContent = String(pendencies.length);
     document.getElementById('report-pending-list').innerHTML = crmGroupedLessons(pendencies);
