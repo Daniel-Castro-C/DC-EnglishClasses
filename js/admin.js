@@ -125,7 +125,7 @@ async function loadReportPendencies(){
   const pending=[], registered=new Set();
   const studentById=new Map(students.filter(s=>!s.is_test_profile).map(s=>[s.id,s]));
   for(let offset=0;;offset+=500){
-    const {data,error}=await sb.from('lessons').select('id,student_id,lesson_date,title,report_pending_dismissed,resources(type)').order('id',{ascending:true}).range(offset,offset+499);
+    const {data,error}=await sb.from('lessons').select('id,student_id,group_id,lesson_date,title,report_pending_dismissed,resources(type)').order('id',{ascending:true}).range(offset,offset+499);
     if(error)throw error;
     const batch=data||[];
     for(const lesson of batch){
@@ -141,7 +141,7 @@ async function loadReportPendencies(){
   for(const student of studentById.values()){
     for(const date of ccManualDoneDates(ccData(student))){
       if(registered.has(student.id+'|'+date)||crmDismissed(student.id,'missing:'+date))continue;
-      pending.push({lesson:{student_id:student.id,lesson_date:date,title:'Aula realizada'},studentName:student.full_name||student.email||'Aluno',missingLesson:true});
+      pending.push({lesson:{student_id:student.id,lesson_date:date,title:'Aula realizada',group_id:ccData(student).events[date]?.group_id||null},studentName:student.full_name||student.email||'Aluno',missingLesson:true});
     }
   }
   return pending.sort((a,b)=>(b.lesson.lesson_date||'').localeCompare(a.lesson.lesson_date||'')||a.studentName.localeCompare(b.studentName,'pt-BR'));
@@ -204,22 +204,14 @@ async function renderHome(){
   `;
   renderRecentAdminActivity();
   try {
+    await tgLoad();
     const pendencies = await loadReportPendencies();
     // Evita sobrescrever outra tela se o usuário navegar durante o carregamento.
     if (currentView !== 'home' || !document.getElementById('report-pending-list')) return;
     document.getElementById('report-pending-count').textContent = String(pendencies.length);
     document.getElementById('report-pending-stat').textContent = String(pendencies.length);
-    document.getElementById('report-pending-list').innerHTML = pendencies.length
-      ? pendencies.map(({lesson, studentName, missingLesson}) => `
-        <div class="crm-pending-row">${crmIcon("file")}<div class="crm-pending-text"><strong>${escapeHtml(studentName)}</strong><small>${missingLesson?'Cadastro da aula e relatório pendentes':'Relatório pendente'} · aula do dia
-          ${lesson.lesson_date ? escapeHtml(formatDate(lesson.lesson_date)) : 'não informado'}
-          ${lesson.lesson_date ? '' : `(${escapeHtml(lesson.title)})`}</small></div>
-          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
-            ${missingLesson ? `<button class="btn-ghost" onclick="openMissingLesson(\'${lesson.student_id}\', \'${lesson.lesson_date}\')">Cadastrar aula</button>${crmDismissButton(lesson.student_id,"missing:"+lesson.lesson_date)}` : `<button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
-            <button class="resource-action" onclick="dismissReportPending('${lesson.id}')" aria-label="Descartar pendência da aula ${escapeAttr(lesson.title)}">Descartar pendência</button>`}
-          </div>
-        </div>`).join('')
-      : '<div class="small-note">Nenhuma aula realizada aguarda cadastro ou relatório.</div>';
+    document.getElementById('report-pending-list').innerHTML = crmGroupedLessons(pendencies);
+    document.getElementById('crm-other-pending').innerHTML=crmOtherPending();
   } catch(error) {
     console.error('Falha ao consultar pendências de relatórios:', error);
     if (currentView !== 'home') return;
@@ -1840,4 +1832,10 @@ function crmEditLesson(id){
 function crmCompletedLocalCount(){
  const dates=new Set(currentLessons.map(l=>l.lesson_date).filter(Boolean));
  return currentLessons.length+ccManualDoneDates(ccData(currentStudent)).filter(d=>!dates.has(d)).length;
+}
+
+function crmGroupedLessons(pendencies){
+ const groups=new Map();
+ for(const p of pendencies){const l=p.lesson,g=tgGroups.find(x=>x.id===l.group_id);const key=g&&l.lesson_date?g.id+'|'+l.lesson_date+'|'+(p.missingLesson?'missing':'report'):'single|'+(l.id||l.student_id+'|'+l.lesson_date);if(!groups.has(key))groups.set(key,{g,rows:[]});groups.get(key).rows.push(p);}
+ return [...groups.values()].map(({g,rows})=>{const first=rows[0],l=first.lesson;return '<div class="crm-pending-row">'+crmIcon('file')+'<div class="crm-pending-text"><strong>'+escapeHtml(g?.name||first.studentName)+'</strong><small>'+ (first.missingLesson?'Cadastro da aula e relatório pendentes':'Relatório pendente')+' · '+escapeHtml(l.lesson_date?formatDate(l.lesson_date):l.title)+(g?' · '+rows.length+' de '+g.members.length+' alunos':'')+'</small>'+rows.map(({lesson,studentName,missingLesson})=>'<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px">'+(g?'<span>'+escapeHtml(studentName)+'</span>':'')+(missingLesson?'<button class="btn-ghost" onclick="'+escapeAttr(g?"tgOpenMissing('"+g.id+"','"+lesson.lesson_date+"')":"openMissingLesson('"+lesson.student_id+"','"+lesson.lesson_date+"')")+'">Cadastrar aula</button>'+crmDismissButton(lesson.student_id,'missing:'+lesson.lesson_date):'<button class="btn-ghost" onclick="openPendingReport(&quot;'+lesson.student_id+'&quot;,&quot;'+lesson.id+'&quot;)">Adicionar relatório</button><button class="resource-action" onclick="dismissReportPending(&quot;'+lesson.id+'&quot;)">Descartar pendência</button>')+'</div>').join('')+'</div></div>';}).join('')||'<div class="small-note">Nenhuma aula realizada aguarda cadastro ou relatório.</div>';
 }
