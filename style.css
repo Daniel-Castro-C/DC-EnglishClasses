@@ -1143,7 +1143,7 @@ body.badge-celebration-open{overflow:hidden;}
   outline:3px solid #81B9ED;outline-offset:3px;
 }
 /* Prévia liberada somente no perfil de teste do professor. */
-.badge-preview-tools{display:flex;justify-content:flex-end;margin:-6px 0 16px;}
+.badge-preview-tools{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin:-6px 0 16px;}
 .badge-preview-tools button{
   background:transparent;border:1px dashed var(--line);
   border-radius:9px;color:var(--text-soft);
@@ -1195,3 +1195,27 @@ body.dark-mode .badge-celebration-done:hover{background:#6395CC;}
 .student-test-badge-preview:focus-visible{outline:3px solid #92C7F3;outline-offset:3px;}
 .student-test-menu .student-test-badge-preview + .student-test-exit{margin-top:0;}
 @media(prefers-reduced-motion:reduce){.student-test-badge-preview{transition:none;}}
+
+
+/* The home call card is shared with the isolated visual preview. */
+  .home-lesson-call{display:flex;align-items:center;gap:14px;margin:0 0 24px;padding:18px 20px;background:var(--paper-card);border:1px solid var(--line);border-radius:12px;}
+  .home-lesson-call-icon{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:10px;background:var(--sky-soft);color:var(--ink);}
+  .home-lesson-call-icon svg,.home-lesson-call-action svg{width:22px;height:22px;}
+  .home-lesson-call-copy{flex:1;min-width:0;}
+  .home-lesson-call-copy h2{font:700 16px/1.4 'IBM Plex Sans',sans-serif;margin:0 0 4px;color:var(--text);}
+  .home-lesson-call-copy p{font-size:13.5px;color:var(--text-soft);margin:0;line-height:1.5;}
+  .home-lesson-call-action.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;flex:none;padding:13px 20px;text-decoration:none;text-align:center;}
+  @media(max-width:600px){.home-lesson-call{flex-wrap:wrap;padding:16px;gap:12px;}.home-lesson-call-action.btn-primary{width:100%;}}
+/* Lesson day uses the existing navy/sky palette, in both themes. */
+.home-lesson-call.is-lesson-day{background:var(--sky-soft);border-color:var(--sky);box-shadow:inset 4px 0 var(--sky);}
+.home-lesson-call.is-lesson-day .home-lesson-call-icon{background:#D3E1EF;color:var(--ink);}
+.home-lesson-call.is-lesson-day .home-lesson-call-copy h2{color:var(--ink);}
+.home-lesson-call.is-lesson-day .home-lesson-call-copy p{color:#305580;}
+.home-lesson-call.is-lesson-day .home-lesson-call-action{background:var(--ink);color:#fff;}
+.home-lesson-call.is-lesson-day .home-lesson-call-action:hover{background:var(--ink-dark);}
+body.dark-mode .home-lesson-call.is-lesson-day{background:#243653;border-color:#8EBCE6;box-shadow:inset 4px 0 #8EBCE6;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-icon{background:#2E4565;color:#B6D7F6;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-copy h2{color:#E7ECF5;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-copy p{color:#B9D8F5;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-action{background:#315580;color:#fff;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-action:hover{background:#3F6391;}
