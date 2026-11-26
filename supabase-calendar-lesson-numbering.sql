@@ -12,7 +12,7 @@ create or replace function public.portal_calendar_resequence(p_student uuid,p_gr
 returns void language plpgsql security invoker set search_path='' as $$
 declare members uuid[];
 begin
- if not public.is_admin() then raise exception 'Access denied'; end if;
+ if not coalesce(public.is_admin(),false) then raise exception 'Access denied'; end if;
  if p_group is null then
   with ranked as (
     select id, row_number() over(order by coalesce(lesson_date,created_at::date),created_at,id) as n
@@ -41,12 +41,53 @@ end $$;
 revoke all on function public.portal_calendar_resequence(uuid,uuid) from public,anon;
 grant execute on function public.portal_calendar_resequence(uuid,uuid) to authenticated;
 
+-- Resolve the full registered session, including unambiguous historical group records.
+create or replace function public.portal_calendar_lesson_ids(p_group uuid,p_student uuid,p_date date)
+returns uuid[] language plpgsql security invoker set search_path='' as $$
+declare ids uuid[]; members uuid[]; n integer; variants integer;
+begin
+ if not coalesce(public.is_admin(),false) then raise exception 'Access denied'; end if;
+ if p_date is null or (p_group is null)=(p_student is null) then raise exception 'Invalid lesson'; end if;
+ if p_group is null then
+  select array_agg(id) into ids from public.lessons where student_id=p_student and group_id is null and lesson_date=p_date;
+  if coalesce(cardinality(ids),0)<>1 then raise exception 'Ambiguous lesson'; end if;
+ else
+  select g.members into strict members from public.portal_groups g where g.id=p_group;
+  select array_agg(id),count(distinct student_id) into ids,n from public.lessons where group_id=p_group and lesson_date=p_date;
+  if ids is null then
+   select array_agg(id),count(distinct student_id),count(distinct (title,coalesce(topic,''))) into ids,n,variants from public.lessons
+    where group_id is null and student_id=any(members) and lesson_date=p_date;
+   if n<>cardinality(members) or cardinality(ids)<>n or variants<>1 then raise exception 'Ambiguous historical group lesson'; end if;
+  elsif cardinality(ids)<>n then raise exception 'Ambiguous group lesson'; end if;
+ end if;
+ return ids;
+end $$;
+revoke all on function public.portal_calendar_lesson_ids(uuid,uuid,date) from public,anon;
+grant execute on function public.portal_calendar_lesson_ids(uuid,uuid,date) to authenticated;
+
+create or replace function public.portal_calendar_lesson_delete(p_group uuid,p_student uuid,p_date date,p_ids uuid[])
+returns void language plpgsql security invoker set search_path='' as $$
+declare ids uuid[]; affected integer;
+begin
+ if not coalesce(public.is_admin(),false) then raise exception 'Access denied'; end if;
+ lock table public.lessons in share row exclusive mode;
+ ids:=public.portal_calendar_lesson_ids(p_group,p_student,p_date);
+ if ids is null or p_ids is null or cardinality(ids)<>cardinality(p_ids) or not (ids <@ p_ids and p_ids <@ ids) then raise exception 'Lesson changed; refresh'; end if;
+ -- The resource foreign key cascades. Never delete storage objects: shared files may have other references.
+ delete from public.lessons where id=any(ids);
+ get diagnostics affected = row_count;
+ if affected<>cardinality(ids) then raise exception 'Lesson changed; refresh'; end if;
+ perform public.portal_calendar_resequence(p_student,p_group);
+end $$;
+revoke all on function public.portal_calendar_lesson_delete(uuid,uuid,date,uuid[]) from public,anon;
+grant execute on function public.portal_calendar_lesson_delete(uuid,uuid,date,uuid[]) to authenticated;
+
 create or replace function public.portal_calendar_lesson_save(
  p_group uuid,p_student uuid,p_date date,p_title text,p_topic text,p_members uuid[],p_materials jsonb,p_edit boolean
 ) returns void language plpgsql security invoker set search_path='' as $$
 declare sid uuid; lid uuid; m jsonb; members uuid[]; ids uuid[]; expected uuid[];
 begin
- if not public.is_admin() then raise exception 'Access denied'; end if;
+ if not coalesce(public.is_admin(),false) then raise exception 'Access denied'; end if;
  if p_date is null or (p_group is null)=(p_student is null) or p_title is not null and btrim(p_title)='' then raise exception 'Invalid lesson'; end if;
  if coalesce(cardinality(p_members),0)=0 or p_materials is null or jsonb_typeof(p_materials)<>'array' or p_edit is null then raise exception 'Invalid request'; end if;
  -- Serialize lesson creation/reordering, including concurrent historic registrations.
@@ -58,8 +99,8 @@ begin
   if p_members<>array[p_student] then raise exception 'Invalid student'; end if;
  end if;
  if p_edit then
-  select array_agg(id),array_agg(student_id) into ids,expected from public.lessons l
-   where l.lesson_date=p_date and (p_group is not null and l.group_id=p_group or p_group is null and l.group_id is null and l.student_id=p_student);
+  ids:=public.portal_calendar_lesson_ids(p_group,p_student,p_date);
+  select array_agg(student_id) into expected from public.lessons where id=any(ids);
   if ids is null or not (expected <@ p_members and p_members <@ expected) or cardinality(ids)<>cardinality(p_members) then raise exception 'Lesson changed; refresh'; end if;
  elsif exists(select 1 from public.lessons where student_id=any(p_members) and lesson_date=p_date) then
   raise exception 'Aula já cadastrada nesta data; atualize o calendário';

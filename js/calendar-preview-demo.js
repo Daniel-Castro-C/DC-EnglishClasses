@@ -15,6 +15,14 @@ const sb={
  async rpc(name,args){
   if(name==='save_admin_calendar'){const row={calendar_key:args.p_key,revision:args.p_revision+1,payload:ccClone(args.p_payload)};demoStates.set(row.calendar_key,row);return {data:row.revision};}
   if(name==='portal_group_calendar_save'){for(const v of args.p_changes)demoStates.set(v.id,{calendar_key:v.id,revision:v.revision+1,payload:ccClone(v.payload)});if(args.p_schedule){const x=args.p_schedule;Object.assign(demoGroup,x);demoGroup.days=x.days;}return {};}
+  if(name==='portal_calendar_lesson_delete'){
+   const existing=demoLessons.filter(l=>l.lesson_date===args.p_date&&(args.p_group?l.group_id===args.p_group:l.student_id===args.p_student&&!l.group_id));
+   if(existing.length!==args.p_ids.length||existing.some(l=>!args.p_ids.includes(l.id)))return {error:new Error('Aula alterada; recarregue')};
+   demoLessons=demoLessons.filter(l=>!args.p_ids.includes(l.id));
+   const sorted=demoLessons.filter(l=>args.p_group?l.group_id===args.p_group:l.student_id===args.p_student).sort((a,b)=>a.lesson_date.localeCompare(b.lesson_date));
+   const dates=[...new Set(sorted.map(l=>l.lesson_date))];for(const l of sorted)if(l.title_automatic)l.title='Class #'+(dates.indexOf(l.lesson_date)+1);
+   demoRefresh();return {};
+  }
   if(name!=='portal_calendar_lesson_save')return {error:new Error('Operação não simulada')};
   for(const id of args.p_members){
    let l=demoLessons.find(l=>l.student_id===id&&l.lesson_date===args.p_date);

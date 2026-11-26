@@ -109,3 +109,4 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .cc-schedule-card .cc-weekday-chip{min-width:50px;padding:7px 8px;gap:5px}
 @container (min-width:600px){.admin-crm .cc-schedule-base .cc-schedule-fields{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @container (max-width:300px){.admin-crm .cc-schedule-card .cc-schedule-fields{grid-template-columns:minmax(0,1fr)}}
+.admin-crm .cc-lesson-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
