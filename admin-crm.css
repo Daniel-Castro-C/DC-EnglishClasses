@@ -94,3 +94,7 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .cc-material-name{flex:2;min-width:120px;overflow-wrap:anywhere;font-size:13px}
 .admin-crm .cc-material-row select{margin:3px 0 0}
 .admin-crm .cc-material-drop input[hidden]{display:none}
+
+/* Compact, accessible numbering option below the lesson title. */
+.admin-crm .cc-lesson-form .cc-lesson-number-toggle{display:flex;align-items:center;gap:8px;width:fit-content;margin:4px 0 14px;cursor:pointer;line-height:1.4}
+.admin-crm .cc-lesson-form .cc-lesson-number-toggle input[type="checkbox"]{appearance:auto;flex:0 0 15px;width:15px;height:15px;min-width:15px;min-height:15px;max-width:15px;margin:0;padding:0;accent-color:var(--crm-blue);cursor:pointer}

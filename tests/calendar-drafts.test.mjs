@@ -344,3 +344,14 @@ test('one drop stages mixed file types automatically without an extra add-to-sav
  run("ccChangeLessonFileType(2,'pdf');ccRemoveLessonFile(0)");
  assert.equal(run("ccLessonMap(ctx).get(ccSelected).files.map(r=>r.type).join(',')"),'rep,pdf');
 });
+
+test('automatic numbering is a compact checkbox immediately after the editable title',()=>{
+ const {run}=setupUnified();
+ run("draft.payloads.s1.events['2026-11-23']={status:'done'}");
+ const html=run("ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))");
+ assert.match(html,/<label class="cc-lesson-number-toggle"><input type="checkbox" id="cc-lesson-auto" checked onchange="ccLessonAuto\(\)">/);
+ assert.ok(html.indexOf('id="cc-lesson-title"')<html.indexOf('id="cc-lesson-auto"'));
+ assert.ok(html.indexOf('id="cc-lesson-auto"')<html.indexOf('id="cc-lesson-topic"'));
+ const css=readFileSync('admin-crm.css','utf8');
+ assert.match(css,/\.cc-lesson-number-toggle input\[type="checkbox"\]\{[^}]*width:15px;height:15px/);
+});
