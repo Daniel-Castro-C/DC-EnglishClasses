@@ -146,3 +146,31 @@ test('saving refuses dates published since draft was created',async()=>{
  assert.equal(writes,0);
  assert.equal(run("ccDrafts.get(ctx.key).dirty"),true);
 });
+
+test('published lesson details include number and topic in both calendars',()=>{
+ for(const group of [false,true]){
+  const {run,ctx}=setup({group});const el={innerHTML:''};
+  ctx.document={getElementById:()=>el};
+  const lesson={student_id:'s1',lesson_date:'2026-11-24',title:'Class #23',topic:'Managing different personalities'};
+  ctx.fixture=group?[{...lesson,group_id:'g1'},{...lesson,student_id:'s2',group_id:'g1'}]:[lesson];
+  run((group?'tgSelected.calendarLessons=fixture;':'currentLessons=fixture;')+"ccSelected='2026-11-24';ccEditor()");
+  assert.match(el.innerHTML,/Aula cadastrada: Class #23/);
+  assert.match(el.innerHTML,/<strong>Tema:<\/strong> Managing different personalities/);
+  assert.equal((el.innerHTML.match(/Class #23/g)||[]).length,1);
+  assert.match(el.innerHTML,/Aulas cadastradas são protegidas/);
+ }
+});
+test('individual calendar shows registered topic even when the lesson belongs to a group',()=>{
+ const {run,ctx}=setup();const el={innerHTML:''};ctx.document={getElementById:()=>el};
+ run("tgGroups=[{id:'g1',name:'Turma',members:['s1','s2'],start:'2026-11-01',days:'1',time:'18:00'}];currentLessons=[{student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #23',topic:'Teamwork'}];ccSelected='2026-11-23';ccEditor()");
+ assert.match(el.innerHTML,/<strong>Tema:<\/strong> Teamwork/);
+ assert.match(el.innerHTML,/Abrir calendário da turma/);
+});
+test('published topics are escaped and missing topic is clearly indicated',()=>{
+ const {run,ctx}=setup();
+ ctx.escapeHtml=v=>String(v).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ run("ctx.lessons.push({student_id:'s1',lesson_date:'2026-11-24',title:'Class #23',topic:'<script>'},{student_id:'s1',lesson_date:'2026-11-24',title:'Class #24',topic:null})");
+ const html=run("ccPublishedDetails(ctx,'2026-11-24')");
+ assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);
+ assert.match(html,/Não cadastrado/);
+});

@@ -212,13 +212,27 @@ function ccDeleteDate(ctx,d,date){
   if(ccIsHabitual(x,date)||ccIsHabitual(ccModel(ctx,d),date))x.events[date]={skip:true,...group};else delete x.events[date];
  }
 }
+// A registered lesson already carries its topic in both calendar contexts.
+function ccPublishedDetails(ctx,date){
+ const seen=new Set();
+ return ctx.lessons.filter(l=>l.lesson_date===date).map(l=>{
+  const title=String(l.title||'Aula realizada').trim(),topic=String(l.topic||'').trim();
+  // The same published group lesson is represented once per participant.
+  if(ctx.group&&l.group_id===ctx.group.id){
+   const key=JSON.stringify([title,topic]);
+   if(seen.has(key))return '';
+   seen.add(key);
+  }
+  return '<p>Aula cadastrada: '+ccEsc(title)+'</p><p><strong>Tema:</strong> '+ccEsc(topic||'Não cadastrado')+'</p>';
+ }).join('');
+}
 function ccEditor(){
  const ctx=ccContext(),d=ccDraft(ctx),el=document.getElementById('cc-edit');if(!d||!el||!ccSelected)return;
  const date=ccSelected,state=ccDateState(ctx,d,date),x=ccModel(ctx,d),e=state.event||{};
  const group=!ctx.group&&ccGroupForDate(ctx.members[0].id,date);
  const header='<hr><h3>'+ccEsc(formatDate(date))+'</h3>';
- if(group){el.innerHTML=header+'<p>Esta aula pertence à turma '+ccEsc(group.name)+'.</p><button class="btn-dark-sm" onclick="tgOpenDate(&quot;'+ccEsc(group.id)+'&quot;,&quot;'+date+'&quot;)">Abrir calendário da turma</button>';return;}
- if(state.real){el.innerHTML=header+ctx.lessons.filter(l=>l.lesson_date===date).map(l=>'<p>Aula cadastrada: '+ccEsc(l.title||'Aula realizada')+'</p>').join('')+'<p class="small-note">Aulas cadastradas são protegidas. Edite o cadastro em Aulas e materiais.</p>';return;}
+ if(group){el.innerHTML=header+ccPublishedDetails(ctx,date)+'<p>Esta aula pertence à turma '+ccEsc(group.name)+'.</p><button class="btn-dark-sm" onclick="tgOpenDate(&quot;'+ccEsc(group.id)+'&quot;,&quot;'+date+'&quot;)">Abrir calendário da turma</button>';return;}
+ if(state.real){el.innerHTML=header+ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas. Edite o cadastro em Aulas e materiais.</p>';return;}
  try{ccCanEditDate(ctx,d,date);}catch(error){el.innerHTML=header+'<p role="alert">'+ccEsc(error.message)+'</p>';return;}
  if(state.status==='rescheduled'){
   el.innerHTML=header+'<p><strong>Reagendado</strong> para '+ccEsc(formatDate(e.rescheduled_to))+'</p><div class="row"><button class="btn-ghost" onclick="ccJump(&quot;'+ccEsc(e.rescheduled_to)+'&quot;)">Ir para nova data</button><button class="btn-ghost" onclick="ccRemove()">Excluir registro e cancelar reagendamento</button></div>';return;}
