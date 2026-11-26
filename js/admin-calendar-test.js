@@ -592,12 +592,7 @@ function crmGroupDailyAgenda(rows){
   return {...row,full_name:row.ccMembers.map(s=>s.full_name||s.email||'Aluno sem nome').join(' · '),lesson_time:(group?.calendar_events?.[row.ccDate]?.time||row.ccMembers.find(s=>s.lesson_time)?.lesson_time||'').slice(0,5),ccStatus:statuses.size>1?'mixed':row.ccStatus,ccRegistered:row.ccMembers.some(s=>s.ccRegistered)};
  }).sort((a,b)=>(a.lesson_time||'99').localeCompare(b.lesson_time||'99'));
 }
-// A group's status and attendance belong to its own calendar, never an individual quick-save.
-function crmTodayStatus(row){
- if(!row.ccGroupId)return ccQuickStatus(row);
- const label=row.ccStatus==='mixed'?'Frequência mista':ccStatus[row.ccStatus]||'—';
- return '<button type="button" class="btn-ghost crm-group-status" title="Gerenciar status e frequência da turma" onclick="tgOpenDate(&quot;'+ccEsc(row.ccGroupId)+'&quot;,&quot;'+ccEsc(row.ccDate)+'&quot;)">'+ccEsc(label)+'</button>';
-}
+function crmTodayStatus(row){return ccQuickStatus(row);}
 function crmTodayActions(row){
  const members=row.ccMembers||[row],links=new Map();
  for(const member of members){const link=(member.permanent_lesson_link||'').trim();if(link&&!links.has(link))links.set(link,member);}
@@ -608,7 +603,44 @@ function crmTodayActions(row){
 function crmTodayRowsHtml(classes){
  return classes.map(row=>`<tr><td class="crm-time">${ccEsc(row.lesson_time.slice(0,5)||'—')}</td><td>${ccEsc(row.full_name||row.email||'Aluno sem nome')}</td><td><span class="crm-kind ${row.ccType.startsWith('Reposição')?'is-replacement':''}">${ccEsc(row.ccType)}</span></td><td>${crmTodayStatus(row)}</td><td>${crmTodayActions(row)}</td></tr>`).join('');
 }
-function ccQuickStatus(student){const status=student.ccStatus;return '<select class="crm-quick-status" data-status="'+ccEsc(status)+'" aria-label="Status da aula de '+ccEsc(student.full_name||student.email||'Aluno')+'" '+(student.ccRegistered?'disabled title="Aula cadastrada: altere o status pelo calendário"':'onchange="ccQuickSave(this,&quot;'+ccEsc(student.id)+'&quot;,&quot;'+ccEsc(student.ccDate)+'&quot;)"')+'>'+Object.entries(ccStatus).filter(([k])=>k!=='rescheduled').map(([k,v])=>'<option value="'+k+'" '+(k===status?'selected':'')+'>'+ccEsc(v)+'</option>').join('')+'</select>'+(student.ccRegistered?'<small class="crm-muted" style="display:block">Via cadastro</small>':'')}
+function ccQuickStatus(student){
+ const status=student.ccStatus,group=student.ccGroupId;
+ const options=Object.entries(ccStatus).filter(([k])=>k!=='rescheduled'&&(!group||k!=='absent'||status==='absent'));
+ if(status==='mixed')options.unshift(['mixed','Frequência mista']);
+ const handler=group?'ccQuickGroupSave':'ccQuickSave';
+ return '<select class="crm-quick-status" data-status="'+ccEsc(status)+'" aria-label="Status da aula de '+ccEsc(student.full_name||student.email||'Aluno')+'" '+(student.ccRegistered?'disabled title="Aula cadastrada: altere o status pelo calendário"':'onchange="'+handler+'(this,&quot;'+ccEsc(group||student.id)+'&quot;,&quot;'+ccEsc(student.ccDate)+'&quot;)"')+'>'+options.map(([k,v])=>'<option value="'+k+'" '+(k===status?'selected':'')+((k==='mixed'||group&&k==='absent')?' disabled':'')+'>'+ccEsc(group&&k==='owed'?'Falta de todos (com reposição)':v)+'</option>').join('')+'</select>'+(student.ccRegistered?'<small class="crm-muted" style="display:block">Via cadastro</small>':'');
+}
+async function ccQuickGroupSave(select,id,date){
+ const status=select.value,previous=select.dataset.status;
+ if(ccSaving||!Object.hasOwn(ccStatus,status)||['rescheduled','absent'].includes(status)){select.value=previous;return;}
+ if(!ccCloudReady){select.value=previous;return alert('Calendário indisponível. Recarregue a página antes de editar.');}
+ const group=tgGroups.find(g=>g.id===id),members=group?.members.map(mid=>students.find(s=>s.id===mid&&!s.is_test_profile))||[];
+ if(!group||!members.length||members.some(s=>!s)){select.value=previous;return alert('A turma foi alterada. Reabra a Home antes de tentar novamente.');}
+ if(members.some(s=>ccHasDirtyForMember(s.id))){select.value=previous;return alert('Salve ou descarte as alterações pendentes nos calendários da turma antes de alterar o status.');}
+ ccSaving=true;select.disabled=true;
+ let committed=false,refreshFailed=false;
+ try{
+  // Use a fresh isolated draft and the same staging rules as the collective calendar.
+  const ctx={key:'group:'+id,group,members,lessons:group.calendarLessons||[]};
+  const d={payloads:Object.fromEntries(members.map(s=>[s.id,ccData(s)])),schedule:ccGroupSchedule(group),revisions:Object.fromEntries(members.map(s=>[s.id,ccCloud.get(s.id)?.revision||0]))};
+  const {data,error}=await sb.from('lessons').select('id').in('student_id',group.members).eq('lesson_date',date).limit(1);
+  if(error)throw error;
+  if(data?.length)throw Error('Esta aula já tem cadastro. Altere o status pelo calendário da turma.');
+  const base=ccGroupBase(ctx,d,date);
+  if(base.skip||base.status==='rescheduled')throw Error('A aula foi excluída ou reagendada. Atualize a agenda.');
+  ccStageGroupDate(ctx,d,date,status,{},base.time||ccSchedule(d.schedule,date).time,base.notes||'',base.original||'');
+  const x=d.schedule,p_schedule={...group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events};
+  const result=await sb.rpc('portal_group_calendar_save',{p_group:id,p_schedule,p_changes:members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]}))});
+  if(result.error)throw result.error;
+  committed=true;
+  // Invalidate old clean drafts; reload only after the atomic save succeeds.
+  ccDrafts.delete(ctx.key);
+  try{await ccLoadCloud();await tgLoad();}catch(error){console.error(error);ccCloudReady=false;refreshFailed=true;}
+ }catch(error){console.error(error);select.value=previous;alert('Não foi possível salvar o status coletivo. '+(error.message||'Tente novamente.'));}
+ finally{ccSaving=false;if(select.isConnected){select.disabled=refreshFailed;if(!committed)select.value=previous;}}
+ if(committed&&refreshFailed){alert('Status coletivo salvo. Recarregue a página para consultar o calendário atualizado.');return;}
+ if(committed&&currentView==='home')await renderHome();
+}
 async function ccQuickSave(select,id,date){const s=students.find(v=>v.id===id),status=select.value,previous=select.dataset.status;if(!s||!Object.hasOwn(ccStatus,status)||status==='rescheduled')return;select.disabled=true;try{const {data,error}=await sb.from('lessons').select('id').eq('student_id',id).eq('lesson_date',date).limit(1);if(error)throw error;if(data?.length){select.value=previous;select.dataset.status=previous;select.title='Aula cadastrada: altere o status pelo calendário';alert('Altere o status desta aula cadastrada pelo calendário.');if(currentView==='home')await renderHome();return;}if(ccHasDirtyForMember(id)){select.value=previous;return alert('Salve as alterações pendentes no calendário individual.');}const x=ccData(s);if(ccGroupForDate(id,date)){select.value=previous;return alert('Registre a frequência da turma pelo módulo Turmas.');}x.events[date]={...(x.events[date]||{}),status};if(!await ccWrite(id,x)){select.value=previous;return;}select.dataset.status=status;const feedback=document.getElementById('crm-agenda-feedback');if(feedback)feedback.textContent='Status salvo no calendário de '+(s.full_name||s.email)+'.';const other=document.getElementById('crm-other-pending');if(other)other.innerHTML=crmOtherPending();const count=document.getElementById('crm-replacement-stat');if(count)count.textContent=students.filter(v=>!v.is_test_profile).reduce((a,v)=>a+ccPending(ccData(v)),0);if(currentView==='home')await renderHome();}catch(error){console.error(error);select.value=previous;alert('Não foi possível salvar o status. Tente novamente.');}finally{if(select.isConnected)select.disabled=false}}
 async function ccOpenDate(id,date){await openStudent(id);ccDate=new Date(date+'T12:00:00');ccSelected=date;const existing=ccDrafts.get('student:'+id);if(existing){existing.date=ccDate;existing.selected=date;}ccActiveKey='';switchTab('calendario')}
 function ccGlobalView(){currentView='agenda';currentStudent=null;renderNav();let root=document.getElementById('main-content');root.innerHTML='<div class="topline"><h1>Agenda</h1></div><div class="box"><h3>Feriados e recessos</h3><div class="row"><label>Início<input type="date" id="cg-start"></label><label>Fim<input type="date" id="cg-end"></label><label>Tipo<select id="cg-type"><option value="holiday">Feriado</option><option value="break">Recesso</option></select></label><button class="btn-dark-sm" onclick="ccGlobalSave()">Adicionar</button></div>'+ccGlobal().map((e,i)=>'<p>'+ccEsc(e.start)+' a '+ccEsc(e.end)+' · '+ccEsc(ccStatus[e.status])+(e.name?' · '+ccEsc(e.name):'')+' <button class="btn-ghost" onclick="ccGlobalRemove('+i+')">Excluir</button></p>').join('')+'</div><div class="box"><h3>Agenda de hoje</h3>'+crmGroupDailyAgenda(ccAgenda(adminToday())).map(s=>'<p>'+ccEsc(s.lesson_time.slice(0,5)||'Sem horário')+' · '+ccEsc(s.full_name||s.email)+' · '+ccEsc(s.ccType)+' <button class="btn-ghost" onclick="'+(s.ccGroupId?'tgOpenDate':'ccOpenDate')+'(&quot;'+ccEsc(s.ccGroupId||s.id)+'&quot;,&quot;'+s.ccDate+'&quot;)">Calendário</button></p>').join('')+'</div>'}
