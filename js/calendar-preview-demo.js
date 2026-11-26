@@ -8,6 +8,7 @@ const crmRegisteredDates=new Set(),materialDisplayName=r=>r.name;
 const demoGroup={id:'demo-group',name:'Dupla de teste',members:['demo-2','demo-3'],start:'2026-11-19',days:'4',time:'21:00',calendar_events:{},calendarLessons:[],lessons:[],events:{}};
 let demoLessons=students.flatMap(s=>['2026-11-19','2026-11-26'].map((date,i)=>({id:crypto.randomUUID(),student_id:s.id,group_id:s.id==='demo-1'?null:demoGroup.id,lesson_date:date,title:'Class #'+(i+1),title_automatic:true,topic:i?'Conversation':'Introductions',resources:[{id:crypto.randomUUID(),name:(i?'Conversation':'Introductions')+' — Slides.pdf',type:'ppt'},{id:crypto.randomUUID(),name:(i?'Conversation':'Introductions')+' — Exercícios.docx',type:'ex'}]})));
 const demoStates=new Map(students.map(s=>[s.id,{calendar_key:s.id,revision:1,payload:{start:'2026-11-19',weekdays:'4',time:'21:00',events:{}}}]));
+demoStates.set('global',{calendar_key:'global',revision:1,payload:[{start:'2026-12-18',end:'2027-01-03',status:'break',name:'Recesso de fim de ano'}]});
 function demoRefresh(){currentLessons=demoLessons.filter(l=>l.student_id===currentStudent?.id);demoGroup.calendarLessons=demoLessons.filter(l=>demoGroup.members.includes(l.student_id));}
 const sb={
  storage:{from:()=>({upload:async()=>({error:null})})},
@@ -15,6 +16,22 @@ const sb={
  async rpc(name,args){
   if(name==='save_admin_calendar'){const row={calendar_key:args.p_key,revision:args.p_revision+1,payload:ccClone(args.p_payload)};demoStates.set(row.calendar_key,row);return {data:row.revision};}
   if(name==='portal_group_calendar_save'){for(const v of args.p_changes)demoStates.set(v.id,{calendar_key:v.id,revision:v.revision+1,payload:ccClone(v.payload)});if(args.p_schedule){const x=args.p_schedule;Object.assign(demoGroup,x);demoGroup.days=x.days;}return {};}
+  if(name==='portal_calendar_save_with_moves'){
+   if(args.p_changes.some(c=>demoStates.get(c.id)?.revision!==c.revision))return {error:new Error('Calendário alterado; recarregue')};
+   const before=ccClone(demoLessons),beforeGroup=ccClone(demoGroup),beforeStates=new Map([...demoStates].map(([k,v])=>[k,ccClone(v)]));
+   try{
+    for(const move of args.p_moves){
+     const existing=demoLessons.filter(l=>l.lesson_date===move.date&&(args.p_group?l.group_id===args.p_group:l.student_id===args.p_student&&!l.group_id));
+     if(existing.length!==move.ids.length||existing.some(l=>!move.ids.includes(l.id))||demoLessons.some(l=>l.lesson_date===move.to&&args.p_changes.some(c=>c.id===l.student_id)))throw Error('Aula alterada; recarregue');
+     for(const l of existing)l.lesson_date=move.to;
+     const result=await sb.rpc('portal_calendar_lesson_save',{p_group:args.p_group,p_student:args.p_student,p_date:move.to,p_title:move.title,p_topic:move.topic,p_members:existing.map(l=>l.student_id),p_materials:move.materials,p_edit:true});
+     if(result.error)throw result.error;
+    }
+    if(args.p_deletions.length){const result=await sb.rpc('portal_calendar_save_with_deletions',args);if(result.error)throw result.error;return result;}
+    if(args.p_group){await sb.rpc('portal_group_calendar_save',args);return {};}
+    const c=args.p_changes[0];return await sb.rpc('save_admin_calendar',{p_key:c.id,p_revision:c.revision,p_payload:c.payload});
+   }catch(error){demoLessons=before;Object.assign(demoGroup,beforeGroup);demoStates.clear();for(const [k,v] of beforeStates)demoStates.set(k,v);demoRefresh();return {error};}
+  }
   if(name==='portal_calendar_save_with_deletions'){
    // Validate every expected record and revision before mutating this isolated fixture.
    const ids=new Set(args.p_deletions.flatMap(e=>e.ids));

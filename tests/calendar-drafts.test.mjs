@@ -490,3 +490,78 @@ test('registered lesson consultation hides edit fields by default, shows title a
  run("draft.editLessonDate=''");
  assert.match(run(expression),/id="cc-lesson-edit-fields" hidden/);
 });
+
+for(const group of [false,true]){
+ test((group?'group':'individual')+': registered date move preserves records, uses single RPC and includes calendar projection',async()=>{
+  const {run,ctx}=setupUnified(group);ctx.calls=[];
+  ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),rpc:async(name,args)=>{ctx.calls.push({name,args});return {data:3}}};
+  run(`ctx.lessons.push({id:'a',student_id:'s1',lesson_date:'2026-11-23',title:'Class #2',topic:'Topic',group_id:${group?"'g1'":"null"},resources:[{id:'resource-a'}]});`);
+  if(group)run("ctx.lessons.push({id:'b',student_id:'s2',lesson_date:'2026-11-23',title:'Class #2',topic:'Topic',group_id:'g1'});");else run("currentLessons=ctx.lessons");
+  run("ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',newDate:'2027-01-01',automatic:true,topic:'Topic',files:[]});ccMarkDirty(ctx,draft);ccRender=()=>{};ccLoadCloud=async()=>{};tgLoad=async()=>{};loadLessonsFor=async()=>{}");
+  assert.equal(run("ccLessonNumber(ctx,'2027-01-01')"),'Class #1');
+  assert.equal(run("ccProjectLessonMoves(ctx,draft).payloads.s1.events['2026-11-23'].skip"),true);
+  assert.equal(run("ccProjectLessonMoves(ctx,draft).payloads.s1.events['2027-01-01'].status"),'done');
+  assert.equal(run("ctx.lessons[0].resources[0].id"),'resource-a');
+  assert.equal(run("draft.payloads.s1.events['2026-11-23']"),undefined);
+  await run("ccSaveAll()");
+  assert.equal(ctx.calls.length,1);assert.equal(ctx.calls[0].name,'portal_calendar_save_with_moves');
+  assert.deepEqual(Array.from(ctx.calls[0].args.p_moves[0].ids),group?['a','b']:['a']);
+  assert.equal(ctx.calls[0].args.p_moves[0].to,'2027-01-01');
+  if(group)assert.equal(ctx.calls[0].args.p_schedule.calendar_events['2027-01-01'].status,'done');
+ });
+ test((group?'group':'individual')+': holidays are gray and allow exceptional completed lessons',()=>{
+  const {run}=setupUnified(group);
+  assert.equal(run("ccNationalHolidays2027.length"),10);
+  assert.equal(run("ccGlobalStatus('2027-11-20')"),'holiday');
+  assert.equal(run("ccDateState(ctx,draft,'2027-01-01').status"),'holiday');
+  if(group)run("ccStageGroupDate(ctx,draft,'2027-01-01','done',{},'18:00','','')");
+  else run("draft.payloads.s1.events['2027-01-01']={status:'done',time:'18:00'}");
+  assert.equal(run("ccDateState(ctx,draft,'2027-01-01').status"),'done');
+  assert.equal(run("ccUnavailable('2027-01-01','done')"),'Confraternização Universal');
+  run("ccCloud.set('global',{payload:[{start:'2026-12-18',end:'2027-01-03',status:'break'}]})");
+  assert.equal(run("ccGlobalStatus('2026-12-22')"),'break');
+  assert.equal(run("ccGlobalStatus('2027-01-01')"),'holiday');
+ });
+}
+test('move to occupied date refuses without mutating draft',()=>{
+ const {run}=setupUnified();
+ run("ctx.lessons.push({id:'a',student_id:'s1',lesson_date:'2026-11-23'},{id:'b',student_id:'s1',lesson_date:'2026-11-24'});ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',newDate:'2026-11-24',automatic:true,files:[]})");
+ assert.throws(()=>run("ccProjectLessonMoves(ctx,draft)"),/Já há/);
+ assert.equal(run("Object.keys(draft.payloads.s1.events).length"),0);
+});
+test('partial group move keeps absent attendee and existing reschedule link',()=>{
+ const {run}=setupUnified(true);
+ run("ctx.lessons.push({id:'a',student_id:'s1',lesson_date:'2026-11-24',group_id:'g1'});draft.schedule.events['2026-11-23']={status:'rescheduled',rescheduled_to:'2026-11-24'};draft.schedule.events['2026-11-24']={status:'done',rescheduled_from:'2026-11-23'};for(const id of ['s1','s2']){draft.payloads[id].events['2026-11-23']={status:'rescheduled',rescheduled_to:'2026-11-24',group_id:'g1'};draft.payloads[id].events['2026-11-24']={status:id==='s1'?'done':'absent',group_id:'g1',group_status:'done',rescheduled_from:'2026-11-23',...(id==='s2'?{attendance_override:'absent'}:{})}};ccLessonMap(ctx).set('2026-11-24',{date:'2026-11-24',newDate:'2026-11-25',automatic:true,files:[]});var projected=ccProjectLessonMoves(ctx,draft)");
+ assert.equal(run("projected.payloads.s2.events['2026-11-25'].attendance_override"),'absent');
+ assert.equal(run("projected.payloads.s1.events['2026-11-23'].rescheduled_to"),'2026-11-25');
+ assert.equal(run("projected.schedule.events['2026-11-23'].rescheduled_to"),'2026-11-25');
+});
+test('new move RPC verifies exact IDs, wraps edits and calendar save, keeps resources',()=>{
+ const sql=readFileSync('supabase-calendar-lesson-moves.sql','utf8');
+ assert.match(sql,/security invoker set search_path=''/);
+ assert.match(sql,/public\.is_admin\(\)/);
+ assert.match(sql,/expected:=public\.portal_calendar_lesson_ids/);
+ assert.match(sql,/update public\.lessons set lesson_date=destination/);
+ assert.match(sql,/perform public\.portal_calendar_lesson_save/);
+ assert.match(sql,/public\.portal_calendar_save_with_deletions/);
+ assert.match(sql,/public\.portal_group_calendar_save/);
+ assert.match(sql,/public\.save_admin_calendar/);
+ assert.doesNotMatch(sql,/delete from public\.lessons/);
+});
+
+test('rescheduling waits for explicit confirmation instead of submitting a partial year',()=>{
+ const {run,ctx}=setupUnified();
+ const source=readFileSync('js/admin-calendar-test.js','utf8');
+ assert.match(source,/id="cc-reschedule-date" type="date" min="1900-01-01" max="9999-12-31"/);
+ assert.doesNotMatch(source,/id="cc-reschedule-date"[^>]*onchange=/);
+ assert.match(source,/onclick="ccApplyReschedule\(\)">Confirmar reagendamento/);
+ const input={value:'0002-11-24',validity:{valid:false},reportValidity(){},focus(){}};
+ ctx.document={getElementById(id){return id==='cc-reschedule-date'?input:{value:id==='cc-time'?'18:00':''}}};
+ run("ccSelected='2026-11-23';ccUpdateToolbar=()=>{};ccRefreshGrid=()=>{};ccEditor=()=>{}");
+ assert.equal(run("ccApplyReschedule()"),false);
+ assert.equal(run("Object.keys(draft.payloads.s1.events).length"),0);
+ input.value='2026-11-24';input.validity.valid=true;
+ assert.equal(run("ccApplyReschedule()"),true);
+ assert.equal(run("draft.payloads.s1.events['2026-11-23'].rescheduled_to"),'2026-11-24');
+ assert.equal(run("draft.payloads.s1.events['2026-11-24'].status"),'planned');
+});
