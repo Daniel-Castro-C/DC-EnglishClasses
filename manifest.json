@@ -1,7 +1,7 @@
 {
   "name": "Portal do Aluno — D.C English Classes",
   "short_name": "D.C English",
-  "description": "Área do aluno da D.C English Classes: aulas, materiais e comunicação com o professor.",
+  "description": "Portal do aluno da D.C English Classes: aulas, materiais e comunicação com o professor.",
   "start_url": "index.html",
   "scope": ".",
   "display": "standalone",

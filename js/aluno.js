@@ -134,9 +134,8 @@ function renderLessonsList(){
   const tiles = pageItems.map(lesson => {
     const resources = (lesson.resources || []).slice().sort((x,y) => String(x.created_at || '').localeCompare(String(y.created_at || '')));
     const materials = resources.filter(r => !!r.file_path).map(r => {
-      const typeKey = 'lessons_type_' + r.type;
-      const typeLabel = t(typeKey) === typeKey ? (r.type || 'Arquivo') : t(typeKey);
-      const filename = r.name || typeLabel;
+      const typeLabel = materialTypeLabel(r.type);
+      const filename = materialDisplayName(r) || typeLabel;
       const hint = filename === typeLabel ? '' : filename;
       const aria = t('lessons_open_material', {type:typeLabel,name:filename});
       return `

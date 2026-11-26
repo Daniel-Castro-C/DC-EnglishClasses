@@ -163,8 +163,8 @@ const I18N = {
     nav_enviar: 'Enviar material',
     nav_gramatica: 'Guias de Gramática',
     nav_daniel: 'Pergunte ao Daniel',
-    area_aluno: 'Área do aluno',
-    painel_aluno: 'Painel do aluno',
+    area_aluno: 'Portal do aluno',
+    painel_aluno: 'Portal do aluno',
     logout: 'Sair',
     whatsapp_support: 'Fale com nossa equipe',
     loading: 'Carregando...',
@@ -172,9 +172,9 @@ const I18N = {
 
     // home.html
     welcome_greeting: 'Olá, {name}',
-    welcome_sub: 'Bem-vindo(a) à sua área do aluno',
+    welcome_sub: 'Bem-vindo(a) ao seu portal do aluno',
     card_perfil_desc: 'Sua foto, seu nome, sua senha e o link fixo da sua aula.',
-    card_aulas_desc: 'Slides, PDFs, exercícios e relatórios de cada aula já dada.',
+    card_aulas_desc: 'Slides, PDFs, exercícios e relatórios de desempenho de cada aula realizada.',
     card_enviar_desc: 'Quer usar algo específico na próxima aula? Envie aqui pro professor.',
     card_gramatica_desc: 'Materiais de gramática organizados por nível, pra estudar no seu ritmo.',
     card_daniel_desc: 'Tire dúvidas de inglês a qualquer momento, sem esperar a próxima aula.',
@@ -242,7 +242,7 @@ const I18N = {
     usage_placeholder: 'Conte pra gente como imagina usar esse material na aula — por exemplo: simular uma apresentação, praticar vocabulário, treinar leitura em voz alta, conversar sobre o assunto, tirar dúvidas específicas, etc.',
     notify_btn: 'Avisar ao professor',
     sending: 'Enviando...',
-    my_requests_title: 'Meus pedidos enviados',
+    my_requests_title: 'Meus pedidos de material',
     date_required_error: 'Escolha a data em que quer usar o material.',
     file_or_link_required_error: 'Envie um arquivo ou informe um link.',
     file_upload_error: 'Não foi possível enviar o arquivo. Tente novamente.',
@@ -349,17 +349,17 @@ const I18N = {
     nav_enviar: 'Send material',
     nav_gramatica: 'Grammar Guides',
     nav_daniel: 'Ask Daniel',
-    area_aluno: 'Student area',
-    painel_aluno: 'Student panel',
+    area_aluno: 'Student portal',
+    painel_aluno: 'Student portal',
     logout: 'Log out',
     whatsapp_support: 'Chat with the teacher support',
     loading: 'Loading...',
     cancel_btn: 'Cancel',
 
     welcome_greeting: 'Hi, {name}',
-    welcome_sub: 'Welcome to your student area',
+    welcome_sub: 'Welcome to your student portal',
     card_perfil_desc: 'Your photo, name, password, and your fixed lesson link.',
-    card_aulas_desc: 'Slides, PDFs, exercises and reports from every lesson given.',
+    card_aulas_desc: 'Slides, PDFs, exercises and performance reports from each completed lesson.',
     card_enviar_desc: 'Want to use something specific in your next lesson? Send it here to your teacher.',
     card_gramatica_desc: 'Grammar materials organized by level, so you can study at your own pace.',
     card_daniel_desc: 'Ask English questions anytime, without waiting for your next lesson.',
@@ -424,7 +424,7 @@ const I18N = {
     usage_placeholder: 'Tell us how you imagine using this material in the lesson — for example: simulate a presentation, practice vocabulary, train reading aloud, talk about the topic, clear up specific doubts, etc.',
     notify_btn: 'Notify teacher',
     sending: 'Sending...',
-    my_requests_title: 'My sent requests',
+    my_requests_title: 'My material requests',
     date_required_error: 'Choose the date you want to use the material.',
     file_or_link_required_error: 'Send a file or provide a link.',
     file_upload_error: 'Couldn\'t upload the file. Please try again.',
@@ -842,7 +842,7 @@ function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts, options){
   if (window.__dcTeacherTestMode) {
     html = '<div class="student-test-menu">' +
       '<div class="student-test-label"><span class="student-test-dot"></span> Modo Aluno de Teste</div>' +
-      '<button type="button" class="student-test-badge-preview" onclick="showTestBadgePreview()">✦ Simular conquista de badge</button>' +
+      '<button type="button" class="student-test-badge-preview" onclick="showTestBadgePreview()">✦ Simular conquista</button>' +
       '<button type="button" class="student-test-exit" onclick="leaveStudentTestMode()">← Voltar ao painel do professor</button>' +
       '</div>' + html;
   }
@@ -910,36 +910,36 @@ Object.assign(I18N.pt, {
   dashboard_intro:'Seu inglês continua evoluindo. Escolha por onde começar hoje.',
   dashboard_continue:'CONTINUE APRENDENDO',
   dashboard_hero_title:'Suas aulas, em um só lugar.',
-  dashboard_hero_desc:'Revise apresentações, exercícios e relatórios no seu ritmo.',
+  dashboard_hero_desc:'Revise slides, exercícios e relatórios de desempenho no seu ritmo.',
   dashboard_hero_action:'Ver minhas aulas',
   dashboard_explore:'Explorar',
   dashboard_recent_title:'Materiais recentes',
   dashboard_recent_empty:'Os materiais das suas aulas aparecerão aqui.',
   dashboard_recent_error:'Não foi possível consultar os materiais recentes.',
   dashboard_quick_title:'Acesso rápido',
-  dashboard_profile_short:'Meu perfil',
-  dashboard_send_short:'Enviar material',
+  dashboard_profile_short:I18N.pt.nav_perfil,
+  dashboard_send_short:I18N.pt.nav_enviar,
   dashboard_lessons_summary:'aulas disponíveis',
-  dashboard_grammar_title:'Guias de gramática',
-  dashboard_ask_title:'Pergunte ao Daniel'
+  dashboard_grammar_title:I18N.pt.nav_gramatica,
+  dashboard_ask_title:I18N.pt.nav_daniel
 });
 Object.assign(I18N.en, {
   dashboard_eyebrow:'YOUR LEARNING SPACE',
   dashboard_intro:'Your English keeps improving. Choose where to start today.',
   dashboard_continue:'KEEP LEARNING',
   dashboard_hero_title:'All your lessons, in one place.',
-  dashboard_hero_desc:'Review presentations, exercises and reports at your own pace.',
+  dashboard_hero_desc:'Review slides, exercises and performance reports at your own pace.',
   dashboard_hero_action:'View my lessons',
   dashboard_explore:'Explore',
   dashboard_recent_title:'Recent materials',
   dashboard_recent_empty:'Materials from your lessons will appear here.',
   dashboard_recent_error:'Could not load recent materials.',
   dashboard_quick_title:'Quick access',
-  dashboard_profile_short:'My profile',
-  dashboard_send_short:'Send material',
+  dashboard_profile_short:I18N.en.nav_perfil,
+  dashboard_send_short:I18N.en.nav_enviar,
   dashboard_lessons_summary:'available lessons',
-  dashboard_grammar_title:'Grammar guides',
-  dashboard_ask_title:'Ask Daniel'
+  dashboard_grammar_title:I18N.en.nav_gramatica,
+  dashboard_ask_title:I18N.en.nav_daniel
 });
 
 
@@ -951,9 +951,10 @@ Object.assign(I18N.pt, {
   recursos_vocab_sub:'Palavras que você ainda não costuma usar — transforme vocabulário em prática.',
   recursos_count:'{n} palavras',
   recursos_empty:'Nenhuma palavra pendente de revisão por enquanto.',
-  recursos_load_error:'Não foi possível carregar seus vocabulários.',
+  recursos_load_error:'Não foi possível carregar suas palavras.',
   word_use:'Já uso esta palavra',
-  word_save_error:'Não foi possível atualizar esta palavra.',
+  word_not_use:'Ainda não uso esta palavra',
+  word_save_error:'Não foi possível salvar. Tente novamente.',
   lessons_overview_kicker:'SUA BIBLIOTECA DE ESTUDOS',
   lessons_overview_title:'Minhas aulas',
   lessons_overview_sub:'Revisite suas aulas, encontre materiais e continue aprendendo no seu ritmo.',
@@ -965,15 +966,16 @@ Object.assign(I18N.pt, {
   lessons_download:'Baixar',
   lessons_type_ppt:'Slides',
   lessons_type_pdf:'PDF',
-  lessons_type_ex:'Exercício',
-  lessons_type_rep:'Relatório de performance',
+  lessons_type_ex:'Exercícios',
+  lessons_type_file:'Arquivo',
+  lessons_type_rep:'Relatório de desempenho',
   questions_kicker:'SEU CANAL COM O PROFESSOR',
   questions_intro_title:'Um espaço para aprender sem medo de perguntar',
   questions_intro_desc:'Envie suas dúvidas sobre inglês e consulte as respostas sempre que quiser.',
   questions_history_title:'Histórico de perguntas',
   questions_history_empty:'Você ainda não enviou perguntas.',
   questions_answered_status:'Respondida',
-  questions_pending_status:'Aguardando',
+  questions_pending_status:'Aguardando resposta',
   send_kicker:'PARTICIPE DA SUA PRÓXIMA AULA',
   profile_kicker:'SUAS INFORMAÇÕES',
   profile_personal_heading:'Informações pessoais',
@@ -983,7 +985,7 @@ Object.assign(I18N.pt, {
   writing_steps:'Como funciona',
   writing_step_1:'Escreva seu texto',
   writing_step_2:'Envie para correção',
-  writing_step_3:'Receba a devolutiva'
+  writing_step_3:'Receba a correção'
 });
 Object.assign(I18N.en, {
   nav_recursos:'Resources',
@@ -993,11 +995,12 @@ Object.assign(I18N.en, {
   recursos_count:'{n} words',
   recursos_empty:'No words to review right now.',
   recursos_load_error:'Could not load your vocabulary.',
-  word_use:'I use this word now',
-  word_save_error:'Could not update this word.',
+  word_use:'I already use this word',
+  word_not_use:"I don't use this word yet",
+  word_save_error:'Could not save. Please try again.',
   lessons_overview_kicker:'YOUR LEARNING LIBRARY',
   lessons_overview_title:'My lessons',
-  lessons_overview_sub:'Revisit lessons, find resources, and keep learning at your pace.',
+  lessons_overview_sub:'Revisit lessons, find materials, and keep learning at your pace.',
   lessons_counter:'recorded lessons',
   lessons_materials_counter:'materials',
   lessons_no_materials:'No materials have been added to this lesson.',
@@ -1006,7 +1009,8 @@ Object.assign(I18N.en, {
   lessons_download:'Download',
   lessons_type_ppt:'Slides',
   lessons_type_pdf:'PDF',
-  lessons_type_ex:'Exercise',
+  lessons_type_ex:'Exercises',
+  lessons_type_file:'File',
   lessons_type_rep:'Performance report',
   questions_kicker:'YOUR DIRECT LINE TO THE TEACHER',
   questions_intro_title:'A space to learn without being afraid to ask',
@@ -1014,7 +1018,7 @@ Object.assign(I18N.en, {
   questions_history_title:'Question history',
   questions_history_empty:'You have not sent any questions yet.',
   questions_answered_status:'Answered',
-  questions_pending_status:'Waiting',
+  questions_pending_status:'Waiting for answer',
   send_kicker:'HELP SHAPE YOUR NEXT LESSON',
   profile_kicker:'YOUR INFORMATION',
   profile_personal_heading:'Personal information',
@@ -1024,7 +1028,7 @@ Object.assign(I18N.en, {
   writing_steps:'How it works',
   writing_step_1:'Write your text',
   writing_step_2:'Send for correction',
-  writing_step_3:'Get feedback'
+  writing_step_3:'Get your correction'
 });
 
 
@@ -1036,7 +1040,7 @@ Object.assign(I18N.pt, {
   badge_celebration_message: 'Cada aula é mais um passo na sua evolução. Continue assim!',
   badge_celebration_button: 'Continuar aprendendo',
   badge_celebration_close: 'Fechar celebração',
-  badge_celebration_preview: 'Simular celebração de badge'
+  badge_celebration_preview: 'Simular conquista'
 });
 Object.assign(I18N.en, {
   badge_celebration_kicker: 'ACHIEVEMENT UNLOCKED',
@@ -1045,7 +1049,7 @@ Object.assign(I18N.en, {
   badge_celebration_message: 'Every lesson brings you closer to your goals. Keep going!',
   badge_celebration_button: 'Keep learning',
   badge_celebration_close: 'Close celebration',
-  badge_celebration_preview: 'Preview badge celebration'
+  badge_celebration_preview: 'Preview achievement'
 });
 
 /* Material requests accept external web URLs only. Legacy links without a
@@ -1064,4 +1068,19 @@ function normalizeMaterialExternalLink(value){
     if(!['http:','https:'].includes(url.protocol)||!url.hostname||url.username||url.password) return null;
     return url.href;
   }catch(e){return null;}
+}
+
+// Material labels shared by the student portal and the teacher dashboard.
+function materialTypeLabel(type, lang = getLang()){
+  const dict = I18N[lang] || I18N.pt;
+  const key = 'lessons_type_' + type;
+  return Object.hasOwn(dict, key) ? dict[key] : dict.lessons_type_file;
+}
+
+// Preserve saved names and file paths; normalize legacy report labels only for display.
+function materialDisplayName(resource){
+  const name = String(resource.name || '');
+  return resource.type === 'rep'
+    ? name.replace(/relatório de performance/gi, 'Relatório de desempenho')
+    : name;
 }

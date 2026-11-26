@@ -5,23 +5,24 @@ import { test } from 'node:test';
 const source = readFileSync('js/admin.js','utf8');
 const styles = readFileSync('style.css','utf8');
 
-test('landing shortcuts appear on the administrator dashboard only', () => {
-  const dashboard = source.slice(source.indexOf('async function renderHome()'), source.indexOf('async function renderRecentAdminActivity()'));
+test('landing shortcuts appear only in the teacher administration navigation', () => {
+  const nav = source.slice(source.indexOf('function renderNav()'), source.indexOf('function filterAdminStudentNav'));
   assert.match(source, /profile\.role !== 'admin'/);
-  assert.match(dashboard, /<nav class="admin-landing-actions" aria-label="Acessos à landing page">/);
-  assert.match(dashboard, /Visitar a landing page/);
-  assert.match(dashboard, /Acessar a área de administrador/);
+  assert.ok(nav.includes("['landing','Landing page'"));
+  assert.ok(nav.includes("['leads','Administração da landing page'"));
+  const student = readFileSync('js/common.js','utf8');
+  const studentNav = student.slice(student.indexOf('function buildStudentTopNav'),student.indexOf('async function getNotificationCounts'));
+  assert.doesNotMatch(studentNav, /Administração da landing page/);
 });
 
-test('shortcuts target the public production landing and its actual admin route', () => {
-  const dashboard = source.slice(source.indexOf('async function renderHome()'), source.indexOf('async function renderRecentAdminActivity()'));
+test('sidebar shortcuts retain their current public landing and administration destinations', () => {
+  const nav = source.slice(source.indexOf('function renderNav()'), source.indexOf('function filterAdminStudentNav'));
   for (const route of [
-    'https://dc-english-classes-leads.vercel.app/',
-    'https://dc-english-classes-leads.vercel.app/admin.html'
+    'https://dc-englishclasses.vercel.app/',
+    'https://dc-englishclasses.vercel.app/admin.html'
   ]) {
-    assert.ok(dashboard.includes('href="' + route + '"'), route);
+    assert.ok(nav.includes("window.open('" + route + "','_blank','noopener')"), route);
   }
-  assert.equal((dashboard.match(/target="_blank" rel="noopener noreferrer"/g) || []).length, 2);
 });
 
 test('links have responsive styles and remain legible in dark mode', () => {

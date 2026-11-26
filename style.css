@@ -737,7 +737,7 @@ body.dark-mode .achievement-progress{background:#35445F;}
 .recent-resource-details{display:flex;flex-direction:column;min-width:0;gap:4px;}
 .recent-resource-details strong{font-size:12.5px;font-weight:600;overflow-wrap:anywhere;}
 .recent-resource-details small{font-size:11px;color:var(--text-soft);}
-.recent-resource-type{flex-shrink:0;color:#316FA9;background:var(--sky-soft);border-radius:7px;padding:6px 8px;font-size:10px;}
+.recent-resource-type{flex-shrink:0;max-width:45%;overflow-wrap:anywhere;text-align:center;color:#316FA9;background:var(--sky-soft);border-radius:7px;padding:6px 8px;font-size:10px;}
 .home-bottom-grid #word-of-day-container{min-width:0;}
 .home-bottom-grid .word-of-day-card{margin-top:0;height:100%;border-radius:15px;display:flex;flex-direction:column;justify-content:center;min-height:206px;}
 /* Professor */
