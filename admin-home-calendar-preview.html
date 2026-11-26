@@ -21,15 +21,46 @@ const escapeHtml=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 const students=[{id:'marina',full_name:'Marina',lesson_weekday:4,lesson_time:'18:00'},{id:'bruno',full_name:'Bruno',lesson_weekday:1,lesson_time:'18:00'},{id:'helena',full_name:'Helena',lesson_weekday:3,lesson_time:'19:00'},{id:'caio',full_name:'Caio',lesson_weekday:2,lesson_time:'20:00'},{id:'laura',full_name:'Laura',lesson_weekday:4,lesson_time:'21:00'},{id:'rafael',full_name:'Rafael',lesson_weekday:4,lesson_time:'21:00'}];
 const adminToday=()=>({date:'2026-11-26'});
 </script>
-<script src="js/admin-calendar-test.js"></script><script src="js/admin-turmas-preview.js"></script><script src="js/admin-monthly-calendar.js"></script>
+<script src="js/admin-calendar-test.js"></script><script src="js/admin-turmas-preview.js"></script><script src="js/admin-monthly-calendar.js"></script><script src="js/admin-vocabulary.js"></script>
 <script>
 ccCloudReady=true;
 tgGroups=[{id:'demo-group',members:['laura','rafael'],start:'2026-11-01',days:'4',time:'21:00',calendar_events:{},calendarLessons:[]}];
 ccCloud.set('global',{payload:[{start:'2026-12-18',end:'2027-01-03',status:'break'}]});
 ccCloud.set('bruno',{payload:{start:'2026-11-01',weekdays:'1',time:'18:00',events:{'2026-11-16':{status:'rescheduled',rescheduled_to:'2026-11-17'},'2026-11-17':{status:'planned',time:'18:30',rescheduled_from:'2026-11-16'}}}});
-const previewToday=crmGroupDailyAgenda(ccAgenda(adminToday(),null,true));
-document.getElementById('preview-today-count').textContent=previewToday.length;
-document.getElementById('preview-today-rows').innerHTML=crmTodayRowsHtml(previewToday);
+const previewHomeMarkup=document.getElementById('main-content').innerHTML;
+let currentStudent=null,currentView='home',currentTab='resumo',currentLessons=[];
+const crmInboxError=false,crmInboxFor=()=>({questions:[],materials:[],texts:[]}),crmCountBadge=()=>'';
+const demoWords=[
+ {answer:'nao_uso',updated_at:'2026-11-26T15:00:00Z',word_of_day:{term:'resourceful',definition:'Able to find clever solutions.',example:'She is a resourceful colleague.'}},
+ {answer:'nao_uso',updated_at:'2026-11-25T15:00:00Z',word_of_day:{term:'reliable',definition:'Someone you can depend on.',example:'He is a reliable teammate.'}},
+ {answer:'uso',updated_at:'2026-11-24T15:00:00Z',word_of_day:{term:'confidence',definition:'Belief in your ability to succeed.',example:'Practice builds confidence.'}}
+];
+const sb={from(){return {select(){return this},eq(_,id){this.id=id;return this},async order(){return {data:this.id==='rafael'?[]:this.id==='laura'?demoWords.slice(1):demoWords}}}}};
+function previewRefreshHome(){
+ const rows=crmGroupDailyAgenda(ccAgenda(adminToday(),null,true));
+ document.getElementById('preview-today-count').textContent=rows.length;
+ document.getElementById('preview-today-rows').innerHTML=crmTodayRowsHtml(rows);
+ crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),Promise.resolve(),async()=>[],adminToday().date);
+}
+function previewHome(){
+ currentView='home';currentStudent=null;document.getElementById('main-content').innerHTML=previewHomeMarkup;previewRefreshHome();
+}
+function openStudent(id){
+ currentStudent=students.find(s=>s.id===id);if(!currentStudent)return;
+ currentView='student';currentTab='resumo';
+ currentLessons=Array.from({length:6},(_,i)=>({lesson_date: ['2026-10-22','2026-10-29','2026-11-05','2026-11-12','2026-11-19','2026-11-26'][i],title:'Class #'+(i+1)}));
+ previewProfile();
+}
+function previewProfile(){
+ const s=currentStudent;
+ document.getElementById('main-content').innerHTML='<div class="crm-dossier"><div class="crm-dossier-top"><button class="crm-link crm-back" onclick="previewHome()">← Visão geral</button></div><section class="crm-profile-head crm-dossier-head"><span class="crm-avatar">'+escapeHtml(s.full_name[0])+'</span><div class="crm-dossier-identity"><h1>'+escapeHtml(s.full_name)+'</h1><p>Perfil demonstrativo</p></div></section><p class="crm-muted">Prévia isolada · Dados fictícios, sem conexão com o banco de produção.</p><div class="crm-dossier-layout"><nav class="crm-dossier-nav" aria-label="Ficha do aluno"><div class="crm-dossier-label">ACOMPANHAMENTO</div>'+[['resumo','Resumo','dashboard'],['calendario','Calendário e aulas','calendar'],['vocab','Vocabulário','book']].map(([key,label,icon])=>'<button class="'+(currentTab===key?'active':'')+'" onclick="switchTab(&quot;'+key+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span></button>').join('')+'</nav><div class="crm-dossier-content"><div id="tab-content"></div></div></div></div>';
+ if(currentTab==='vocab')window.renderVocabTab();else crmStudentSummary();
+}
+function switchTab(tab){
+ if(tab==='calendario'||tab==='nova'){location.href='calendar-preview.html';return;}
+ if(tab!=='resumo'&&tab!=='vocab'){previewAction();return;}
+ currentTab=tab;previewProfile();
+}
 function previewAction(){alert('Ação disponível no portal real. Esta é uma prévia com dados fictícios.');}
 ccQuickSave=(select)=>{select.dataset.status=select.value;};
 ccQuickGroupSave=(select,id,date)=>{
@@ -39,13 +70,11 @@ ccQuickGroupSave=(select,id,date)=>{
  ccStageGroupDate(ctx,d,date,select.value,{},base.time||group.time,base.notes||'',base.original||'');
  group.calendar_events=d.schedule.events;
  for(const member of members)ccCloud.set(member.id,{payload:d.payloads[member.id]});
- const rows=crmGroupDailyAgenda(ccAgenda(adminToday(),null,true));
- document.getElementById('preview-today-count').textContent=rows.length;
- document.getElementById('preview-today-rows').innerHTML=crmTodayRowsHtml(rows);
- crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),Promise.resolve(),async()=>[],adminToday().date);
+ previewRefreshHome();
 };
 tgOpenDate=previewAction;ccOpenDate=previewAction;
 const openTodayClassCall=previewAction;
-crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),Promise.resolve(),async()=>[],adminToday().date);
+const requestedStudent=new URLSearchParams(location.search).get('student');
+if(requestedStudent&&students.some(s=>s.id===requestedStudent))openStudent(requestedStudent);else previewHome();
 </script>
 </body></html>

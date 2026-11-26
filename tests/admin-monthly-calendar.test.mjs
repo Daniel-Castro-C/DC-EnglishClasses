@@ -173,3 +173,19 @@ test('group quick status rejects registered lessons, dirty drafts and failed tra
   assert.equal(alerts.length,1);
  }
 });
+test('daily agenda links each student to their own profile, including the two members of a group',()=>{
+ const {run}=setup();
+ const html=run("crmTodayRowsHtml(crmGroupDailyAgenda(ccAgenda({date:'2026-11-12'},null,true)))");
+ assert.match(html,/<a class="crm-student-link" href="\?student=two" data-student-id="two"[^>]+>Aluno B<\/a> · <a class="crm-student-link" href="\?student=three" data-student-id="three"[^>]+>Aluno C<\/a>/);
+ assert.match(html,/openStudent\(this.dataset.studentId\)/);
+ const single=run("crmStudentProfileLinks(students[0])");
+ assert.match(single,/href="\?student=one"/);
+ assert.match(readFileSync('js/admin.js','utf8'),/new URLSearchParams\(location.search\).get\('student'\)/);
+});
+test('student recent history contains only the four newest entries (not all six)',()=>{
+ const {run}=setup();
+ run("var latest=crmStudentHistory(students[2],Array.from({length:6},(_,i)=>({lesson_date:'2026-11-0'+(i+1),title:'Class #'+(i+1),calendar_status:i===5?'owed':'done'})))");
+ assert.equal(run('latest.length'),4);
+ assert.equal(run('latest.map(r=>r.title).join(",")'),'Class #6,Class #5,Class #4,Class #3');
+ assert.equal(run('latest[0].status'),'Falta com reposição');
+});
