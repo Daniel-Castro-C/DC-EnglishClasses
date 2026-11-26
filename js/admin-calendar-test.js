@@ -119,6 +119,7 @@ function ccRegistered(ctx,id,date){return ctx.lessons.some(l=>l.student_id===id&
 function ccIsHabitual(x,date){return !!ccSchedule(x,date).time&&ccHabitual(x,date);}
 function ccEvent(ctx,d,id,date){const e=d.payloads[id].events[date];return ctx.group&&e?.group_id!==ctx.group.id?undefined:e;}
 function ccDateState(ctx,d,date){
+ if(typeof ccPendingLessonDeletion==='function'&&ccPendingLessonDeletion(ctx,date))return {rows:ctx.members.map(s=>({id:s.id,status:'',real:false,e:{skip:true},time:''})),status:'',base:ctx.group?{skip:true}:null,event:{skip:true},real:false,mixed:false};
  const x=ccModel(ctx,d),base=ctx.group?ccGroupBase(ctx,d,date):null;
  const individualGroup=!ctx.group?ccGroupForDate(ctx.members[0].id,date):null;
  const rows=ctx.members.map(s=>{
@@ -337,6 +338,7 @@ function ccEditor(){
  const date=ccSelected,state=ccDateState(ctx,d,date),x=ccModel(ctx,d),e=state.event||{};
  const group=!ctx.group&&ccGroupForDate(ctx.members[0].id,date);
  const header='<hr><h3>'+ccEsc(formatDate(date))+'</h3>';
+ if(typeof ccPendingLessonDeletion==='function'&&ccPendingLessonDeletion(ctx,date)){el.innerHTML=header+ccLessonForm(ctx,d,date,state);return;}
  if(group){
   const base=group.calendar_events?.[date],own=d.payloads[ctx.members[0].id].events[date]||{};
   const permitted=!state.real&&!base?.skip&&!own.skip&&['planned','done','absent','owed'].includes(base?.status||own.status||state.status);
@@ -433,23 +435,32 @@ async function ccImportCompletions(){
  try{await ccLoadCloud();await tgLoad();if(typeof ccLessonMap==='function')ccLessonMap(ctx).clear();if(!ctx.group)await loadLessonsFor(ctx.members[0].id);ccDrafts.delete(ctx.key);ccActiveKey='';if(ccContext()?.key===ctx.key)ccRender();}catch(e){alert('Não foi possível atualizar o calendário.');}
 }
 async function ccSaveAll(){
- const ctx=ccContext(),d=ccDraft(ctx);if(!d||ccSaving||!ccFinishInput()||!d.dirty)return;
+ const ctx=ccContext();let d=ccDraft(ctx);if(!d||ccSaving||!ccFinishInput()||!d.dirty)return;
  if([...ccDrafts.values()].some(other=>other.key!==ctx.key&&other.dirty&&ctx.members.some(s=>Object.hasOwn(other.payloads,s.id))))return alert('Há alterações pendentes em outro calendário relacionado. Descarte esse outro rascunho antes de salvar.');
  if(!ctx.members.every(s=>s.is_test_profile||ccCloudReady&&(ccCloud.get(s.id)?.revision||0)===d.revisions[s.id]))return alert('Calendário alterado em outro fluxo. Atualize do servidor antes de salvar.');
  // Preflight the dates touched by the draft against the current published lesson records.
  ccSaving=true;ccUpdateToolbar(d);
  try{
   if(typeof ccValidateLessonDrafts==='function'){ccValidateLessonDrafts(ctx,d);await ccCheckLessonSchema(ctx);}
+  const deletions=typeof ccLessonDeletionEntries==='function'?ccLessonDeletionEntries(ctx):[];
+  const removedDates=new Set(deletions.map(e=>e.date));
+  if(deletions.length)d=ccProjectLessonDeletions(ctx,d);
   if(!ctx.members.every(s=>s.is_test_profile)){
    for(const member of ctx.members){
-    const dates=Object.keys({...d.base[member.id].events,...d.payloads[member.id].events}).filter(date=>JSON.stringify(d.base[member.id].events[date])!==JSON.stringify(d.payloads[member.id].events[date]));
+    const dates=Object.keys({...d.base[member.id].events,...d.payloads[member.id].events}).filter(date=>!removedDates.has(date)&&JSON.stringify(d.base[member.id].events[date])!==JSON.stringify(d.payloads[member.id].events[date]));
     for(let offset=0;offset<dates.length;offset+=80){
      const {data,error}=await sb.from('lessons').select('id,student_id,lesson_date').in('student_id',[member.id]).in('lesson_date',dates.slice(offset,offset+80)).limit(1);
      if(error)throw error;if(data?.length)throw Error('Uma aula cadastrada foi encontrada em '+formatDate(data[0].lesson_date)+'. Atualize o calendário antes de salvar.');
     }
    }
   }
-  if(ctx.group){
+  if(deletions.length){
+   const x=d.schedule,schedule=ctx.group?{...ctx.group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events}:null;
+   const {data,error}=await sb.rpc('portal_calendar_save_with_deletions',{p_group:ctx.group?.id||null,p_student:ctx.group?null:ctx.members[0].id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]})),p_deletions:deletions.map(e=>({date:e.date,ids:e.deleteIds}))});
+   if(error)throw error;
+   for(const entry of deletions)ccLessonMap(ctx).delete(entry.date);
+   if(!ctx.group){const id=ctx.members[0].id;ccCloud.set(id,{calendar_key:id,payload:ccClone(d.payloads[id]),revision:data});}
+  }else if(ctx.group){
    const x=d.schedule,schedule=JSON.stringify(x)===JSON.stringify(d.baseSchedule)?null:{...ctx.group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events};
    const {error}=await sb.rpc('portal_group_calendar_save',{p_group:ctx.group.id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]}))});
    if(error)throw error;

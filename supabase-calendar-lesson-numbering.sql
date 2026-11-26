@@ -82,6 +82,46 @@ end $$;
 revoke all on function public.portal_calendar_lesson_delete(uuid,uuid,date,uuid[]) from public,anon;
 grant execute on function public.portal_calendar_lesson_delete(uuid,uuid,date,uuid[]) to authenticated;
 
+-- Delete lesson registrations and the corresponding calendar events in one transaction.
+-- The existing calendar RPCs enforce revision/member checks and synchronize completion rows.
+create or replace function public.portal_calendar_save_with_deletions(
+ p_group uuid,p_student uuid,p_schedule jsonb,p_changes jsonb,p_deletions jsonb
+) returns bigint language plpgsql security invoker set search_path='' as $$
+declare item jsonb; c jsonb; ids uuid[]; members uuid[]; day date; revision bigint;
+begin
+ if not coalesce(public.is_admin(),false) then raise exception 'Access denied'; end if;
+ if (p_group is null)=(p_student is null) or jsonb_typeof(p_changes) is distinct from 'array' or jsonb_typeof(p_deletions) is distinct from 'array'
+  or jsonb_array_length(p_deletions)=0 then raise exception 'Invalid calendar deletion'; end if;
+ lock table public.lessons in share row exclusive mode;
+ if p_group is not null then
+  select g.members into strict members from public.portal_groups g where g.id=p_group for update;
+ else
+  members:=array[p_student];
+ end if;
+ if jsonb_array_length(p_changes)<>cardinality(members) or
+  (select count(distinct x->>'id') from jsonb_array_elements(p_changes) x)<>cardinality(members)
+  or exists(select 1 from jsonb_array_elements(p_changes) x where not coalesce((x->>'id')::uuid=any(members),false)) then raise exception 'Invalid members'; end if;
+ for item in select value from jsonb_array_elements(p_deletions) loop
+  day:=(item->>'date')::date;
+  if day is null or jsonb_typeof(item->'ids') is distinct from 'array' then raise exception 'Invalid deletion'; end if;
+  select array_agg(value::uuid) into ids from jsonb_array_elements_text(item->'ids');
+  if exists(select 1 from jsonb_array_elements(p_changes) x where x->'payload'->'events'->(day::text)->>'skip' is distinct from 'true')
+    or (p_group is not null and p_schedule->'calendar_events'->(day::text)->>'skip' is distinct from 'true') then raise exception 'Missing calendar deletion'; end if;
+  if exists(select 1 from public.lessons l where l.id=any(ids) and not (l.student_id=any(members))) then raise exception 'Invalid participants'; end if;
+  perform public.portal_calendar_lesson_delete(p_group,p_student,day,ids);
+  if exists(select 1 from public.lessons l where l.student_id=any(members) and l.lesson_date=day) then raise exception 'Other lesson on this date; refresh'; end if;
+ end loop;
+ if p_group is not null then
+  perform public.portal_group_calendar_save(p_group,p_schedule,p_changes);
+ else
+  c:=p_changes->0;
+  revision:=public.save_admin_calendar(p_student::text,c->'payload',(c->>'revision')::bigint);
+ end if;
+ return revision;
+end $$;
+revoke all on function public.portal_calendar_save_with_deletions(uuid,uuid,jsonb,jsonb,jsonb) from public,anon;
+grant execute on function public.portal_calendar_save_with_deletions(uuid,uuid,jsonb,jsonb,jsonb) to authenticated;
+
 create or replace function public.portal_calendar_lesson_save(
  p_group uuid,p_student uuid,p_date date,p_title text,p_topic text,p_members uuid[],p_materials jsonb,p_edit boolean
 ) returns void language plpgsql security invoker set search_path='' as $$

@@ -61,21 +61,39 @@ function ccEditRegisteredLesson(){
  const el=document.getElementById('cc-lesson-title');if(!el)return;
  el.focus();el.scrollIntoView({block:'nearest'});
 }
+function ccLessonDeletionEntries(ctx){return [...ccLessonMap(ctx).values()].filter(e=>e.deleteIds);}
+function ccPendingLessonDeletion(ctx,date){return Boolean(ccLessonMap(ctx).get(date)?.deleteIds);}
+// Use the same link/conflict checks as calendar deletion, but ignore only the explicitly selected lesson IDs.
+// Work on a copy: undo and failed saves leave unrelated calendar changes intact.
+function ccProjectLessonDeletions(ctx,d){
+ const entries=ccLessonDeletionEntries(ctx);
+ if(!entries.length)return d;
+ const gone=new Set(entries.flatMap(e=>e.deleteIds)),remaining={...ctx,lessons:ctx.lessons.filter(l=>!gone.has(l.id))};
+ const next={...d,payloads:ccClone(d.payloads),schedule:d.schedule?ccClone(d.schedule):null};
+ for(const entry of entries){
+  ccDeleteDate(remaining,next,entry.date);
+  for(const member of ctx.members)next.payloads[member.id].events[entry.date]={skip:true,...(ctx.group?{group_id:ctx.group.id}:{})};
+  if(ctx.group)next.schedule.events[entry.date]={skip:true};
+ }
+ return next;
+}
 function ccStageLessonDelete(){
  if(ccSaving)return;
  const ctx=ccContext(),d=ccDraft(ctx),date=ccSelected;
  if(!d||!ccLessonCanManage(ctx,date))return;
  const rows=ccLessonRows(ctx,date),map=ccLessonMap(ctx);
- if(!confirm('Marcar esta aula e seus materiais para exclusão'+(ctx.group?' de todos os integrantes cadastrados':'')+'? A exclusão só será efetivada ao salvar o calendário. A frequência existente no calendário será preservada.'))return;
- map.set(date,{date,deleteIds:rows.map(l=>l.id).sort(),previous:map.get(date)});
- ccMarkDirty(ctx,d);ccEditor();
+ if(!confirm('Marcar esta aula e seus materiais para exclusão'+(ctx.group?' de todos os integrantes cadastrados':'')+'? A exclusão só será efetivada ao salvar o calendário. O evento também será removido do calendário.'))return;
+ const previous=map.get(date);
+ map.set(date,{date,deleteIds:rows.map(l=>l.id).sort(),previous});
+ try{ccProjectLessonDeletions(ctx,d);}catch(error){if(previous)map.set(date,previous);else map.delete(date);alert(error.message);return;}
+ ccMarkDirty(ctx,d);ccRefreshGrid();ccEditor();
 }
 function ccUndoLessonDelete(){
  if(ccSaving)return;
  const ctx=ccContext(),d=ccDraft(ctx),map=ccLessonMap(ctx),entry=map.get(ccSelected);
  if(!entry?.deleteIds)return;
  if(entry.previous)map.set(ccSelected,entry.previous);else map.delete(ccSelected);
- ccMarkDirty(ctx,d);ccEditor();
+ ccMarkDirty(ctx,d);ccRefreshGrid();ccEditor();
 }
 function ccLessonForm(ctx,d,date,state){
  const existing=ccLessonRows(ctx,date);
@@ -87,7 +105,7 @@ function ccLessonForm(ctx,d,date,state){
  if(!existing.length&&!(state.status==='done'||(ctx.group&&state.rows.some(r=>r.status==='done'))))return '';
  if(existing.length&&!ccLessonCanManage(ctx,date))return '<p class="small-note">Há registros ambíguos nesta data. A edição em lote foi bloqueada para proteger os materiais.</p>';
  const deletion=ccLessonMap(ctx).get(date);
- if(deletion?.deleteIds)return '<section class="box cc-lesson-form"><h3>Exclusão de aula pendente</h3><p>Esta aula e seus materiais serão removidos ao salvar o calendário. O status registrado no calendário permanece.</p><button type="button" class="btn-ghost" onclick="ccUndoLessonDelete()">Desfazer exclusão</button></section>';
+ if(deletion?.deleteIds)return '<section class="box cc-lesson-form"><h3>Exclusão de aula pendente</h3><p>Esta aula, seus materiais e o evento serão removidos ao salvar o calendário.</p><button type="button" class="btn-ghost" onclick="ccUndoLessonDelete()">Desfazer exclusão</button></section>';
  const draft=ccLessonMap(ctx).get(date),first=existing[0],automatic=draft?.automatic??(first?first.title_automatic??/^(Class|Aula)\s*#?\s*\d+$/i.test(first.title):true);
  const value=draft?.title??(automatic?ccLessonNumber(ctx,date):first?.title||'');
  const topic=draft?.topic??first?.topic??'';
@@ -147,6 +165,7 @@ function ccLessonTitleEdit(){document.getElementById('cc-lesson-auto').checked=f
 function ccLessonAuto(){if(document.getElementById('cc-lesson-auto').checked)document.getElementById('cc-lesson-title').value=ccLessonNumber(ccContext(),ccSelected);ccCaptureLesson();}
 function ccRemoveLessonFile(index){if(ccSaving)return;const entry=ccLessonMap(ccContext()).get(ccSelected);entry?.files.splice(index,1);ccRenderLessonFiles();}
 function ccValidateLessonDrafts(ctx,d){
+ ccProjectLessonDeletions(ctx,d);
  for(const entry of ccLessonMap(ctx).values()){
   const existing=ccLessonRows(ctx,entry.date),state=ccDateState(ctx,d,entry.date);
   if(entry.deleteIds){if(!ccLessonCanManage(ctx,entry.date)||JSON.stringify(existing.map(l=>l.id).sort())!==JSON.stringify(entry.deleteIds))throw Error('A aula mudou; recarregue o calendário.');continue;}
@@ -164,11 +183,7 @@ async function ccCheckLessonSchema(ctx){
 async function ccFlushLessons(ctx,d){
  const map=ccLessonMap(ctx);if(!map.size)return;
  for(const [date,entry] of [...map].sort(([a],[b])=>a.localeCompare(b))){
-  if(entry.deleteIds){
-   const {error}=await sb.rpc('portal_calendar_lesson_delete',{p_group:ctx.group?.id||null,p_student:ctx.group?null:ctx.members[0].id,p_date:date,p_ids:entry.deleteIds});
-   if(error)throw error;
-   map.delete(date);continue;
-  }
+  if(entry.deleteIds)throw Error('A exclusão deve ser confirmada junto com o calendário.');
   const existing=ccLessonRows(ctx,date),state=ccDateState(ctx,d,date),targets=existing.length?existing.map(l=>l.student_id):state.rows.filter(r=>r.status==='done').map(r=>r.id);
   const materials=[];
   for(const r of entry.files){
@@ -185,7 +200,7 @@ async function ccFlushLessons(ctx,d){
 }
 function ccLessonHistory(){
  const ctx=ccContext();if(!ctx)return;
- const rows=ccCollectiveRows(ctx),dates=[...new Set(rows.map(l=>l.lesson_date).filter(Boolean))].sort().reverse();
+ const rows=ccCollectiveRows(ctx).filter(l=>!ccPendingLessonDeletion(ctx,l.lesson_date)),dates=[...new Set(rows.map(l=>l.lesson_date).filter(Boolean))].sort().reverse();
  const box=document.getElementById('cc-history');if(!box)return;
  box.hidden=!box.hidden;if(box.hidden)return;
  box.innerHTML='<h3>Histórico de aulas</h3>'+(!ctx.group&&!ctx.members[0].is_test_profile&&typeof notifyStudentAboutLesson==='function'?'<button class="btn-ghost" onclick="notifyStudentAboutLesson()">Enviar e-mail ao aluno</button>':'')+dates.map(date=>'<div class="resource-row"><div class="resource-info">'+ccPublishedDetails(ctx,date)+'<small>'+ccEsc(formatDate(date))+'</small></div><button class="btn-ghost" onclick="ccJump(&quot;'+date+'&quot;)">Abrir aula</button></div>').join('');

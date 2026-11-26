@@ -368,7 +368,7 @@ test('both calendar contexts share a responsive grid for habitual schedule and c
 
 for(const group of [false,true])test((group?'group':'individual')+': registered lesson actions, staged deletion and undo',async()=>{
  const {run,ctx}=setupUnified(group);ctx.calls=[];
- ctx.sb={rpc:async(name,args)=>{ctx.calls.push({name,args});return {}}};
+ ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),rpc:async(name,args)=>{ctx.calls.push({name,args});return {data:3}}};
  run((group?"tgSelected.calendarLessons.push({id:'one',student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #1'},{id:'two',student_id:'s2',group_id:'g1',lesson_date:'2026-11-23',title:'Class #1'});":"currentLessons.push({id:'one',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1'});")+"ctx=ccContext();ccSelected='2026-11-23';ccEditor=()=>{};");
  const html=run("ccLessonForm(ctx,draft,ccSelected,ccDateState(ctx,draft,ccSelected))");
  assert.match(html,/>Editar aula<\/button>/);assert.match(html,/>Excluir aula<\/button>/);
@@ -376,11 +376,18 @@ for(const group of [false,true])test((group?'group':'individual')+': registered 
  assert.equal(ctx.calls.length,0);
  assert.equal(run("ccLessonMap(ctx).get(ccSelected).deleteIds.join(',')"),group?'one,two':'one');
  assert.match(run("ccLessonForm(ctx,draft,ccSelected,ccDateState(ctx,draft,ccSelected))"),/Desfazer exclusão/);
+ assert.equal(run("ccDateState(ctx,draft,ccSelected).status"),'');
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-30').status"),'planned');
  run("ccUndoLessonDelete()");assert.equal(run("ccLessonMap(ctx).size"),0);
- run("ccStageLessonDelete();ccValidateLessonDrafts(ctx,draft)");
- await run("ccFlushLessons(ctx,draft)");
- assert.equal(ctx.calls[0].name,'portal_calendar_lesson_delete');
- assert.deepEqual(Array.from(ctx.calls[0].args.p_ids),group?['one','two']:['one']);
+ assert.equal(run("ccDateState(ctx,draft,ccSelected).rows[0].status"),'done');
+ run("ccStageLessonDelete();ccValidateLessonDrafts(ctx,draft);ccRender=()=>{};ccLoadCloud=async()=>{};tgLoad=async()=>{};loadLessonsFor=async()=>{};");
+ await run("ccSaveAll()");
+ assert.equal(ctx.calls.length,1);
+ assert.equal(ctx.calls[0].name,'portal_calendar_save_with_deletions');
+ assert.deepEqual(Array.from(ctx.calls[0].args.p_deletions[0].ids),group?['one','two']:['one']);
+ assert.equal(ctx.calls[0].args.p_deletions[0].date,'2026-11-23');
+ for(const c of ctx.calls[0].args.p_changes)assert.equal(c.payload.events['2026-11-23'].skip,true);
+ if(group)assert.equal(ctx.calls[0].args.p_schedule.calendar_events['2026-11-23'].skip,true);
  assert.equal(run("ccLessonMap(ctx).size"),0);
 });
 test('historical group editing and deletion require an unambiguous matching session',()=>{
@@ -392,8 +399,59 @@ test('historical group editing and deletion require an unambiguous matching sess
 });
 test('delete RPC checks administrative authorization and exact lesson IDs before deleting and renumbering',()=>{
  const sql=readFileSync('supabase-calendar-lesson-numbering.sql','utf8');
- const body=sql.slice(sql.indexOf('create or replace function public.portal_calendar_lesson_delete'),sql.indexOf('create or replace function public.portal_calendar_lesson_save'));
+ const body=sql.slice(sql.indexOf('create or replace function public.portal_calendar_lesson_delete'),sql.indexOf('create or replace function public.portal_calendar_save_with_deletions'));
  assert.match(body,/security invoker/);assert.match(body,/not coalesce\(public\.is_admin\(\),false\)/);
  assert.match(body,/ids <@ p_ids and p_ids <@ ids/);assert.match(body,/delete from public\.lessons where id=any\(ids\)/);
  assert.match(body,/portal_calendar_resequence/);assert.doesNotMatch(body,/delete from storage/);
+});
+
+test('atomic lesson deletion failure leaves original calendar and deletion draft intact',async()=>{
+ const {run,ctx}=setupUnified();
+ ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),rpc:async()=>({error:new Error('revision conflict')})};
+ run("currentLessons.push({id:'one',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1'});ctx=ccContext();ccSelected='2026-11-23';ccEditor=()=>{};ccStageLessonDelete();");
+ await run("ccSaveAll()");
+ assert.equal(run("ccLessonMap(ctx).size"),1);
+ assert.equal(run("ccDrafts.get(ctx.key).dirty"),true);
+ assert.equal(run("ccRead('s1').events['2026-11-23']"),undefined);
+ run("ccUndoLessonDelete()");
+ assert.equal(run("ccDateState(ctx,ccDraft(ctx),'2026-11-23').status"),'done');
+});
+test('prospective deletion removes manual completion and writes an exception without changing other dates',()=>{
+ const {run}=setupUnified();
+ run("currentLessons.push({id:'one',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1'});ctx=ccContext();ccSelected='2026-11-23';draft.payloads.s1.events[ccSelected]={status:'done'};draft.payloads.s1.events['2026-11-30']={status:'planned'};ccEditor=()=>{};ccStageLessonDelete();var projected=ccProjectLessonDeletions(ctx,draft);");
+ assert.equal(run("projected.payloads.s1.events['2026-11-23'].skip"),true);
+ assert.equal(run("ccManualDoneDates(projected.payloads.s1).length"),0);
+ assert.equal(run("projected.payloads.s1.events['2026-11-30'].status"),'planned');
+ assert.equal(run("draft.payloads.s1.events['2026-11-23'].status"),'done');
+});
+test('deletion SQL wraps exact scoped deletion and revision-checked calendar saves in one function',()=>{
+ const sql=readFileSync('supabase-calendar-lesson-numbering.sql','utf8');
+ const body=sql.slice(sql.indexOf('create or replace function public.portal_calendar_save_with_deletions'),sql.indexOf('create or replace function public.portal_calendar_lesson_save'));
+ assert.match(body,/security invoker/);assert.match(body,/Missing calendar deletion/);assert.match(body,/Other lesson on this date/);
+ assert.match(body,/portal_calendar_lesson_delete\(p_group,p_student,day,ids\)/);
+ assert.match(body,/portal_group_calendar_save\(p_group,p_schedule,p_changes\)/);
+ assert.match(body,/save_admin_calendar\(p_student::text/);
+});
+
+test('isolated demo persists deletion and mirrors an empty group date into both individual calendars',async()=>{
+ const {randomUUID}=await import('node:crypto');
+ const c=vm.createContext({console,crypto:{randomUUID},window:{addEventListener(){}},document:{getElementById(){return null}},alert(){},confirm:()=>true});
+ vm.runInContext(code+'\n'+lessonCode+'\n'+readFileSync('js/calendar-preview-demo.js','utf8').replace('(async()=>{await ccLoadCloud();demoSelect(false)})();',''),c);
+ const run=s=>vm.runInContext(s,c);
+ await run("ccLoadCloud();");
+ run("ccRender=()=>{};ccEditor=()=>{};ccRefreshGrid=()=>{};tgGroups=[demoGroup];tgSelected=demoGroup;currentView='turmas';tgTab='calendar';demoRefresh();ccSelected='2026-11-19';ccStageLessonDelete();");
+ await run("ccSaveAll()");
+ assert.equal(run("demoLessons.filter(l=>l.group_id===demoGroup.id&&l.lesson_date==='2026-11-19').length"),0);
+ assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-19').status"),'');
+ assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-26').status"),'done');
+ for(const id of ['demo-2','demo-3']){
+  run("currentView='student';currentTab='calendario';currentStudent=students.find(s=>s.id==='"+id+"');demoRefresh()");
+  assert.equal(run("ccRead(currentStudent.id).events['2026-11-19'].skip"),true);
+  assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-19').status"),'');
+ }
+ run("currentStudent=students[0];demoRefresh();ccSelected='2026-11-19';ccStageLessonDelete();");
+ await run("ccSaveAll()");
+ assert.equal(run("demoLessons.filter(l=>l.student_id==='demo-1'&&l.lesson_date==='2026-11-19').length"),0);
+ assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-19').status"),'');
+ assert.equal(run("demoLessons.find(l=>l.student_id==='demo-1'&&l.lesson_date==='2026-11-26').title"),'Class #1');
 });
