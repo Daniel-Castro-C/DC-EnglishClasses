@@ -372,6 +372,7 @@ for(const group of [false,true])test((group?'group':'individual')+': registered 
  run((group?"tgSelected.calendarLessons.push({id:'one',student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #1'},{id:'two',student_id:'s2',group_id:'g1',lesson_date:'2026-11-23',title:'Class #1'});":"currentLessons.push({id:'one',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1'});")+"ctx=ccContext();ccSelected='2026-11-23';ccEditor=()=>{};");
  const html=run("ccLessonForm(ctx,draft,ccSelected,ccDateState(ctx,draft,ccSelected))");
  assert.match(html,/>Editar aula<\/button>/);assert.match(html,/>Excluir aula<\/button>/);
+ assert.match(html,/<div class="cc-lesson-header"><div class="cc-lesson-summary">[\s\S]*?Class #1[\s\S]*?<div class="cc-lesson-actions">[\s\S]*?Editar aula[\s\S]*?Excluir aula[\s\S]*?<h4>Materiais da aula<\/h4>/);
  run("ccStageLessonDelete()");
  assert.equal(ctx.calls.length,0);
  assert.equal(run("ccLessonMap(ctx).get(ccSelected).deleteIds.join(',')"),group?'one,two':'one');

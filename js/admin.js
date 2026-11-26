@@ -42,7 +42,9 @@ let quickLessonFiles = [];
   try { await ccLoadCloud(); } catch(error) { console.error(error); alert('Não foi possível carregar o calendário do Supabase. As alterações do calendário estão bloqueadas até recarregar a página.'); }
   await refreshPendingCounts();
   renderNav();
-  renderHome();
+  const requestedStudent = new URLSearchParams(location.search).get('student');
+  if (requestedStudent && students.some(s => s.id === requestedStudent)) await openStudent(requestedStudent);
+  else renderHome();
   window.addEventListener('focus',crmRefreshIndicators);
   setInterval(()=>{if(!document.hidden)crmRefreshIndicators();},60000);
 })();
@@ -696,7 +698,9 @@ async function refreshStudents(){
 }
 
 async function openStudent(studentId){
-  currentStudent = students.find(s => s.id === studentId);
+  const student = students.find(s => s.id === studentId);
+  if (!student) return;
+  currentStudent = student;
   currentView = 'student';
   currentTab = 'resumo';
   renderNav();
@@ -753,13 +757,15 @@ function renderStudentDetail(){
     <section class="crm-profile-head crm-dossier-head"><span class="crm-avatar">${s.avatar_url?'<img src="'+escapeAttr(s.avatar_url)+'" alt="" class="crm-dossier-photo">':escapeHtml((s.full_name||s.email||'A').charAt(0).toUpperCase())}</span><div class="crm-dossier-identity"><h1>${escapeHtml(s.full_name||s.email)}</h1><p>${crmPlan(ccData(s))} · ${escapeHtml(s.email||'')}</p><small class="crm-muted">${s.is_test_profile?'Perfil de teste':(s.lesson_weekday?WEEKDAY_LABELS[s.lesson_weekday-1]+' · '+escapeHtml((s.lesson_time||'').slice(0,5)):'Horário habitual não definido')}</small></div><button class="btn-ghost" onclick="openTodayClassCall(currentStudent.id)">${crmIcon('video')} Videochamada</button></section>
     <section class="crm-kpis crm-kpis-three">${crmKpi('Carga anual',metrics.count+'/'+(metrics.target??'—'),'chart')}${crmKpi('Reposições',metrics.pending,'refresh')}${crmKpi('Frequência',metrics.frequency,'calendar')}</section>
     <div class="crm-dossier-layout"><nav class="crm-dossier-nav" aria-label="Ficha do aluno">
-    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário e aulas','calendar'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation']]],['CAIXA DE ENTRADA',[['pedidos','Material do Aluno','file','materials'],['duvidas','Perguntas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
+    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário e aulas','calendar'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation'],['vocab','Vocabulário','book']]],['CAIXA DE ENTRADA',[['pedidos','Material do Aluno','file','materials'],['duvidas','Perguntas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
     </nav><div class="crm-dossier-content">
     <div id="tab-content"></div></div></div></div>
   `;
 
   if (currentTab === 'resumo') {
     crmStudentSummary();
+  } else if (currentTab === 'vocab') {
+    window.renderVocabTab();
   } else if (currentTab === 'estudos') {
     crmStudyTab();
   } else if (currentTab === 'duvidas' || currentTab === 'textos-aluno') {
