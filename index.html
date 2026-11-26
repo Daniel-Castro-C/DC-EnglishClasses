@@ -62,12 +62,25 @@
 <script>
 // Se já existir uma sessão ativa, manda direto pro painel certo
 (async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    const profile = await getMyProfile(session.user.id);
-    if (profile) {
-      window.location.href = profile.role === 'admin' ? 'admin.html' : 'home.html';
+  // Keep the login form usable if a saved session cannot be restored.
+  try {
+    if (typeof sb === 'undefined') throw new Error('Authentication unavailable');
+    const result = await Promise.race([
+      sb.auth.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Session timeout')), 10000))
+    ]);
+    if (result.error) throw result.error;
+    const session = result.data?.session;
+    if (session) {
+      const profile = await Promise.race([
+        getMyProfile(session.user.id),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Profile timeout')), 10000))
+      ]);
+      if (profile) window.location.replace(profile.role === 'admin' ? 'admin.html' : 'home.html');
     }
+  } catch (error) {
+    console.warn('Automatic session restoration unavailable', error);
+    showError('Não foi possível restaurar a sessão automaticamente. Tente entrar normalmente.');
   }
 })();
 
@@ -94,7 +107,12 @@ async function handleLogin(){
   btn.disabled = true;
   btn.textContent = 'Entrando...';
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  let data, error;
+  try {
+    ({ data, error } = await sb.auth.signInWithPassword({ email, password }));
+  } catch (err) {
+    error = err;
+  }
 
   if (error) {
     btn.disabled = false;
@@ -106,7 +124,8 @@ async function handleLogin(){
   }
 
   // O registro de "Acessou o portal" agora é feito dentro de getMyProfile (supabaseClient.js)
-  const profile = await getMyProfile(data.user.id);
+  let profile;
+  try { profile = await getMyProfile(data.user.id); } catch (err) { console.warn('Profile unavailable', err); }
   if (!profile) {
     btn.disabled = false;
     btn.textContent = 'Entrar';
