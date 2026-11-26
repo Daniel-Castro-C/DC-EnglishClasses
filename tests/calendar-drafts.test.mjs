@@ -548,3 +548,20 @@ test('new move RPC verifies exact IDs, wraps edits and calendar save, keeps reso
  assert.match(sql,/public\.save_admin_calendar/);
  assert.doesNotMatch(sql,/delete from public\.lessons/);
 });
+
+test('rescheduling waits for explicit confirmation instead of submitting a partial year',()=>{
+ const {run,ctx}=setupUnified();
+ const source=readFileSync('js/admin-calendar-test.js','utf8');
+ assert.match(source,/id="cc-reschedule-date" type="date" min="1900-01-01" max="9999-12-31"/);
+ assert.doesNotMatch(source,/id="cc-reschedule-date"[^>]*onchange=/);
+ assert.match(source,/onclick="ccApplyReschedule\(\)">Confirmar reagendamento/);
+ const input={value:'0002-11-24',validity:{valid:false},reportValidity(){},focus(){}};
+ ctx.document={getElementById(id){return id==='cc-reschedule-date'?input:{value:id==='cc-time'?'18:00':''}}};
+ run("ccSelected='2026-11-23';ccUpdateToolbar=()=>{};ccRefreshGrid=()=>{};ccEditor=()=>{}");
+ assert.equal(run("ccApplyReschedule()"),false);
+ assert.equal(run("Object.keys(draft.payloads.s1.events).length"),0);
+ input.value='2026-11-24';input.validity.valid=true;
+ assert.equal(run("ccApplyReschedule()"),true);
+ assert.equal(run("draft.payloads.s1.events['2026-11-23'].rescheduled_to"),'2026-11-24');
+ assert.equal(run("draft.payloads.s1.events['2026-11-24'].status"),'planned');
+});
