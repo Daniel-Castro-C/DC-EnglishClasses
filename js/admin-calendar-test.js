@@ -56,7 +56,7 @@ function ccEffectiveEvents(id,events){
    if(e.group_id!==g.id||!ccAbsent(e.status))continue;
    const allAbsent=g.members.every(member=>{
     const row=member===id?e:ccRead(member).events?.[date],base=g.calendar_events?.[date];
-    return !g.calendarLessons?.some(l=>l.student_id===member&&l.lesson_date===date&&l.group_id===g.id)&&(base||row?.group_id===g.id)&&ccAbsent(ccAttendanceStatus(base?.status||row.status,row?.attendance_override));
+    return !g.calendarLessons?.some(l=>l.student_id===member&&l.lesson_date===date&&l.group_id===g.id&&!ccAbsent(l.calendar_status))&&(base||row?.group_id===g.id)&&ccAbsent(ccAttendanceStatus(base?.status||row.status,row?.attendance_override));
    });
    e.status=allAbsent?'owed':'absent';
   }
@@ -70,9 +70,9 @@ function ccGroupForDate(id,date){
  ))))||null;
 }
 function ccGroupBase(ctx,d,date){
- const explicit=d.schedule.events[date];if(explicit)return ctx.lessons.some(l=>l.group_id===ctx.group.id&&l.lesson_date===date)?{...explicit,status:'done'}:explicit;
+ const explicit=d.schedule.events[date];if(explicit)return ctx.lessons.some(l=>l.group_id===ctx.group.id&&l.lesson_date===date&&!l.calendar_status)&&!d.registeredStatuses?.[date]?{...explicit,status:'done'}:explicit;
  const rows=ctx.members.map(s=>d.payloads[s.id].events[date]).filter(e=>e?.group_id===ctx.group.id);
- const registered=ctx.lessons.some(l=>l.group_id===ctx.group.id&&l.lesson_date===date);
+ const registered=ctx.lessons.some(l=>l.group_id===ctx.group.id&&l.lesson_date===date)||typeof ccLessonRows==='function'&&ccLessonRows(ctx,date).length>0;
  if(rows.length&&rows.every(e=>e.skip))return {skip:true};
  const first=rows.find(e=>!e.skip)||{};
  const statuses=rows.map(e=>e.group_status||e.status).filter(Boolean);
@@ -124,13 +124,14 @@ function ccDateState(ctx,d,date){
  const individualGroup=!ctx.group?ccGroupForDate(ctx.members[0].id,date):null;
  const rows=ctx.members.map(s=>{
   const own=ccEvent(ctx,d,s.id,date),e=ctx.group?ccLegacyGroupRow(ctx,d,s.id,date):own;
-  const real=ctx.lessons.some(l=>l.student_id===s.id&&l.lesson_date===date&&(!ctx.group||l.group_id===ctx.group.id));
+  const registered=ctx.lessons.find(l=>l.student_id===s.id&&l.lesson_date===date&&(!ctx.group||l.group_id===ctx.group.id||typeof ccLessonRows==='function'&&ccLessonRows(ctx,date).includes(l)));
+  const real=!!registered;
   const shared=individualGroup?.calendar_events?.[date];
   const fallback=individualGroup?ccSchedule(ccGroupSchedule(individualGroup),date):ccSchedule(x,date);
   const event=ctx.group?{...base,...e,time:base.time||e?.time,group_id:ctx.group.id}:shared?{...shared,...own,time:shared.time||own?.time}:e;
-  let status=real?'done':ctx.group?(base.skip?'':ccAttendanceStatus(base.status,ccGroupOverride(e,base))):event?.skip?'':event?.status||ccGlobalStatus(date)||((individualGroup?ccIsHabitual(ccGroupSchedule(individualGroup),date):ccIsHabitual(x,date))?'planned':'');
+  let status=real?(d.registeredStatuses?.[date]?event?.status||'done':registered.calendar_status||'done'):ctx.group?(base.skip?'':ccAttendanceStatus(base.status,ccGroupOverride(e,base))):event?.skip?'':event?.status||ccGlobalStatus(date)||((individualGroup?ccIsHabitual(ccGroupSchedule(individualGroup),date):ccIsHabitual(x,date))?'planned':'');
   if(ctx.group&&ccAbsent(status))status='absent';
-  if(individualGroup&&!real&&ccAbsent(status)){const all=individualGroup.members.every(id=>id===s.id||(!individualGroup.calendarLessons?.some(l=>l.student_id===id&&l.lesson_date===date&&l.group_id===individualGroup.id)&&ccAbsent(ccData(students.find(v=>v.id===id)).events[date]?.status)));status=all?'owed':'absent';}
+  if(individualGroup&&ccAbsent(status)){const all=individualGroup.members.every(id=>id===s.id||(!individualGroup.calendarLessons?.some(l=>l.student_id===id&&l.lesson_date===date&&l.group_id===individualGroup.id&&!ccAbsent(l.calendar_status))&&ccAbsent(ccData(students.find(v=>v.id===id)).events[date]?.status)));status=all?'owed':'absent';}
   return {id:s.id,e:event,status,real,override:ctx.group?ccGroupOverride(e,base):own?.attendance_override,time:fallback.time};
  });
  const allAbsent=ctx.group&&rows.every(r=>ccAbsent(r.status));
@@ -138,7 +139,7 @@ function ccDateState(ctx,d,date){
  const status=ctx.group?(base.skip?'':allAbsent?'owed':base.status||''):rows[0].status;
  return {rows,status,base,event:ctx.group?base:rows[0].e||{time:rows[0].time},real:ctx.members.some(s=>ccRegistered(ctx,s.id,date)),mixed:ctx.group&&new Set(rows.map(r=>r.status)).size>1};
 }
-function ccDateLabel(status){return status==='mixed'?'Frequência mista':ccStatus[status]||'';}
+function ccDateLabel(status,event){if(status==='done'&&event?.original)return 'Reposição realizada';if(status==='planned'&&event?.original)return 'Reposição agendada';return status==='mixed'?'Frequência mista':ccStatus[status]||'';}
 function ccNextDate(date){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+1);return d.toISOString().slice(0,10);}
 function ccGroupProjection(d,next){
  const previous=d.schedule;
@@ -209,7 +210,7 @@ function ccRefreshGrid(){
  let cells=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(day=>'<small>'+day+'</small>').join('')+emptyCell.repeat(offset);
  for(let day=1;day<=n;day++){
   const date=ccISO(y,m,day),{status,event,mixed}=ccDateState(ctx,d,date);
-  const moveLabel=typeof ccPendingMoveLabel==='function'?ccPendingMoveLabel(ctx,date):'',unavailable=ccUnavailable(date,status),label=ccDateLabel(status),holidayLabel=unavailable&&unavailable!==label?unavailable:'';
+  const moveLabel=typeof ccPendingMoveLabel==='function'?ccPendingMoveLabel(ctx,date):'',unavailable=ccUnavailable(date,status),label=ccDateLabel(status,event),holidayLabel=unavailable&&unavailable!==label?unavailable:'';
   cells+='<button class="btn-ghost cc-day'+(date===ccSelected?' cc-selected':'')+(unavailable?' cc-unavailable':'')+'" aria-label="'+ccEsc(formatDate(date)+(label?' · '+label:'')+(holidayLabel?' · '+holidayLabel:'')+(moveLabel?' · '+moveLabel:''))+'" onclick="ccSelect(&quot;'+date+'&quot;)"><b>'+day+'</b><small>'+ccEsc(label)+(moveLabel?'<br>'+ccEsc(moveLabel):'')+(holidayLabel?'<br><span class="cc-unavailable-label">'+ccEsc(holidayLabel)+'</span>':'')+(mixed?'<br>Frequência mista':'')+(status&&!['holiday','break'].includes(status)?'<br>'+ccEsc(event?.time||ccSchedule(x,date).time||''):'')+(event?.rescheduled_to?'<br>→ '+ccEsc(formatDate(event.rescheduled_to)):event?.rescheduled_from?'<br>De '+ccEsc(formatDate(event.rescheduled_from)):event?.original?'<br>Ref. '+ccEsc(formatDate(event.original)):'')+'</small></button>';
  }
  // Reserve six complete weeks so the calendar height never depends on the month length.
@@ -220,7 +221,7 @@ function ccRefreshGrid(){
  for(const date of dates){const state=ccDateState(ctx,d,date);if(state.rows.some(r=>r.status==='done'))completed++;else if(state.rows.every(r=>r.status==='absent'))absent++;
   if(ctx.group&&state.rows.every(r=>r.status==='vacation'&&r.e?.discounted!==false))groupVacations[date]={status:'vacation'};
   const eligible=ctx.group?state.rows.every(r=>['absent','owed'].includes(r.status)):['owed','teacher'].includes(state.status)||state.status==='absent'&&Object.values(x.events).some(e=>e.original===date);
-  if(eligible&&!state.real&&!ctx.members.every(s=>Object.entries(d.payloads[s.id].events).some(([rd,e])=>e.original===date&&(e.status==='done'||ccRegistered(ctx,s.id,rd)))))pending++;
+  if(eligible&&!state.rows.some(r=>r.status==='done')&&!ctx.members.every(s=>Object.entries(d.payloads[s.id].events).some(([rd,e])=>e.original===date&&(e.status==='done'||ctx.lessons.some(l=>l.student_id===s.id&&l.lesson_date===rd&&(!l.calendar_status||l.calendar_status==='done'))))))pending++;
  }
  document.getElementById('cc-annual').innerHTML='<h3>Controle anual · '+y+'</h3><p><b>'+(completed+absent)+' / '+(ccTarget(ctx.group?{...x,events:groupVacations}:x,y)??'—')+'</b> contabilizadas · '+completed+' realizadas · '+absent+' faltas sem reposição · '+pending+' reposições pendentes</p><p class="small-note">Aulas cadastradas são consideradas realizadas automaticamente.</p>';
 }
@@ -237,8 +238,8 @@ function ccSelect(date){if(ccSaving||!ccFinishInput())return;const d=ccDraft();i
 function ccReplacementAvailable(x,original,date,lessons,collective=false){
  if(x.events[original]?.group_id&&!collective)return false;
  if(!original||original>=date||!['owed','absent','teacher'].includes(x.events[original]?.status))return false;
- if(lessons.some(l=>l.lesson_date===original))return false;
- return !Object.entries(x.events).some(([rd,r])=>rd!==date&&r.original===original&&!r.skip&&(r.status==='done'||r.status==='planned'||lessons.some(l=>l.lesson_date===rd)));
+ if(lessons.some(l=>l.lesson_date===original&&!['owed','absent','teacher'].includes(l.calendar_status)))return false;
+ return !Object.entries(x.events).some(([rd,r])=>rd!==date&&r.original===original&&!r.skip&&(r.status==='done'||r.status==='planned'||lessons.some(l=>l.lesson_date===rd&&(!l.calendar_status||['done','planned'].includes(l.calendar_status)))));
 }
 function ccCanEditDate(ctx,d,date){
  if(ctx.members.some(s=>ccRegistered(ctx,s.id,date)))throw Error('Esta data tem aula cadastrada com materiais. Use Aulas e materiais para editar o cadastro; o calendário não exclui esse conteúdo.');
@@ -304,7 +305,8 @@ function ccSharedFields(row){
 }
 function ccIndividualAttendance(ctx,d,date,group,value){
  const id=ctx.members[0].id,x=d.payloads[id],old=x.events[date]||{};
- if(ccRegistered(ctx,id,date))throw Error('Esta aula tem materiais cadastrados. Preserve o registro realizado.');
+ const registered=ctx.lessons.filter(l=>l.student_id===id&&l.lesson_date===date);
+ if(registered.length&&(registered.length!==1||!registered[0].id||registered[0].group_id!==group.id))throw Error('Registro com materiais cadastrados ambíguo. Ajuste pelo calendário da turma.');
  if(!['inherit','done','absent'].includes(value))throw Error('Frequência inválida.');
  if(!old.group_id&&(old.original||old.rescheduled_from||old.rescheduled_to||old.skip||old.time&&old.time!==ccSchedule(ccGroupSchedule(group),date).time))throw Error('Já existe um registro individual independente nesta data.');
  if(old.group_id&&old.group_id!==group.id)throw Error('Esta data pertence a outra turma.');
@@ -317,6 +319,7 @@ function ccIndividualAttendance(ctx,d,date,group,value){
  const override=value==='inherit'?undefined:value;
  const status=ccAttendanceStatus(base.status,override);
  x.events[date]={...ccSharedFields(base),group_id:group.id,group_status:base.status,status:ccAbsent(status)?'absent':status,...(override?{attendance_override:override}:{})};
+ if(registered.length)(d.registeredStatuses??={})[date]={date,ids:registered.map(l=>l.id),attendance:true};
 }
 function ccChangeIndividualAttendance(){
  const ctx=ccContext(),d=ccDraft(ctx),group=ccGroupForDate(ctx.members[0].id,ccSelected);
@@ -339,8 +342,8 @@ function ccPublishedDetails(ctx,date){
  }).join('');
 }
 function ccDayHeading(date,state,time){
- const label=ccDateLabel(state.status)||'Sem aula',unavailable=ccUnavailable(date,state.status);
- return '<div class="cc-day-heading"><div><h3>'+ccEsc(formatDate(date))+(state.status&&!['holiday','break'].includes(state.status)&&time?' · '+ccEsc(time):'')+'</h3></div><span class="cc-day-status" data-status="'+ccEsc(state.status||'empty')+'">'+ccEsc(label)+(state.mixed?' · frequência mista':'')+'</span></div>'+(unavailable?'<p class="cc-unavailable-note">'+ccEsc(unavailable)+' · Dia normalmente indisponível. É possível registrar uma aula excepcional.</p>':'');
+ const label=ccDateLabel(state.status,state.event)||'Sem aula',unavailable=ccUnavailable(date,state.status);
+ return '<div class="cc-day-heading"><div><h3>'+ccEsc(formatDate(date))+(state.status&&!['holiday','break'].includes(state.status)&&time?' · '+ccEsc(time):'')+'</h3></div><span class="cc-day-status" data-status="'+ccEsc(state.status||'empty')+'">'+ccEsc(label)+(state.mixed?' · frequência mista':'')+'</span></div>'+(state.event?.original?'<p class="small-note">Reposição referente a '+ccEsc(formatDate(state.event.original))+'</p>':'')+(unavailable?'<p class="cc-unavailable-note">'+ccEsc(unavailable)+' · Dia normalmente indisponível. É possível registrar uma aula excepcional.</p>':'');
 }
 function ccQuickDayActions(ctx,state){
  const status=state.status;
@@ -369,14 +372,14 @@ function ccEditor(){
  if(typeof ccPendingLessonDeletion==='function'&&ccPendingLessonDeletion(ctx,date)){el.innerHTML=header+ccLessonForm(ctx,d,date,state);return;}
  if(group){
   const base=group.calendar_events?.[date],own=d.payloads[ctx.members[0].id].events[date]||{};
-  const permitted=!state.real&&!base?.skip&&!own.skip&&['planned','done','absent','owed'].includes(base?.status||own.status||state.status);
+  const permitted=!base?.skip&&!own.skip&&['planned','done','absent','owed'].includes(base?.status||own.status||state.status);
   const ownForm=state.real&&typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';
   el.innerHTML=header+(ownForm?'':state.real&&typeof ccLessonConsultation==='function'?ccLessonConsultation(ctx,date,ctx.lessons.filter(l=>l.lesson_date===date),false):ccPublishedDetails(ctx,date))+'<p>Esta aula pertence à turma '+ccEsc(group.name)+'. Alterações coletivas são feitas no calendário da turma.</p>'+(permitted?'<label>Frequência deste aluno <select id="cc-own-attendance" onchange="ccChangeIndividualAttendance()"><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option></select></label><p class="small-note">A falta não altera os demais alunos. Só há reposição quando todos faltarem.</p>':'')+'<button class="btn-dark-sm" onclick="tgOpenDate(&quot;'+ccEsc(group.id)+'&quot;,&quot;'+date+'&quot;)">Abrir calendário da turma</button>';
   if(ownForm)el.insertAdjacentHTML('beforeend',ownForm);
   if(permitted)document.getElementById('cc-own-attendance').value=ccGroupOverride(own,base||{status:own.group_status||'planned'})||'inherit';
   return;
  }
- if(state.real&&!ctx.group){const lesson=typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';el.innerHTML=header+(lesson||ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas.</p>');return;}
+ if(state.real&&(!ctx.group||typeof ccLessonCanManage==='function'&&ccLessonCanManage(ctx,date))){const lesson=typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';el.innerHTML=header+(lesson||ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas.</p>');return;}
  try{if(!ctx.group||!state.real)ccCanEditDate(ctx,d,date);}catch(error){el.innerHTML=header+'<p role="alert">'+ccEsc(error.message)+'</p>';return;}
  if(state.status==='rescheduled'){
   el.innerHTML=header+'<p><strong>Reagendado</strong> para '+ccEsc(formatDate(e.rescheduled_to))+'</p><div class="row"><button class="btn-ghost" onclick="ccJump(&quot;'+ccEsc(e.rescheduled_to)+'&quot;)">Ir para nova data</button><button class="btn-ghost" onclick="ccRemove()">Excluir registro e cancelar reagendamento</button></div>';return;}
@@ -475,7 +478,9 @@ async function ccSaveAll(){
   if(typeof ccValidateLessonDrafts==='function'){ccValidateLessonDrafts(ctx,d);await ccCheckLessonSchema(ctx);}
   const deletions=typeof ccLessonDeletionEntries==='function'?ccLessonDeletionEntries(ctx):[];
   const moves=typeof ccLessonMoveEntries==='function'?ccLessonMoveEntries(ctx):[];
-  const removedDates=new Set([...deletions,...moves].map(e=>e.date));
+  const metadata=Object.values(d.registeredStatuses||{}).filter(e=>!deletions.some(x=>x.date===e.date));
+  const removedDates=new Set([...deletions,...moves,...metadata].map(e=>e.date));
+  if(moves.some(m=>metadata.some(e=>e.date===m.date)))throw Error('Salve a alteração de status antes de alterar a data desta mesma aula.');
   if(deletions.length)d=ccProjectLessonDeletions(ctx,d);
   if(moves.length)d=ccProjectLessonMoves(ctx,d);
   if(!ctx.members.every(s=>s.is_test_profile)){
@@ -487,7 +492,19 @@ async function ccSaveAll(){
     }
    }
   }
-  if(moves.length){
+  if(metadata.length){
+   const x=d.schedule,schedule=ctx.group?{...ctx.group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events}:null;
+   const requests=[];
+   for(const entry of moves){
+    const rows=ccLessonRows(ctx,entry.date),targets=rows.map(l=>l.student_id);
+    requests.push({date:entry.date,to:entry.newDate,ids:rows.map(l=>l.id),title:entry.automatic?null:entry.title,topic:entry.topic,materials:await ccPrepareLessonMaterials(ctx,entry,targets)});
+   }
+   const {data,error}=await sb.rpc('portal_calendar_save_registered_statuses',{p_group:ctx.group?.id||null,p_student:ctx.group?null:ctx.members[0].id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]})),p_metadata:metadata,p_moves:requests,p_deletions:deletions.map(e=>({date:e.date,ids:e.deleteIds}))});
+   if(error)throw error;
+   for(const entry of [...moves,...deletions])ccLessonMap(ctx).delete(entry.date);
+   const moved=moves.find(e=>e.date===d.selected);if(moved){d.selected=moved.newDate;d.date=new Date(moved.newDate+'T12:00:00');}
+   if(!ctx.group){const id=ctx.members[0].id;ccCloud.set(id,{calendar_key:id,payload:ccClone(d.payloads[id]),revision:data});}
+  }else if(moves.length){
    const x=d.schedule,schedule=ctx.group?{...ctx.group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events}:null;
    const requests=[];
    for(const entry of moves){
@@ -529,7 +546,7 @@ async function ccOverview(){currentView='controle';renderNav();const root=docume
 async function ccOpen(id){await openStudent(id);ccActiveKey='';ccSelected='';switchTab('calendario')}
 
 function ccTarget(x,y){if(!x.plan||!x.start)return null;let total=0;for(let m=0;m<12;m++){let first=ccISO(y,m,1),last=ccISO(y,m,new Date(y,m+1,0).getDate());if(x.start>last||(x.end&&x.end<first))continue;let days=new Date(y,m+1,0).getDate(),a=x.start>first?Number(x.start.slice(-2)):1,b=x.end&&x.end<last?Number(x.end.slice(-2)):days;total+=Math.round(Number(x.plan)/12*(b-a+1)/days)}return Math.max(0,total-Object.entries(x.events).filter(([d,e])=>d.startsWith(y+'-')&&d>=x.start&&(!x.end||d<=x.end)&&e.status==='vacation'&&e.discounted!==false).length)}
-function ccPending(x,byDate={}){const entries=Object.entries(x.events);return entries.filter(([d,e])=>(!e.group_id||tgGroupReplacementEligible(e.group_id,d))&&(['owed','teacher'].includes(e.status)||e.status==='absent'&&entries.some(([rd,r])=>r.original===d))&&!byDate[d]&&!entries.some(([rd,r])=>r.original===d&&(r.status==='done'||byDate[rd]?.length))).length}
+function ccPending(x,byDate={}){const entries=Object.entries(x.events);return entries.filter(([d,e])=>(!e.group_id||tgGroupReplacementEligible(e.group_id,d))&&(['owed','teacher'].includes(e.status)||e.status==='absent'&&entries.some(([rd,r])=>r.original===d))&&!byDate[d]?.some(l=>!l.calendar_status||l.calendar_status==='done')&&!entries.some(([rd,r])=>r.original===d&&(r.status==='done'||byDate[rd]?.some(l=>!l.calendar_status||l.calendar_status==='done')))).length}
 // Previsão nacional de 2027. Carnaval e Corpus Christi não são feriados nacionais.
 const ccNationalHolidays2027=Object.freeze([
  ['2027-01-01','Confraternização Universal'],['2027-03-26','Sexta-feira Santa'],
@@ -546,9 +563,9 @@ function ccGlobal(){
 function ccGlobalEntry(d){const entries=ccGlobal().filter(e=>d>=e.start&&d<=e.end);return entries.find(e=>e.status==='holiday')||entries[0];}
 function ccGlobalStatus(d){return ccGlobalEntry(d)?.status||'';}
 function ccUnavailable(date,status){const entry=ccGlobalEntry(date);return entry?(entry.name||ccStatus[entry.status]):['holiday','break'].includes(status)?ccStatus[status]:'';}
-function ccAgenda(today,completedIds=null,keepRecorded=false){return students.filter(s=>!s.is_test_profile).flatMap(s=>{const x=ccData(s),e=x.events[today.date],habitual=ccHabitual(x,today.date)&&ccSchedule(x,today.date).time,registered=completedIds?.has(s.id),global=ccGlobalStatus(today.date);if(!registered&&(e?.skip||e?.status==='rescheduled'))return [];if(!registered&&!e&&!habitual)return [];if(!keepRecorded&&!registered&&((e&&!['planned','done'].includes(e.status))||(!e&&global)))return [];if(!registered&&!e&&global)return [];return [{...s,lesson_time:e?.time||ccSchedule(x,today.date).time||'',ccType:e?.rescheduled_from?'Reagendamento · '+e.rescheduled_from.split('-').reverse().join('/'):e?.original?'Reposição · '+e.original.split('-').reverse().join('/'):habitual?'Regular':'Adicional',ccDate:today.date,ccStatus:registered?'done':e?.status||'planned',ccRegistered:!!registered}] }).sort((a,b)=>(a.lesson_time||'99').localeCompare(b.lesson_time||'99'))}
-function ccQuickStatus(student){const status=student.ccStatus;return '<select class="crm-quick-status" data-status="'+ccEsc(status)+'" aria-label="Status da aula de '+ccEsc(student.full_name||student.email||'Aluno')+'" '+(student.ccRegistered?'disabled title="Aula realizada automaticamente pelo cadastro de materiais"':'onchange="ccQuickSave(this,&quot;'+ccEsc(student.id)+'&quot;,&quot;'+ccEsc(student.ccDate)+'&quot;)"')+'>'+Object.entries(ccStatus).filter(([k])=>k!=='rescheduled').map(([k,v])=>'<option value="'+k+'" '+(k===status?'selected':'')+'>'+ccEsc(v)+'</option>').join('')+'</select>'+(student.ccRegistered?'<small class="crm-muted" style="display:block">Via cadastro</small>':'')}
-async function ccQuickSave(select,id,date){const s=students.find(v=>v.id===id),status=select.value,previous=select.dataset.status;if(!s||!Object.hasOwn(ccStatus,status)||status==='rescheduled')return;select.disabled=true;try{const {data,error}=await sb.from('lessons').select('id').eq('student_id',id).eq('lesson_date',date).limit(1);if(error)throw error;if(data?.length){select.value='done';select.dataset.status='done';select.title='Aula realizada automaticamente pelo cadastro de materiais';alert('Esta aula já está cadastrada como realizada.');if(currentView==='home')await renderHome();return;}if(ccHasDirtyForMember(id)){select.value=previous;return alert('Salve as alterações pendentes no calendário individual.');}const x=ccData(s);if(ccGroupForDate(id,date)){select.value=previous;return alert('Registre a frequência da turma pelo módulo Turmas.');}x.events[date]={...(x.events[date]||{}),status};if(!await ccWrite(id,x)){select.value=previous;return;}select.dataset.status=status;const feedback=document.getElementById('crm-agenda-feedback');if(feedback)feedback.textContent='Status salvo no calendário de '+(s.full_name||s.email)+'.';const other=document.getElementById('crm-other-pending');if(other)other.innerHTML=crmOtherPending();const count=document.getElementById('crm-replacement-stat');if(count)count.textContent=students.filter(v=>!v.is_test_profile).reduce((a,v)=>a+ccPending(ccData(v)),0);if(currentView==='home')await renderHome();}catch(error){console.error(error);select.value=previous;alert('Não foi possível salvar o status. Tente novamente.');}finally{if(select.isConnected)select.disabled=false}}
+function ccAgenda(today,completedIds=null,keepRecorded=false,registeredIds=completedIds){return students.filter(s=>!s.is_test_profile).flatMap(s=>{const x=ccData(s),e=x.events[today.date],habitual=ccHabitual(x,today.date)&&ccSchedule(x,today.date).time,registered=completedIds?.has(s.id),global=ccGlobalStatus(today.date);if(!registered&&(e?.skip||e?.status==='rescheduled'))return [];if(!registered&&!e&&!habitual)return [];if(!keepRecorded&&!registered&&((e&&!['planned','done'].includes(e.status))||(!e&&global)))return [];if(!registered&&!e&&global)return [];return [{...s,lesson_time:e?.time||ccSchedule(x,today.date).time||'',ccType:e?.rescheduled_from?'Reagendamento · '+e.rescheduled_from.split('-').reverse().join('/'):e?.original?'Reposição · '+e.original.split('-').reverse().join('/'):habitual?'Regular':'Adicional',ccDate:today.date,ccStatus:registered?'done':e?.status||'planned',ccRegistered:!!registeredIds?.has(s.id)}] }).sort((a,b)=>(a.lesson_time||'99').localeCompare(b.lesson_time||'99'))}
+function ccQuickStatus(student){const status=student.ccStatus;return '<select class="crm-quick-status" data-status="'+ccEsc(status)+'" aria-label="Status da aula de '+ccEsc(student.full_name||student.email||'Aluno')+'" '+(student.ccRegistered?'disabled title="Aula cadastrada: altere o status pelo calendário"':'onchange="ccQuickSave(this,&quot;'+ccEsc(student.id)+'&quot;,&quot;'+ccEsc(student.ccDate)+'&quot;)"')+'>'+Object.entries(ccStatus).filter(([k])=>k!=='rescheduled').map(([k,v])=>'<option value="'+k+'" '+(k===status?'selected':'')+'>'+ccEsc(v)+'</option>').join('')+'</select>'+(student.ccRegistered?'<small class="crm-muted" style="display:block">Via cadastro</small>':'')}
+async function ccQuickSave(select,id,date){const s=students.find(v=>v.id===id),status=select.value,previous=select.dataset.status;if(!s||!Object.hasOwn(ccStatus,status)||status==='rescheduled')return;select.disabled=true;try{const {data,error}=await sb.from('lessons').select('id').eq('student_id',id).eq('lesson_date',date).limit(1);if(error)throw error;if(data?.length){select.value=previous;select.dataset.status=previous;select.title='Aula cadastrada: altere o status pelo calendário';alert('Altere o status desta aula cadastrada pelo calendário.');if(currentView==='home')await renderHome();return;}if(ccHasDirtyForMember(id)){select.value=previous;return alert('Salve as alterações pendentes no calendário individual.');}const x=ccData(s);if(ccGroupForDate(id,date)){select.value=previous;return alert('Registre a frequência da turma pelo módulo Turmas.');}x.events[date]={...(x.events[date]||{}),status};if(!await ccWrite(id,x)){select.value=previous;return;}select.dataset.status=status;const feedback=document.getElementById('crm-agenda-feedback');if(feedback)feedback.textContent='Status salvo no calendário de '+(s.full_name||s.email)+'.';const other=document.getElementById('crm-other-pending');if(other)other.innerHTML=crmOtherPending();const count=document.getElementById('crm-replacement-stat');if(count)count.textContent=students.filter(v=>!v.is_test_profile).reduce((a,v)=>a+ccPending(ccData(v)),0);if(currentView==='home')await renderHome();}catch(error){console.error(error);select.value=previous;alert('Não foi possível salvar o status. Tente novamente.');}finally{if(select.isConnected)select.disabled=false}}
 async function ccOpenDate(id,date){await openStudent(id);ccDate=new Date(date+'T12:00:00');ccSelected=date;const existing=ccDrafts.get('student:'+id);if(existing){existing.date=ccDate;existing.selected=date;}ccActiveKey='';switchTab('calendario')}
 function ccGlobalView(){currentView='agenda';currentStudent=null;renderNav();let root=document.getElementById('main-content');root.innerHTML='<div class="topline"><h1>Agenda</h1></div><div class="box"><h3>Feriados e recessos</h3><div class="row"><label>Início<input type="date" id="cg-start"></label><label>Fim<input type="date" id="cg-end"></label><label>Tipo<select id="cg-type"><option value="holiday">Feriado</option><option value="break">Recesso</option></select></label><button class="btn-dark-sm" onclick="ccGlobalSave()">Adicionar</button></div>'+ccGlobal().map((e,i)=>'<p>'+ccEsc(e.start)+' a '+ccEsc(e.end)+' · '+ccEsc(ccStatus[e.status])+(e.name?' · '+ccEsc(e.name):'')+' <button class="btn-ghost" onclick="ccGlobalRemove('+i+')">Excluir</button></p>').join('')+'</div><div class="box"><h3>Agenda de hoje</h3>'+ccAgenda(adminToday()).map(s=>'<p>'+ccEsc(s.lesson_time.slice(0,5)||'Sem horário')+' · '+ccEsc(s.full_name||s.email)+' · '+ccEsc(s.ccType)+' <button class="btn-ghost" onclick="ccOpenDate(&quot;'+s.id+'&quot;,&quot;'+s.ccDate+'&quot;)">Calendário</button></p>').join('')+'</div>'}
 async function ccGlobalSave(){let a=document.getElementById('cg-start').value,b=document.getElementById('cg-end').value||a;if(!a||b<a)return alert('Informe um período válido.');if(await ccSaveCloud('global',[...ccGlobalRaw(),{start:a,end:b,status:document.getElementById('cg-type').value}]))ccGlobalView()}
@@ -559,7 +576,7 @@ async function ccRosterRows(){let el=document.getElementById('crm-roster');if(!e
 function crmIcon(name){const paths={dashboard:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-4M16 3a4 4 0 0 1 0 8"/><circle cx="9" cy="7" r="4"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',chart:'<path d="M3 3v18h18M8 16v-4m5 4V8m5 8V5"/>',book:'<path d="M12 7c-3-3-7-3-10-2v15c4-1 7 0 10 2 3-2 6-3 10-2V5c-3-1-7-1-10 2v15"/>',message:'<path d="M21 11a9 9 0 0 1-9 9H3l2-5a9 9 0 1 1 16-4Z"/>',megaphone:'<path d="M3 10v4h4l4 7h3l-3-7 10 4V6l-14 4Z"/>',graduation:'<path d="m2 9 10-5 10 5-10 5-10-5Zm4 2v6c4 3 8 3 12 0v-6"/>',external:'<path d="M13 5h6v6m0-6-9 9M19 13v6H5V5h6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="m12 2 2 4 4-1 1 4 3 3-3 3-1 4-4-1-2 4-2-4-4 1-1-4-3-3 3-3 1-4 4 1Z"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',refresh:'<path d="M20 7a9 9 0 0 0-15-2L2 8m0-5v5h5m-3 9a9 9 0 0 0 15 2l3-3m0 5v-5h-5"/>',file:'<path d="M6 2h8l4 4v16H6ZM14 2v5h4M9 12h6m-6 4h6"/>',video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-4v12l-6-4"/>',plus:'<path d="M12 5v14M5 12h14"/>',chevron:'<path d="m9 6 6 6-6 6"/>'};return '<svg class="crm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[name]||paths.calendar)+'</svg>'}
 function crmKpi(label,value,icon,id){return '<div class="crm-kpi"><div><span>'+ccEsc(label)+'</span>'+crmIcon(icon)+'</div><strong '+(id?'id="'+id+'"':'')+'>'+ccEsc(value)+'</strong></div>'}
 function crmPlan(x){return x.plan==='48'?'Essencial':x.plan==='96'?'Intensivo':'Plano não definido'}
-function crmStudentMetrics(s,lessons){const x=ccData(s),y=Number(adminToday().date.slice(0,4)),prefix=y+'-',by={};lessons.filter(l=>l.lesson_date).forEach(l=>(by[l.lesson_date]??=[]).push(l));const rows=Object.entries(x.events),used=new Set(rows.filter(([d,e])=>e.original&&(e.status==='done'||by[d]?.length)).map(([d,e])=>e.original));const real=lessons.filter(l=>l.lesson_date?.startsWith(prefix)).length+rows.filter(([d,e])=>d.startsWith(prefix)&&e.status==='done'&&!by[d]).length;const absent=rows.filter(([d,e])=>d.startsWith(prefix)&&e.status==='absent'&&!by[d]&&!used.has(d)).length;const missed=rows.filter(([d,e])=>d.startsWith(prefix)&&['owed','absent'].includes(e.status)&&!by[d]).length;return {count:real+absent,target:ccTarget(x,y),pending:ccPending(x,by),frequency:real+missed?Math.round(real/(real+missed)*100)+'%':'—'}}
+function crmStudentMetrics(s,lessons){const x=ccData(s),y=Number(adminToday().date.slice(0,4)),prefix=y+'-',by={};lessons.filter(l=>l.lesson_date).forEach(l=>(by[l.lesson_date]??=[]).push(l));const rows=Object.entries(x.events),used=new Set(rows.filter(([d,e])=>e.original&&(e.status==='done'||by[d]?.length)).map(([d,e])=>e.original));const real=lessons.filter(l=>l.lesson_date?.startsWith(prefix)&&(!l.calendar_status||l.calendar_status==='done')).length+rows.filter(([d,e])=>d.startsWith(prefix)&&e.status==='done'&&!by[d]).length;const absent=rows.filter(([d,e])=>d.startsWith(prefix)&&e.status==='absent'&&!by[d]?.some(l=>!l.calendar_status||l.calendar_status==='done')&&!used.has(d)).length;const missed=rows.filter(([d,e])=>d.startsWith(prefix)&&['owed','absent'].includes(e.status)&&!by[d]?.some(l=>!l.calendar_status||l.calendar_status==='done')).length;return {count:real+absent,target:ccTarget(x,y),pending:ccPending(x,by),frequency:real+missed?Math.round(real/(real+missed)*100)+'%':'—'}}
 function crmDismissed(id,key){return !!ccRead(id).dismissedAlerts?.[key];}
 async function crmDismissAlert(id,key){
  if(!confirm('Descartar somente este aviso? O registro original será preservado.'))return;

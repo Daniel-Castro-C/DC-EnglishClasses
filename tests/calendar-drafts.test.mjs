@@ -565,3 +565,53 @@ test('rescheduling waits for explicit confirmation instead of submitting a parti
  assert.equal(run("draft.payloads.s1.events['2026-11-23'].rescheduled_to"),'2026-11-24');
  assert.equal(run("draft.payloads.s1.events['2026-11-24'].status"),'planned');
 });
+
+for(const group of [false,true]){
+ test((group?'group':'individual')+': registered lesson can change to every status, retain IDs and materials, and persist in draft',()=>{
+  const {run}=setup({group});
+  run(readFileSync('js/admin-calendar-lessons.js','utf8'));
+  run("ctx.lessons.push(...ctx.members.map(s=>({id:'lesson-'+s.id,student_id:s.id,group_id:ctx.group?.id||null,lesson_date:'2026-11-23',title:'Class #1',topic:'Test',resources:[{id:'resource-'+s.id}]})))");
+  for(const status of ['planned','done','absent','owed','teacher','holiday','break','vacation']){
+   run("ccStageRegisteredStatus(ctx,draft,'2026-11-23',"+JSON.stringify(status)+")");
+   const expected=group&&status==='absent'?'owed':status;
+   assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),expected);
+   assert.equal(run("ctx.lessons[0].resources[0].id"),'resource-s1');
+   assert.equal(run("draft.registeredStatuses['2026-11-23'].ids[0]"),'lesson-s1');
+  }
+  run("ccStageRegisteredStatus(ctx,draft,'2026-11-23','rescheduled','','2026-11-24')");
+  assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'rescheduled');
+  assert.equal(run("ccDateState(ctx,draft,'2026-11-24').status"),'planned');
+  run("ccStageRegisteredStatus(ctx,draft,'2026-11-23','done')");
+  assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'done');
+  assert.equal(run("ccDateState(ctx,draft,'2026-11-24').status"),'');
+  run("ccStageRegisteredStatus(ctx,draft,'2026-11-23','owed');for(const l of ctx.lessons)l.calendar_status='owed';delete draft.registeredStatuses");
+  assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'owed');
+ });
+}
+test('registered lesson status selector exposes all choices including replacement and rescheduling',()=>{
+ const {run}=setup();
+ run(readFileSync('js/admin-calendar-lessons.js','utf8'));
+ run("ctx.lessons.push({id:'l1',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1'})");
+ const html=run("ccRegisteredReplacementFields(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))");
+ for(const status of ['planned','done','absent','owed','teacher','holiday','break','vacation','rescheduled','replacement_done','replacement_planned'])assert.match(html,new RegExp('value="'+status+'"'));
+});
+test('registered group absence can be corrected on an individual calendar without affecting the other member',()=>{
+ const {run}=setup({group:true});
+ run("tgSelected.calendarLessons=[{id:'l1',group_id:'g1',student_id:'s1',lesson_date:'2026-11-23'},{id:'l2',group_id:'g1',student_id:'s2',lesson_date:'2026-11-23'}];currentView='student';currentLessons=[tgSelected.calendarLessons[0]];ctx=ccContext();draft=ccDraft(ctx);ccIndividualAttendance(ctx,draft,'2026-11-23',tgSelected,'absent')");
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'absent');
+ assert.equal(run("draft.registeredStatuses['2026-11-23'].ids[0]"),'l1');
+ assert.equal(run("Object.hasOwn(draft.payloads,'s2')"),false);
+});
+test('status corrections are sent in one atomic request with exact IDs and unchanged resources',async()=>{
+ const {run,ctx}=setup();
+ run(readFileSync('js/admin-calendar-lessons.js','utf8'));
+ ctx.calls=[];ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),async rpc(name,args){ctx.calls.push({name,args});return {data:3}}};
+ run("currentLessons.push({id:'a',student_id:'s1',lesson_date:'2026-11-23',resources:[{id:'r'}]},{id:'b',student_id:'s1',lesson_date:'2026-11-30'});ctx=ccContext();ccStageRegisteredStatus(ctx,draft,'2026-11-23','owed');ccStageRegisteredStatus(ctx,draft,'2026-11-30','teacher');ccMarkDirty(ctx,draft);ccRender=()=>{};loadLessonsFor=async()=>{}");
+ await run("ccSaveAll()");
+ assert.equal(ctx.calls.length,1);
+ assert.equal(ctx.calls[0].name,'portal_calendar_save_registered_statuses');
+ assert.equal(ctx.calls[0].args.p_metadata.length,2);
+ assert.equal(ctx.calls[0].args.p_metadata[0].ids[0],'a');
+ assert.equal(ctx.calls[0].args.p_changes[0].payload.events['2026-11-23'].status,'owed');
+ assert.equal(run("currentLessons[0].resources[0].id"),'r');
+});

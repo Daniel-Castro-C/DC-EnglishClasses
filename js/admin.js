@@ -127,14 +127,15 @@ async function loadReportPendencies(){
   const pending=[], registered=new Set();
   const studentById=new Map(students.filter(s=>!s.is_test_profile).map(s=>[s.id,s]));
   for(let offset=0;;offset+=500){
-    const {data,error}=await sb.from('lessons').select('id,student_id,group_id,lesson_date,title,report_pending_dismissed,resources(type)').order('id',{ascending:true}).range(offset,offset+499);
+    const {data,error}=await sb.from('lessons').select('id,student_id,group_id,lesson_date,title,calendar_status,report_pending_dismissed,resources(type)').order('id',{ascending:true}).range(offset,offset+499);
     if(error)throw error;
     const batch=data||[];
     for(const lesson of batch){
       const student=studentById.get(lesson.student_id);
       if(!student)continue;
-      if(lesson.lesson_date)registered.add(lesson.student_id+'|'+lesson.lesson_date);
-      // Cadastro existente já conta como realizada na regra vigente do calendário.
+      if(lesson.lesson_date&&(!lesson.calendar_status||lesson.calendar_status==='done'))registered.add(lesson.student_id+'|'+lesson.lesson_date);
+      // Apenas aulas realizadas geram pendência de relatório de desempenho.
+      if(lesson.calendar_status&&lesson.calendar_status!=='done')continue;
       if(lesson.report_pending_dismissed||(lesson.resources||[]).some(r=>r.type==='rep'))continue;
       pending.push({lesson,studentName:student.full_name||student.email||'Aluno',missingLesson:false});
     }
@@ -182,10 +183,10 @@ async function renderHome(){
   renderNav();
   const today = adminToday();
   const homeRequest = ++crmHomeRequest;
-  let completedIds = new Set(), agendaLoadError = false;
-  try { const {data,error}=await sb.from('lessons').select('student_id').eq('lesson_date',today.date); if(error)throw error; completedIds=new Set((data||[]).map(l=>l.student_id)); } catch(error){console.error('Agenda: falha ao consultar aulas cadastradas',error);agendaLoadError=true;}
+  let completedIds = new Set(), registeredIds = new Set(), agendaLoadError = false;
+  try { const {data,error}=await sb.from('lessons').select('student_id,calendar_status').eq('lesson_date',today.date); if(error)throw error; registeredIds=new Set((data||[]).map(l=>l.student_id)); completedIds=new Set((data||[]).filter(l=>!l.calendar_status||l.calendar_status==='done').map(l=>l.student_id)); } catch(error){console.error('Agenda: falha ao consultar aulas cadastradas',error);agendaLoadError=true;}
   if(currentView!=='home'||homeRequest!==crmHomeRequest)return;
-  const classes = ccAgenda(today,completedIds,true);
+  const classes = ccAgenda(today,completedIds,true,registeredIds);
   const main = document.getElementById('main-content');
   main.innerHTML = `
 
@@ -1818,7 +1819,7 @@ function crmEditLesson(id){
 
 function crmCompletedLocalCount(){
  const dates=new Set(currentLessons.map(l=>l.lesson_date).filter(Boolean));
- return currentLessons.length+ccManualDoneDates(ccData(currentStudent)).filter(d=>!dates.has(d)).length;
+ return currentLessons.filter(l=>!l.calendar_status||l.calendar_status==='done').length+ccManualDoneDates(ccData(currentStudent)).filter(d=>!dates.has(d)).length;
 }
 
 function crmGroupedLessons(pendencies){
