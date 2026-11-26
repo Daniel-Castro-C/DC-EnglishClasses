@@ -120,3 +120,56 @@ test('actual current date has a colored date badge and border, not other days',(
  assert.doesNotMatch(run("crmMonthlyGrid('2026-12',new Map(),'2026-11-26')"),/is-today/);
  assert.match(readFileSync('admin-crm.css','utf8'),/\.crm-month-day\.is-today \.crm-month-day-number\{[^}]*background:#496C97;color:#fff/);
 });
+test('individual and group daily status use the same select, with safe group attendance options',()=>{
+ const {run}=setup();
+ const group=run("crmTodayStatus(crmGroupDailyAgenda(ccAgenda({date:'2026-11-19'},null,true))[0])");
+ assert.match(group,/<select class="crm-quick-status" data-status="mixed"/);
+ assert.match(group,/ccQuickGroupSave/);
+ assert.match(group,/value="mixed" selected disabled/);
+ assert.match(group,/Falta de todos \(com reposição\)/);
+ assert.doesNotMatch(group,/value="absent"/);
+ const individual=run("ccQuickStatus({id:'one',ccStatus:'planned',ccDate:'2026-11-12'})");
+ assert.match(individual,/<select class="crm-quick-status"/);
+ assert.match(individual,/ccQuickSave/);
+ assert.match(run("ccQuickStatus({ccGroupId:'g',ccStatus:'done',ccRegistered:true})"),/disabled title=/);
+});
+function quickGroupFixture({registered=false,fail=false}={}){
+ const {run,c}=setup(),calls=[],alerts=[];
+ c.alert=msg=>alerts.push(msg);c.console={error(){}};
+ c.select={value:'done',dataset:{status:'mixed'},disabled:false,isConnected:true};
+ c.sb={from(){return {select(){return this},in(){return this},eq(){return this},async limit(){return {data:registered?[{id:1}]:[]}}}},async rpc(name,args){calls.push({name,args:JSON.parse(JSON.stringify(args))});return fail?{error:Error('revision conflict')}:{data:1}}};
+ c.currentView='turmas';
+ run("ccLoadCloud=async()=>{};tgLoad=async()=>{};ccCloud.get('two').revision=4;ccCloud.set('three',{payload:{},revision:5})");
+ return {run,c,calls,alerts};
+}
+test('group quick status saves one atomic transaction and preserves the individual absence and event time',async()=>{
+ const {run,c,calls,alerts}=quickGroupFixture();
+ await run("ccQuickGroupSave(select,'g','2026-11-19')");
+ assert.equal(calls.length,1);assert.equal(calls[0].name,'portal_group_calendar_save');
+ const {p_group,p_schedule,p_changes}=calls[0].args;
+ assert.equal(p_group,'g');assert.equal(p_schedule.calendar_events['2026-11-19'].status,'done');
+ assert.equal(p_schedule.calendar_events['2026-11-19'].time,'20:00');
+ assert.deepEqual(p_changes.map(p=>[p.id,p.revision,p.payload.events['2026-11-19'].status]),[['two',4,'absent'],['three',5,'done']]);
+ assert.equal(p_changes[0].payload.events['2026-11-19'].attendance_override,'absent');
+ assert.equal(alerts.length,0);assert.equal(c.select.disabled,false);
+});
+test('collective absence marks both members eligible for a shared replacement',async()=>{
+ const {run,c,calls}=quickGroupFixture();c.select.value='owed';
+ await run("ccQuickGroupSave(select,'g','2026-11-12')");
+ assert.equal(calls.length,1);
+ const {p_schedule,p_changes}=calls[0].args;
+ assert.equal(p_schedule.calendar_events['2026-11-12'].status,'owed');
+ assert.deepEqual(p_changes.map(p=>p.payload.events['2026-11-12'].status),['owed','owed']);
+});
+test('group quick status rejects registered lessons, dirty drafts and failed transaction without replacing committed data',async()=>{
+ for(const options of [{registered:true},{dirty:true},{fail:true}]){
+  const {run,c,calls,alerts}=quickGroupFixture(options);
+  if(options.dirty)run("ccDrafts.set('student:two',{dirty:true,payloads:{two:{}}})");
+  await run("ccQuickGroupSave(select,'g','2026-11-19')");
+  assert.equal(calls.length,options.fail?1:0);
+  assert.equal(c.select.value,'mixed');assert.equal(c.select.disabled,false);
+  assert.equal(run("tgGroups[0].calendar_events['2026-11-19'].status"),'planned');
+  assert.equal(run("ccRead('two').events['2026-11-19'].status"),'absent');
+  assert.equal(alerts.length,1);
+ }
+});

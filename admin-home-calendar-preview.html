@@ -31,7 +31,20 @@ const previewToday=crmGroupDailyAgenda(ccAgenda(adminToday(),null,true));
 document.getElementById('preview-today-count').textContent=previewToday.length;
 document.getElementById('preview-today-rows').innerHTML=crmTodayRowsHtml(previewToday);
 function previewAction(){alert('Ação disponível no portal real. Esta é uma prévia com dados fictícios.');}
-ccQuickSave=previewAction;tgOpenDate=previewAction;ccOpenDate=previewAction;
+ccQuickSave=(select)=>{select.dataset.status=select.value;};
+ccQuickGroupSave=(select,id,date)=>{
+ const group=tgGroups.find(g=>g.id===id),members=group.members.map(mid=>students.find(s=>s.id===mid));
+ const ctx={key:'group:'+id,group,members,lessons:[]},d={schedule:ccGroupSchedule(group),payloads:Object.fromEntries(members.map(s=>[s.id,ccData(s)]))};
+ const base=ccGroupBase(ctx,d,date);
+ ccStageGroupDate(ctx,d,date,select.value,{},base.time||group.time,base.notes||'',base.original||'');
+ group.calendar_events=d.schedule.events;
+ for(const member of members)ccCloud.set(member.id,{payload:d.payloads[member.id]});
+ const rows=crmGroupDailyAgenda(ccAgenda(adminToday(),null,true));
+ document.getElementById('preview-today-count').textContent=rows.length;
+ document.getElementById('preview-today-rows').innerHTML=crmTodayRowsHtml(rows);
+ crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),Promise.resolve(),async()=>[],adminToday().date);
+};
+tgOpenDate=previewAction;ccOpenDate=previewAction;
 const openTodayClassCall=previewAction;
 crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),Promise.resolve(),async()=>[],adminToday().date);
 </script>
