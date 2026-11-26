@@ -72,3 +72,8 @@ test('same component and styling in preview and actual Home; responsive and dark
  assert.match(css,/body\.dark-mode \.home-lesson-call\.is-lesson-day/);
  assert.match(css,/@media\(max-width:600px\)\{\.home-lesson-call/);
 });
+test('lesson day adopts the existing navy and sky tokens in the portal palette',()=>{
+ const css=read('style.css');
+ assert.match(css,/\.home-lesson-call\.is-lesson-day\{background:var\(--sky-soft\);border-color:var\(--sky\)/);
+ assert.match(css,/\.home-lesson-call\.is-lesson-day \.home-lesson-call-action\{background:var\(--ink\)/);
+});

@@ -1206,14 +1206,16 @@ body.dark-mode .badge-celebration-done:hover{background:#6395CC;}
   .home-lesson-call-copy p{font-size:13.5px;color:var(--text-soft);margin:0;line-height:1.5;}
   .home-lesson-call-action.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;flex:none;padding:13px 20px;text-decoration:none;text-align:center;}
   @media(max-width:600px){.home-lesson-call{flex-wrap:wrap;padding:16px;gap:12px;}.home-lesson-call-action.btn-primary{width:100%;}}
-.home-lesson-call.is-lesson-day{background:#e2f1e7;border-color:#74a584;box-shadow:inset 4px 0 #32704b;}
-.home-lesson-call.is-lesson-day .home-lesson-call-icon{background:#c6e5d1;color:#23563b;}
-.home-lesson-call.is-lesson-day .home-lesson-call-copy h2{color:#18472e;}
-.home-lesson-call.is-lesson-day .home-lesson-call-copy p{color:#315e46;}
-.home-lesson-call.is-lesson-day .home-lesson-call-action{background:#23563b;color:#fff;}
-.home-lesson-call.is-lesson-day .home-lesson-call-action:hover{background:#19432e;}
-body.dark-mode .home-lesson-call.is-lesson-day{background:#203a2e;border-color:#6caa83;box-shadow:inset 4px 0 #88c69b;}
-body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-icon{background:#335844;color:#daf3e2;}
-body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-copy h2{color:#e1f6e8;}
-body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-copy p{color:#b8d8c3;}
-body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-action{background:#326846;color:#fff;}
+/* Lesson day uses the existing navy/sky palette, in both themes. */
+.home-lesson-call.is-lesson-day{background:var(--sky-soft);border-color:var(--sky);box-shadow:inset 4px 0 var(--sky);}
+.home-lesson-call.is-lesson-day .home-lesson-call-icon{background:#D3E1EF;color:var(--ink);}
+.home-lesson-call.is-lesson-day .home-lesson-call-copy h2{color:var(--ink);}
+.home-lesson-call.is-lesson-day .home-lesson-call-copy p{color:#305580;}
+.home-lesson-call.is-lesson-day .home-lesson-call-action{background:var(--ink);color:#fff;}
+.home-lesson-call.is-lesson-day .home-lesson-call-action:hover{background:var(--ink-dark);}
+body.dark-mode .home-lesson-call.is-lesson-day{background:#243653;border-color:#8EBCE6;box-shadow:inset 4px 0 #8EBCE6;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-icon{background:#2E4565;color:#B6D7F6;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-copy h2{color:#E7ECF5;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-copy p{color:#B9D8F5;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-action{background:#315580;color:#fff;}
+body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-action:hover{background:#3F6391;}
