@@ -265,3 +265,46 @@ test('month navigation updates only grid, reserves six weeks and preserves draft
   }
  }
 });
+
+const lessonCode=readFileSync('js/admin-calendar-lessons.js','utf8');
+function setupUnified(group=false){
+ const {run,ctx}=setup({group});vm.runInContext(lessonCode,ctx);return {run,ctx};
+}
+test('unified calendar suggests chronological title and next habitual date',()=>{
+ const {run}=setupUnified();
+ run("ctx.lessons.push({id:'a',student_id:'s1',lesson_date:'2026-11-09',title:'Class #1'},{id:'b',student_id:'s1',lesson_date:'2026-11-23',title:'Class #2'})");
+ assert.equal(run("ccLessonNumber(ctx,'2026-11-16')"),'Class #2');
+ assert.equal(run("ccNextLessonDate(ctx,draft)"),'2026-11-30');
+ run("draft.payloads.s1.events['2026-11-30']={skip:true}");
+ assert.equal(run("ccNextLessonDate(ctx,draft)"),'2026-12-07');
+ run("ccLessonMap(ctx).set('2026-11-16',{date:'2026-11-16',automatic:true,files:[]})");
+ assert.equal(run("ccLessonNumber(ctx,'2026-11-30')"),'Class #4');
+});
+test('group numbering counts common historic dates once and never counts separate individual dates',()=>{
+ const {run}=setupUnified(true);
+ run("ctx.lessons.push({student_id:'s1',lesson_date:'2026-11-09',title:'Class #1',topic:'Intro'},{student_id:'s2',lesson_date:'2026-11-09',title:'Class #1',topic:'Intro'},{student_id:'s1',lesson_date:'2026-11-16',title:'Class #2',topic:'Extra'},{student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #2'},{student_id:'s2',group_id:'g1',lesson_date:'2026-11-23',title:'Class #2'})");
+ assert.equal(run("ccLessonNumber(ctx,'2026-11-30')"),'Class #3');
+});
+test('material form appears only for realized sessions and targets present group members',()=>{
+ const {run}=setupUnified(true);
+ assert.equal(run("ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))"),'');
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true)");
+ const html=run("ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))");
+ assert.match(html,/Class #1/);assert.match(html,/Slides compartilhados/);
+ assert.match(html,/data-cc-student="s2"/);assert.doesNotMatch(html,/data-cc-student="s1"/);
+});
+test('lesson drafts refuse save when the underlying class is not completed',()=>{
+ const {run}=setupUnified();
+ run("ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',automatic:true,files:[]})");
+ assert.throws(()=>run("ccValidateLessonDrafts(ctx,draft)"),/Realizada/);
+});
+test('flush sends explicit manual titles and preserves attendance boundary',async()=>{
+ const {run,ctx}=setupUnified(true);ctx.calls=[];
+ ctx.sb={rpc:async(name,args)=>{ctx.calls.push({name,args});return {}}};
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true);ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',automatic:false,title:'Class #12',topic:'Topic',files:[]})");
+ await run("ccFlushLessons(ctx,draft)");
+ assert.equal(ctx.calls[0].name,'portal_calendar_lesson_save');
+ assert.deepEqual(Array.from(ctx.calls[0].args.p_members),['s2']);
+ assert.equal(ctx.calls[0].args.p_title,'Class #12');
+ assert.equal(run("ccLessonMap(ctx).size"),0);
+});
