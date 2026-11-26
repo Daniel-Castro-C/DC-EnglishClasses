@@ -178,7 +178,7 @@ HTML atualizados (todos ganharam o botão flutuante no canto inferior direito).
   ou cola um link, escreve como pretende usá-lo, e clica em "Avisar ao professor".
 - Você recebe um e-mail: *"Aluno [nome] adicionou um material para ser usado na data [data]. Acesse o
   portal para conferir os detalhes."*
-- No seu painel, dentro de cada aluno, a aba **"Materiais do aluno"** mostra todos os pedidos enviados
+- No seu painel, dentro de cada aluno, a aba **"Material do Aluno"** mostra todos os pedidos enviados
   por ele (com o arquivo pra baixar, o link, e as observações), e você pode excluir depois de já ter usado.
 
 ---

@@ -12,17 +12,17 @@
   ];
   const resources=[
     {id:'demo-productivity-slides',lesson_id:'demo-productivity',name:'Productivity — Modo Demonstração',type:'ppt',file_path:'demo/Productivity - Modo Demonstração.pdf',created_at:'2026-01-01T12:01:00Z'},
-    {id:'demo-productivity-report',lesson_id:'demo-productivity',name:'Relatório de Performance — Productivity',type:'rep',file_path:'demo/Productivity - Relatório de Performance - Modo Demonstração.pdf',created_at:'2026-01-01T12:02:00Z'},
+    {id:'demo-productivity-report',lesson_id:'demo-productivity',name:'Relatório de desempenho — Productivity',type:'rep',file_path:'demo/Productivity - Relatório de desempenho - Modo Demonstração.pdf',created_at:'2026-01-01T12:02:00Z'},
     {id:'demo-feedback-slides',lesson_id:'demo-feedback',name:'Giving and Receiving Feedback — Modo Demonstração',type:'ppt',file_path:'demo/Giving and Receiving Feedback - Modo Demonstração.pdf',created_at:'2026-01-02T12:01:00Z'},
-    {id:'demo-feedback-report',lesson_id:'demo-feedback',name:'Relatório de Performance — Giving and Receiving Feedback',type:'rep',file_path:'demo/Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf',created_at:'2026-01-02T12:02:00Z'}
+    {id:'demo-feedback-report',lesson_id:'demo-feedback',name:'Relatório de desempenho — Giving and Receiving Feedback',type:'rep',file_path:'demo/Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf',created_at:'2026-01-02T12:02:00Z'}
   ];
   lessons.forEach(lesson=>{lesson.resources=resources.filter(r=>r.lesson_id===lesson.id)});
   const word={term:'confidence',definition:'The feeling that you can do something successfully.',example:'I feel more confident when I practice English.'};
   const demoAssetKeys={
     'demo/Giving and Receiving Feedback - Modo Demonstração.pdf':'feedback_slides',
     'demo/Productivity - Modo Demonstração.pdf':'productivity_slides',
-    'demo/Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf':'feedback_report',
-    'demo/Productivity - Relatório de Performance - Modo Demonstração.pdf':'productivity_report',
+    'demo/Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf':'feedback_report',
+    'demo/Productivity - Relatório de desempenho - Modo Demonstração.pdf':'productivity_report',
     'demo/Teamwork - Text Correction - Modo Demonstração.pdf':'teamwork_correction'
   };
   const demoPrefix='https://dgwbjgngewymzgedlzix.supabase.co';

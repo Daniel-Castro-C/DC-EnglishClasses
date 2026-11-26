@@ -58,13 +58,13 @@ function report(name,topic,highlight,review,vocab,pron,ratings,homework,writing)
  p.rect(30,718,536,75,'#f4f8fc');p.text('WRITING PRACTICE',43,726,12,'#172d4d','F2');p.wrap(writing,43,751,506,10,1.34);
  p.text('D.C English Classes',30,818,9,'#748ca6');p.finish(name);
 }
-report('Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf','Giving and Receiving Feedback',
+report('Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf','Giving and Receiving Feedback',
  'Clear explanations and confident use of expressions such as "I see your point" and "Could we try another approach?" helped make feedback more constructive.',
  'Review softening expressions and question forms. For example: "You are wrong" can become "Could we consider another option?"',
  ['constructive','specific','approach','acknowledge','tone','follow-up'],['constructive','acknowledge','colleague'],[4,4,4,3],
  'Write three examples of professional feedback using situation, behavior and impact.',
  'Describe how you would respond to a colleague who missed an important deadline.');
-report('Productivity - Relatório de Performance - Modo Demonstração.pdf','Productivity',
+report('Productivity - Relatório de desempenho - Modo Demonstração.pdf','Productivity',
  'Good fluency when comparing methods of organizing work, especially when using expressions such as "set priorities" and "meet deadlines".',
  'Review the contrast between "efficient" (doing things well) and "effective" (achieving desired results), and revise comparative structures.',
  ['prioritize','deadline','workflow','distraction','efficient','schedule'],['productivity','prioritize','workflow'],[4,3,4,4],
@@ -91,4 +91,8 @@ function correction(){
  p.wrap('Demonstration text only. No student name, attendance record or actual student writing is included.',52,567,480,10,1.5,'#59738f');p.finish('Teamwork - Text Correction - Modo Demonstração.pdf');
 }
 correction();
+// Keep old public demo URLs working; the current interface uses the new filenames.
+for (const file of fs.readdirSync(out).filter(name => name.includes('Relatório de desempenho'))) {
+  fs.copyFileSync(path.join(out,file),path.join(out,file.replace('Relatório de desempenho','Relatório de Performance')));
+}
 console.log('Generated four public class files and one anonymized writing-correction example.');

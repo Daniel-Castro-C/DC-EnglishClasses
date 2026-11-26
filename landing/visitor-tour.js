@@ -15,16 +15,16 @@
   const notification=document.createElement('div');notification.id='visitor-readonly-alert';notification.className='visitor-readonly-alert';notification.hidden=true;notification.textContent='Esta ação está disponível somente para alunos matriculados. Nenhuma informação foi enviada.';
   document.body.appendChild(notification);
   // The visitor logo and the student sidebar are the original elements.
-  const logo=document.querySelector('.sidebar .side-brand small');if(logo)logo.textContent='Área do aluno · Demonstração';
+  const logo=document.querySelector('.sidebar .side-brand small');if(logo)logo.textContent='Portal do aluno · Demonstração';
   const steps=[
     {page:'home.html',target:'.dashboard-heading',title:'Bem-vindo ao seu portal',text:'Conheça o ambiente real do aluno.'},
     {page:'home.html',target:'.achievements-wall',title:'Mural de conquistas',text:'O mural mostra a quantidade de aulas que você já realizou.'},
     {page:'home.html',target:'.dashboard-hero',title:'Continue aprendendo',text:'Os conteúdos das aulas ficam organizados para você revisar quando quiser.'},
     {page:'aluno.html',target:'.student-lesson-item',title:'Materiais das aulas',text:'Aqui ficam todos os materiais das aulas realizadas.'},
-    {page:'aluno.html',target:'.student-material-dropdown',title:'Materiais para experimentar',text:'Disponibilizamos slides e relatórios de performance de demonstração. Abra um material e use “Visualizar” ou “Baixar” para conhecer como são os arquivos.'},
+    {page:'aluno.html',target:'.student-material-dropdown',title:'Materiais para experimentar',text:'Disponibilizamos slides e relatórios de desempenho de demonstração. Abra um material e use “Visualizar” ou “Baixar” para conhecer como são os arquivos.'},
     {page:'recursos.html?s=texto',target:'.student-writing-page .student-howto',title:'Aprimorando a Escrita',text:'Escreva em inglês e envie seu texto para o professor. Ele aponta os trechos que precisam de revisão e devolve uma correção para você aprender com seus próprios erros.'},
     {page:'recursos.html?s=texto',target:'#visitor-writing-example',title:'Exemplo de texto corrigido',text:'Este exemplo demonstra como você recebe a correção. Clique em “Visualizar exemplo” para abrir o PDF e conhecer as marcações e orientações.',showExample:true},
-    {page:'recursos.html?s=texto',target:'#nav-container',title:'Explore o portal',text:'Use os mesmos menus da área do aluno. Quando terminar, consulte nossos horários disponíveis.'}
+    {page:'recursos.html?s=texto',target:'#nav-container',title:'Explore o portal',text:'Use os mesmos menus do portal do aluno. Quando terminar, consulte nossos horários disponíveis.'}
   ];
   const currentPage=location.pathname.split('/').pop();
   function isOnStepPage(page){
@@ -160,8 +160,8 @@
       const safeFiles={
         'demo/Productivity - Modo Demonstração.pdf':'Productivity - Modo Demonstração.pdf',
         'demo/Giving and Receiving Feedback - Modo Demonstração.pdf':'Giving and Receiving Feedback - Modo Demonstração.pdf',
-        'demo/Productivity - Relatório de Performance - Modo Demonstração.pdf':'Productivity - Relatório de Performance - Modo Demonstração.pdf',
-        'demo/Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf':'Giving and Receiving Feedback - Relatório de Performance - Modo Demonstração.pdf'
+        'demo/Productivity - Relatório de desempenho - Modo Demonstração.pdf':'Productivity - Relatório de desempenho - Modo Demonstração.pdf',
+        'demo/Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf':'Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf'
       };
       const name=safeFiles[filePath];
       if(!name){window.__dcDemoReadOnlyNotice?.();return}

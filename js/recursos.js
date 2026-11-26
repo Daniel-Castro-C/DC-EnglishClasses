@@ -10,8 +10,7 @@ const TEXT_MAX = 2000;  // máximo de caracteres (cabe no e-mail e dá para o pr
 
 // ---------- Textos (PT/EN) de "Aprimorando a Escrita" ----------
 Object.assign(I18N.pt, {
-  recursos_texto: 'Aprimorando a Escrita',
-  texto_title: 'Aprimorando a Escrita',
+  texto_title: I18N.pt.recursos_texto,
   texto_sub: 'Escreva em inglês e receba a correção do professor',
   texto_howto_title: 'Como usar',
   texto_howto_1: 'Escreva seu texto direto no campo abaixo — ou escreva em outro editor de texto (Word, Google Docs, Bloco de Notas...) e cole aqui o texto já pronto.',
@@ -40,8 +39,7 @@ Object.assign(I18N.pt, {
   texto_correction_label: 'Sua correção',
 });
 Object.assign(I18N.en, {
-  recursos_texto: 'Improving Your Writing',
-  texto_title: 'Improving Your Writing',
+  texto_title: I18N.en.recursos_texto,
   texto_sub: 'Write in English and get your teacher\'s correction',
   texto_howto_title: 'How to use',
   texto_howto_1: 'Write your text directly in the box below — or write it in another text editor (Word, Google Docs, Notepad...) and paste the finished text here.',
@@ -110,7 +108,7 @@ function renderNav(){
 }
 
 // ==========================================================
-// Novos Vocabulários
+// Expandindo seu vocabulário
 // ==========================================================
 async function loadVocab(){
   const { data, error } = await sb

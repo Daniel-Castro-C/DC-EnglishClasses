@@ -4,7 +4,7 @@ const ICONS = {
   ex:  ['ic-ex','Ex'],
   rep: ['ic-rep','R'],
 };
-const TYPE_LABELS = { ppt:'Slides (PPT)', pdf:'PDF', ex:'Exercícios', rep:'Relatório de desempenho' };
+const TYPE_LABELS = Object.fromEntries(['ppt','pdf','ex','rep'].map(type => [type, materialTypeLabel(type, 'pt')]));
 const WEEKDAY_LABELS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
 const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -12,6 +12,7 @@ let students = [];
 let teacherTestProfile = null;
 let currentStudent = null;
 let currentLessons = [];
+let currentLessonsReady = false;
 let currentTab = 'geral';
 let currentView = 'home'; // 'home' | 'comunicados' | 'student'
 let danielPendingTotal = 0;
@@ -704,15 +705,16 @@ function switchTab(tab){
 }
 
 async function loadLessonsFor(studentId){
-  const { data, error } = await sb
-    .from('lessons')
-    .select('*, resources(*)')
-    .eq('student_id', studentId);
-
-  if (error) { console.error(error); currentLessons = []; return; }
-  currentLessons = sortLessonsByDate(data || [], false);
+  currentLessonsReady=false;
+  const rows=[];
+  for(let offset=0;;offset+=500){
+    const {data,error}=await sb.from('lessons').select('*, resources(*)').eq('student_id',studentId).order('id',{ascending:true}).range(offset,offset+499);
+    if(currentStudent?.id!==studentId)return;
+    if(error){console.error(error);currentLessons=[];return;}
+    rows.push(...(data||[]));if((data||[]).length<500)break;
+  }
+  currentLessons=sortLessonsByDate(rows,false);currentLessonsReady=true;
 }
-
 function renderStudentDetail(){
   const s = currentStudent;
 
@@ -742,7 +744,7 @@ function renderStudentDetail(){
     <section class="crm-profile-head crm-dossier-head"><span class="crm-avatar">${s.avatar_url?'<img src="'+escapeAttr(s.avatar_url)+'" alt="" class="crm-dossier-photo">':escapeHtml((s.full_name||s.email||'A').charAt(0).toUpperCase())}</span><div class="crm-dossier-identity"><h1>${escapeHtml(s.full_name||s.email)}</h1><p>${crmPlan(ccData(s))} · ${escapeHtml(s.email||'')}</p><small class="crm-muted">${s.is_test_profile?'Perfil de teste':(s.lesson_weekday?WEEKDAY_LABELS[s.lesson_weekday-1]+' · '+escapeHtml((s.lesson_time||'').slice(0,5)):'Horário habitual não definido')}</small></div><button class="btn-ghost" onclick="openTodayClassCall(currentStudent.id)">${crmIcon('video')} Videochamada</button></section>
     <section class="crm-kpis crm-kpis-three">${crmKpi('Carga anual',metrics.count+'/'+(metrics.target??'—'),'chart')}${crmKpi('Reposições',metrics.pending,'refresh')}${crmKpi('Frequência',metrics.frequency,'calendar')}</section>
     <div class="crm-dossier-layout"><nav class="crm-dossier-nav" aria-label="Ficha do aluno">
-    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário','calendar'],['cadastradas','Aulas e materiais','book'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation']]],['CAIXA DE ENTRADA',[['pedidos','Materiais recebidos','file','materials'],['duvidas','Dúvidas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings'],['nova','Cadastrar aula','plus']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
+    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário','calendar'],['cadastradas','Aulas e materiais','book'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation']]],['CAIXA DE ENTRADA',[['pedidos','Material do Aluno','file','materials'],['duvidas','Perguntas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings'],['nova','Cadastrar aula','plus']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
     </nav><div class="crm-dossier-content">
     <div id="tab-content"></div></div></div></div>
   `;
@@ -1209,7 +1211,7 @@ function renderNovaAulaTab(){
 
     <div class="box" id="existing-lesson-materials">
       <h3>+ Adicionar materiais a uma aula já cadastrada</h3>
-      <div class="small-note" style="margin-top:0;">Para enviar um relatório de performance depois dos slides, selecione a aula existente. Os arquivos anteriores serão mantidos.</div>
+      <div class="small-note" style="margin-top:0;">Para enviar um relatório de desempenho depois dos slides, selecione a aula existente. Os arquivos anteriores serão mantidos.</div>
       <div class="row">
         <select id="resource-lesson" aria-label="Escolha a aula">
           ${currentLessons.map(l => `<option value="${l.id}">${escapeHtml(l.title)}</option>`).join('')}
@@ -1335,10 +1337,7 @@ function resourceRowHtml(rowIndex){
     <div class="lesson-card" id="resource-row-${rowIndex}" style="padding:14px 16px;margin-bottom:10px;">
       <div class="row">
         <select id="resource-type-${rowIndex}">
-          <option value="ppt">Slides (PPT)</option>
-          <option value="pdf">PDF</option>
-          <option value="ex">Exercícios</option>
-          <option value="rep">Relatório de desempenho</option>
+          ${Object.entries(TYPE_LABELS).map(([type,label]) => `<option value="${type}">${label}</option>`).join('')}
         </select>
         <input id="resource-file-${rowIndex}" type="file" onchange="suggestExistingResourceType(${rowIndex}, this.files)">
       </div>
@@ -1583,6 +1582,10 @@ async function createLesson(){
   }
 
   const studentId = currentStudent.id;
+  if(ccHasDirtyForMember(studentId)){alert('Salve o calendário antes de cadastrar aulas.');return;}
+  const calendarEvent=date&&ccData(currentStudent).events[date];
+  if(date&&ccGroupForDate(studentId,date)){alert('Esta aula pertence à turma. Cadastre os materiais pelo painel de turmas.');return;}
+  if(calendarEvent&&(calendarEvent.skip||calendarEvent.status==='rescheduled')){alert('Esta data foi excluída ou reagendada no calendário. Escolha a data correta.');return;}
   btn.disabled = true;
   btn.textContent = 'Salvando aula...';
 
@@ -1662,7 +1665,7 @@ function resourceRowWithEditHtml(l, r){
   return `<div class="resource-row">
     <div class="resource-icon ${cls}">${label}</div>
     <div class="resource-info">
-      <div class="name">${escapeHtml(r.name)}</div>
+      <div class="name">${escapeHtml(materialDisplayName(r))}</div>
       <div class="desc">${escapeHtml(r.description || '')}</div>
     </div>
     ${isPdfPath(r.file_path) ? `<button class="resource-action" onclick="previewFile('${r.file_path}')">Visualizar</button>` : ''}
@@ -1774,11 +1777,11 @@ function crmStudyTab(){
 }
 async function crmStudentInboxTab(tab){
  const id=currentStudent.id,el=document.getElementById('tab-content'),questions=tab==='duvidas';
- el.innerHTML='<section class="box"><h3>'+(questions?'Dúvidas do aluno':'Textos para correção')+'</h3><p>Carregando...</p></section>';
+ el.innerHTML='<section class="box"><h3>'+(questions?'Perguntas do aluno':'Textos para correção')+'</h3><p>Carregando...</p></section>';
  const result=await sb.from(questions?'daniel_questions':'text_submissions').select(questions?'id,created_at,answer':'id,created_at,status').eq('student_id',id).order('created_at',{ascending:false});
  if(!el.isConnected||currentStudent?.id!==id||currentTab!==tab)return;
  const rows=result.data||[];
- el.innerHTML='<section class="box"><h3>'+(questions?'Dúvidas do aluno':'Textos para correção')+'</h3><p class="small-note">Consulte os envios deste aluno. Use o módulo pedagógico para responder ou corrigir.</p><button class="btn-dark-sm" onclick="'+(questions?'openDanielModule()':'openTextosModule()')+'">Abrir módulo de atendimento</button>'+ (result.error?'<p>Não foi possível carregar os envios.</p>':rows.map(r=>'<div class="resource-row">'+crmIcon(questions?'message':'file')+'<div class="resource-info"><div class="name">'+(questions?(r.answer==null?'Aguardando resposta':'Respondida'):(r.status==='pending'?'Aguardando correção':'Correção disponível'))+'</div><div class="desc">'+escapeHtml(new Date(r.created_at).toLocaleString('pt-BR'))+'</div></div></div>').join('')||'<p class="small-note">Nenhum envio registrado.</p>')+'</section>';
+ el.innerHTML='<section class="box"><h3>'+(questions?'Perguntas do aluno':'Textos para correção')+'</h3><p class="small-note">Consulte os envios deste aluno. Use o módulo pedagógico para responder ou corrigir.</p><button class="btn-dark-sm" onclick="'+(questions?'openDanielModule()':'openTextosModule()')+'">Abrir módulo de atendimento</button>'+ (result.error?'<p>Não foi possível carregar os envios.</p>':rows.map(r=>'<div class="resource-row">'+crmIcon(questions?'message':'file')+'<div class="resource-info"><div class="name">'+(questions?(r.answer==null?'Aguardando resposta':'Respondida'):(r.status==='pending'?'Aguardando correção':'Correção pronta'))+'</div><div class="desc">'+escapeHtml(new Date(r.created_at).toLocaleString('pt-BR'))+'</div></div></div>').join('')||'<p class="small-note">Nenhum envio registrado.</p>')+'</section>';
 }
 
 function crmMaterialNormalize(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();}
@@ -1827,8 +1830,8 @@ function crmEditLesson(id){
   e.preventDefault();const sid=lesson.student_id,date=form.elements.date.value||null,topic=form.elements.topic.value.trim(),status=form.querySelector('[role=status]'),btn=form.querySelector('button[type=submit]');
   if(currentStudent?.id!==sid)return;
   const x=ccData(currentStudent),old=lesson.lesson_date;
-  const linked=old&&old!==date&&(x.events[old]?.original||Object.values(x.events).some(r=>r.original===old));
-  if(linked){status.textContent='Esta data possui vínculo de reposição no calendário. Desvincule ou ajuste o registro antes de alterar a data, para preservar o histórico.';return;}
+  const linked=old&&old!==date&&(x.events[old]?.original||x.events[old]?.rescheduled_from||x.events[old]?.rescheduled_to||Object.values(x.events).some(r=>r.original===old));
+  if(linked){status.textContent='Esta data possui vínculo de reposição ou reagendamento no calendário. Desvincule ou ajuste o registro antes de alterar a data, para preservar o histórico.';return;}
   btn.disabled=true;status.textContent='Salvando...';
   try{
    const {data,error}=await sb.from('lessons').update({topic,lesson_date:date}).eq('id',id).eq('student_id',sid).select('id').single();

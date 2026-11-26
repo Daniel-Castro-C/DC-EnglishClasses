@@ -12,36 +12,18 @@
 
   // ---------- 1) Traduções ----------
   Object.assign(I18N.pt, {
-    nav_recursos: 'Recursos',
-    card_recursos_desc: 'Vocabulários e outros recursos para estudar no seu ritmo.',
-    recursos_vocab: 'Novos Vocabulários',
-    recursos_vocab_sub: 'Palavras do Termo do dia que você marcou como "ainda não uso"',
-    recursos_empty: 'Nenhuma palavra por aqui ainda. Quando você marcar "Ainda não uso essa palavra" no Termo do dia, ela aparece nesta lista.',
-    recursos_load_error: 'Não foi possível carregar suas palavras.',
-    recursos_count: '{n} palavra(s) para praticar',
-    word_use: 'Já uso essa palavra',
-    word_not_use: 'Ainda não uso essa palavra',
+    card_recursos_desc: 'Vocabulário e outros recursos para estudar no seu ritmo.',
     word_confirm: 'Confirmar resposta',
     word_change: 'Mudar resposta',
     word_saved: 'Resposta salva!',
-    word_save_error: 'Não foi possível salvar. Tente de novo.',
     word_dock_collapse: 'Minimizar',
     word_dock_expand: 'Expandir',
   });
   Object.assign(I18N.en, {
-    nav_recursos: 'Resources',
     card_recursos_desc: 'Vocabulary and other resources to study at your own pace.',
-    recursos_vocab: 'New Vocabulary',
-    recursos_vocab_sub: 'Words of the day you marked as "I don\'t use it yet"',
-    recursos_empty: 'No words here yet. When you mark "I don\'t use this word yet" on the Word of the day, it shows up in this list.',
-    recursos_load_error: 'Couldn\'t load your words.',
-    recursos_count: '{n} word(s) to practice',
-    word_use: 'I already use this word',
-    word_not_use: 'I don\'t use this word yet',
     word_confirm: 'Confirm answer',
     word_change: 'Change answer',
     word_saved: 'Answer saved!',
-    word_save_error: 'Couldn\'t save. Please try again.',
     word_dock_collapse: 'Minimize',
     word_dock_expand: 'Expand',
   });

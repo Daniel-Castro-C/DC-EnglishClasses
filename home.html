@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>D.C English Classes — Área do aluno</title>
+<title>D.C English Classes — Portal do aluno</title>
 <link rel="stylesheet" href="style.css">
 <style>
   .home-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:8px;}
@@ -139,7 +139,7 @@ html.welcome-tour-active,html.welcome-tour-active body{overflow:hidden!important
       <img class="logo" src="logo.png" alt="Logo">
       <div>
         <span>D.C English Classes</span>
-        <small data-i18n="area_aluno">Área do aluno</small>
+        <small data-i18n="area_aluno">Portal do aluno</small>
       </div>
     </div>
 
@@ -190,14 +190,13 @@ async function renderRecentDashboardMaterials(studentId){
       return;
     }
     const titles = new Map(lessons.map(l => [l.id, l.title]));
-    const typeLabels = { ppt:'Slides', pdf:'PDF', ex:'Exercise', rep:'Report' };
     holder.innerHTML = resources.map(resource => `
       <a class="recent-resource" href="aluno.html">
         <span class="recent-resource-details">
-          <strong>${escapeHtml(resource.name)}</strong>
+          <strong>${escapeHtml(materialDisplayName(resource))}</strong>
           <small>${escapeHtml(titles.get(resource.lesson_id) || '')}</small>
         </span>
-        <span class="recent-resource-type">${typeLabels[resource.type] || 'File'}</span>
+        <span class="recent-resource-type">${escapeHtml(materialTypeLabel(resource.type))}</span>
       </a>
     `).join('');
   } catch (error) {
@@ -419,7 +418,7 @@ function previewBadgeCelebration(){
             <p class="dashboard-muted">${t('loading')}</p>
           </div>
         </section>
-        <!-- Palavra do dia continua como ÚLTIMO módulo da Home. -->
+        <!-- Termo do dia continua como ÚLTIMO módulo da Home. -->
         <div id="word-of-day-container"></div>
       </div>
     </div>
