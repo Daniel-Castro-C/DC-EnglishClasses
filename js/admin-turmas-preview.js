@@ -72,7 +72,7 @@ async function tgSaveReplacement(groupId,original,done){
  const g=tgGroups.find(v=>v.id===groupId),date=document.getElementById('tg-replacement-date').value,time=document.getElementById('tg-replacement-time').value;
  if(!g||!date||date<=original||!time||!tgGroupReplacementEligible(groupId,original))return alert('Selecione uma data posterior à falta coletiva e um horário.');
  try{
- const changes=g.members.map(id=>{const s=students.find(s=>s.id===id),x=ccData(s);if(!ccReplacementAvailable(x,original,date,[])||x.events[date]&&! (x.events[date].original===original&&x.events[date].group_id===groupId))throw Error('Já existe um registro ou reposição para um integrante.');x.events[date]={status:done?'done':'planned',original,time,group_id:groupId};return {id,payload:x,revision:ccCloud.get(id)?.revision||0};});
+ const changes=g.members.map(id=>{const s=students.find(s=>s.id===id),x=ccData(s);if(!ccReplacementAvailable(x,original,date,[],true)||x.events[date]&&! (x.events[date].original===original&&x.events[date].group_id===groupId))throw Error('Já existe um registro ou reposição para um integrante.');x.events[date]={status:done?'done':'planned',original,time,group_id:groupId};return {id,payload:x,revision:ccCloud.get(id)?.revision||0};});
  const {error}=await sb.rpc('portal_group_calendar_save',{p_group:groupId,p_schedule:null,p_changes:changes});if(error)throw error;await ccLoadCloud();await tgLoad();tgDetail();
  }catch(e){alert(e.message);}
 }
