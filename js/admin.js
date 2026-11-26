@@ -183,23 +183,26 @@ async function renderHome(){
   renderNav();
   const today = adminToday();
   const homeRequest = ++crmHomeRequest;
-  let completedIds = new Set(), registeredIds = new Set(), agendaLoadError = false;
-  try { const {data,error}=await sb.from('lessons').select('student_id,calendar_status').eq('lesson_date',today.date); if(error)throw error; registeredIds=new Set((data||[]).map(l=>l.student_id)); completedIds=new Set((data||[]).filter(l=>!l.calendar_status||l.calendar_status==='done').map(l=>l.student_id)); } catch(error){console.error('Agenda: falha ao consultar aulas cadastradas',error);agendaLoadError=true;}
+  let completedIds = new Set(), registeredIds = new Set(), registeredLessons=[], agendaLoadError = false, groupLoadError=false;
+  const groupsReady=tgLoad();
+  // Resolve the group source before building or counting the daily agenda.
+  try{await groupsReady;}catch(error){console.error('Agenda: falha ao consultar turmas',error);groupLoadError=true;}
+  try { const {data,error}=await sb.from('lessons').select('student_id,calendar_status,group_id,lesson_date').eq('lesson_date',today.date); if(error)throw error; registeredLessons=data||[]; registeredIds=new Set((data||[]).map(l=>l.student_id)); completedIds=new Set((data||[]).filter(l=>!l.calendar_status||l.calendar_status==='done').map(l=>l.student_id)); } catch(error){console.error('Agenda: falha ao consultar aulas cadastradas',error);agendaLoadError=true;}
   if(currentView!=='home'||homeRequest!==crmHomeRequest)return;
-  const classes = ccAgenda(today,completedIds,true,registeredIds);
+  const classes = groupLoadError?[]:crmGroupDailyAgenda(ccAgenda(today,completedIds,true,registeredIds,registeredLessons));
   const main = document.getElementById('main-content');
   main.innerHTML = `
 
     <header class="crm-heading"><div><h1>Visão geral</h1><p>Painel de gestão acadêmica</p></div><div class="crm-heading-tools"><button class="crm-icon-btn" aria-label="Ver pendências" onclick="document.getElementById('crm-pendencias').scrollIntoView({behavior:'smooth'})">${crmIcon('bell')}</button><span class="crm-avatar crm-avatar-small">DC</span></div></header>
     <section class="crm-kpis">
      ${crmKpi('Alunos ativos',students.filter(s=>!s.is_test_profile).length,'users')}
-     ${crmKpi('Aulas hoje',classes.length,'calendar')}
+     ${crmKpi('Aulas hoje',groupLoadError?'—':classes.length,'calendar')}
      ${crmKpi('Reposições pendentes',students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+ccPending(ccData(s)),0),'refresh','crm-replacement-stat')}
      ${crmKpi('Pendências de aulas e relatórios','—','file','report-pending-stat')}
     </section>
     <div class="crm-agenda-layout">
     <section class="crm-panel crm-today-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3><button class="crm-link" onclick="ccGlobalView()">Ver agenda completa →</button></div>
-    <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${classes.map(student=>`<tr><td class="crm-time">${escapeHtml(student.lesson_time.slice(0,5)||'—')}</td><td>${studentDashboardLabel(student)}</td><td><span class="crm-kind ${student.ccType.startsWith('Reposição')?'is-replacement':''}">${escapeHtml(student.ccType)}</span></td><td>${ccQuickStatus(student)}</td><td><div class="crm-row-actions"><button class="crm-icon-btn" title="Videochamada" onclick="openTodayClassCall('${student.id}')">${crmIcon('video')}</button><button class="crm-icon-btn" title="Calendário" onclick="ccOpenDate('${student.id}','${student.ccDate}')">${crmIcon('calendar')}</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>'}</tbody></table></div><p id="crm-agenda-feedback" class="crm-muted crm-agenda-feedback" role="status">${agendaLoadError?'Não foi possível consultar as aulas cadastradas. O status será verificado antes de salvar.':'Altere o status diretamente na tabela. O registro será salvo no calendário individual.'}</p></section>
+    <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${crmTodayRowsHtml(classes)||(groupLoadError?'<tr><td colspan="5" class="crm-empty">Agenda indisponível.</td></tr>':'<tr><td colspan="5" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>')}</tbody></table></div><p id="crm-agenda-feedback" class="crm-muted crm-agenda-feedback" role="status">${groupLoadError?'Não foi possível carregar as turmas. Reabra a Home para tentar novamente.':agendaLoadError?'Não foi possível consultar as aulas cadastradas. O status será verificado antes de salvar.':'Altere o status individual na tabela. Para turmas, clique no status ou no calendário para gerenciar a frequência.'}</p></section>
     <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
     </div>
     <div class="crm-lower">
@@ -208,7 +211,6 @@ async function renderHome(){
     </div>
   `;
   renderRecentAdminActivity();
-  const groupsReady=tgLoad();
   crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),groupsReady);
   try {
     await groupsReady;

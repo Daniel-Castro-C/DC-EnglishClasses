@@ -83,3 +83,40 @@ test('home and isolated preview share the side-by-side compact calendar layout',
  assert.match(css,/\.crm-month-grid\{[^}]*min-width:369px/);
  assert.match(css,/\.crm-month-day\{min-height:45px/);
 });
+
+test('daily agenda counts a collective class once and keeps simultaneous unrelated classes separate',()=>{
+ const {run}=setup();
+ run("students.push({id:'other',full_name:'Outro aluno',lesson_weekday:4,lesson_time:'21:00'}); var daily=crmGroupDailyAgenda(ccAgenda({date:'2026-11-12'},null,true))");
+ assert.equal(run('daily.length'),2);
+ assert.equal(run("daily.find(d=>d.ccGroupId==='g').full_name"),'Aluno B · Aluno C');
+ assert.equal(run("daily.find(d=>d.ccGroupId==='g').lesson_time"),'21:00');
+ assert.equal(run("daily.find(d=>d.id==='other').ccGroupId"),null);
+});
+test('group schedule is authoritative even without individual recurring hours; mixed attendance stays in one row',()=>{
+ const {run}=setup();
+ run("students[1].lesson_weekday=null;students[1].lesson_time='';students[2].lesson_weekday=null;students[2].lesson_time='';var daily=crmGroupDailyAgenda(ccAgenda({date:'2026-11-19'},null,true))");
+ assert.equal(run("daily.length"),1);
+ assert.equal(run("daily[0].full_name"),'Aluno B · Aluno C');
+ assert.equal(run("daily[0].ccStatus"),'mixed');
+ assert.equal(run("daily[0].lesson_time"),'20:00');
+ assert.equal(run("crmGroupDailyAgenda(ccAgenda({date:'2026-11-26'},null,true)).length"),0);
+});
+test('daily group row opens group calendar and deduplicates video links without discarding distinct links',()=>{
+ const {run}=setup();
+ run("students[1].permanent_lesson_link='https://example.test/room';students[2].permanent_lesson_link='https://example.test/room';var daily=crmGroupDailyAgenda(ccAgenda({date:'2026-11-12'},null,true))");
+ const html=run("crmTodayRowsHtml(daily)");
+ assert.match(html,/Aluno B · Aluno C/);
+ assert.match(html,/tgOpenDate\(&quot;g&quot;,&quot;2026-11-12&quot;\)/);
+ assert.doesNotMatch(html,/ccQuickSave/);
+ assert.equal((html.match(/openTodayClassCall/g)||[]).length,1);
+ run("students[2].permanent_lesson_link='https://example.test/another';daily=crmGroupDailyAgenda(ccAgenda({date:'2026-11-12'},null,true))");
+ assert.equal((run("crmTodayRowsHtml(daily)").match(/openTodayClassCall/g)||[]).length,2);
+});
+test('actual current date has a colored date badge and border, not other days',()=>{
+ const {run}=setup();
+ const grid=run("crmMonthlyGrid('2026-11',entries,'2026-11-26')");
+ assert.equal((grid.match(/is-today/g)||[]).length,1);
+ assert.match(grid,/is-today" aria-current="date"><div class="crm-month-day-number">26<\/div>/);
+ assert.doesNotMatch(run("crmMonthlyGrid('2026-12',new Map(),'2026-11-26')"),/is-today/);
+ assert.match(readFileSync('admin-crm.css','utf8'),/\.crm-month-day\.is-today \.crm-month-day-number\{[^}]*background:#496C97;color:#fff/);
+});
