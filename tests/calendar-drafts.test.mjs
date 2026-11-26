@@ -355,3 +355,13 @@ test('automatic numbering is a compact checkbox immediately after the editable t
  const css=readFileSync('admin-crm.css','utf8');
  assert.match(css,/\.cc-lesson-number-toggle input\[type="checkbox"\]\{[^}]*width:15px;height:15px/);
 });
+
+test('both calendar contexts share a responsive grid for habitual schedule and changes',()=>{
+ const markup=readFileSync('js/admin-calendar-test.js','utf8');
+ const css=readFileSync('admin-crm.css','utf8');
+ assert.match(markup,/<div class="cc-schedule-grid"><section class="box cc-schedule-card cc-schedule-base"><h3>Horário habitual<\/h3>/);
+ assert.match(markup,/<\/section><section class="box cc-schedule-card cc-schedule-changes"><h3>Alterações de horário habitual<\/h3>/);
+ assert.match(markup,/<\/section><\/div><div class="box" id="cc-annual">/);
+ assert.match(css,/\.cc-schedule-grid\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,460px\),1fr\)\)/);
+ assert.match(css,/\.cc-schedule-card \.cc-schedule-fields>label\{min-width:0/);
+});

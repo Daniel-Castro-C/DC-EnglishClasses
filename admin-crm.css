@@ -98,3 +98,14 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 /* Compact, accessible numbering option below the lesson title. */
 .admin-crm .cc-lesson-form .cc-lesson-number-toggle{display:flex;align-items:center;gap:8px;width:fit-content;margin:4px 0 14px;cursor:pointer;line-height:1.4}
 .admin-crm .cc-lesson-form .cc-lesson-number-toggle input[type="checkbox"]{appearance:auto;flex:0 0 15px;width:15px;height:15px;min-width:15px;min-height:15px;max-width:15px;margin:0;padding:0;accent-color:var(--crm-blue);cursor:pointer}
+
+/* Use the available calendar width, not the viewport width (the admin has a sidebar). */
+.admin-crm .cc-schedule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:14px;align-items:stretch;margin:8px 0 14px}
+.admin-crm .cc-schedule-grid>.cc-schedule-card{min-width:0;margin:0;container-type:inline-size}
+.admin-crm .cc-schedule-card .cc-schedule-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+.admin-crm .cc-schedule-card .cc-schedule-fields>label{min-width:0;margin-bottom:0}
+.admin-crm .cc-schedule-card .cc-schedule-fields input,.admin-crm .cc-schedule-card .cc-schedule-fields select{width:100%;min-width:0;max-width:100%}
+.admin-crm .cc-schedule-card .cc-weekday-group{gap:6px;margin-bottom:12px}
+.admin-crm .cc-schedule-card .cc-weekday-chip{min-width:50px;padding:7px 8px;gap:5px}
+@container (min-width:600px){.admin-crm .cc-schedule-base .cc-schedule-fields{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@container (max-width:300px){.admin-crm .cc-schedule-card .cc-schedule-fields{grid-template-columns:minmax(0,1fr)}}
