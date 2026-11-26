@@ -122,6 +122,77 @@ function ccUndoLessonDelete(){
  if(entry.previous)map.set(ccSelected,entry.previous);else map.delete(ccSelected);
  ccMarkDirty(ctx,d);ccRefreshGrid();ccEditor();
 }
+// Correct the calendar classification without recreating the registered lesson or its materials.
+function ccRegisteredReplacementAvailable(ctx,d,date,original){
+ return ctx.members.every(s=>{
+  const x=d.payloads[s.id],source=x.events[original],ls=ctx.lessons.filter(l=>l.student_id===s.id).map(l=>d.registeredStatuses?.[l.lesson_date]?{...l,calendar_status:x.events[l.lesson_date]?.status}:l);
+  if(ctx.group&&(!source||source.group_id!==ctx.group.id||!ccAbsent(source.status)))return false;
+  return ccReplacementAvailable(x,original,date,ls,!!ctx.group);
+ });
+}
+function ccRegisteredReplacementFields(ctx,d,date,state){
+ const original=state.event?.original||'',candidates=Object.keys(d.payloads[ctx.members[0].id].events).filter(from=>ccRegisteredReplacementAvailable(ctx,d,date,from)).sort().reverse();
+ if(original&&!candidates.includes(original))candidates.unshift(original);
+ const selected=original&&['done','planned'].includes(state.status)?'replacement_'+state.status:state.status;
+ const options=[...Object.entries(ccStatus).map(([k,v])=>[k,k==='rescheduled'?'Reagendar para...':v]),['replacement_done','Reposição realizada'],['replacement_planned','Reposição agendada']];
+ return '<label>Status da aula<select id="cc-registered-status" onchange="ccRegisteredStatusFields()">'+options.map(([k,v])=>'<option value="'+k+'" '+(k===selected?'selected':'')+'>'+ccEsc(v)+'</option>').join('')+'</select></label><div id="cc-registered-source" '+(!String(selected).startsWith('replacement_')?'hidden':'')+'><label>Reposição referente a<select id="cc-registered-original"><option value="">Selecione a falta original</option>'+candidates.map(from=>'<option value="'+from+'" '+(from===original?'selected':'')+'>'+ccEsc(formatDate(from))+'</option>').join('')+'</select></label></div><div id="cc-registered-move" '+(selected!=='rescheduled'?'hidden':'')+'><label>Nova data<input type="date" id="cc-registered-to" min="1900-01-01" max="9999-12-31" value="'+ccLessonAttr(state.event?.rescheduled_to||'')+'"></label></div><button type="button" class="btn-ghost" onclick="ccChangeRegisteredStatus()">Aplicar status</button><p class="small-note">O registro e os materiais permanecem intactos. Confirme tudo em Salvar calendário.'+(ctx.group?' A reposição coletiva exige falta de todos os integrantes.':'')+'</p>';
+}
+function ccRegisteredStatusFields(){
+ const status=document.getElementById('cc-registered-status').value;
+ document.getElementById('cc-registered-source').hidden=!status.startsWith('replacement_');
+ document.getElementById('cc-registered-move').hidden=status!=='rescheduled';
+ if(!status.startsWith('replacement_')&&status!=='rescheduled')ccChangeRegisteredStatus();
+}
+function ccStageRegisteredStatus(ctx,d,date,status,original='',to=''){
+ if(!ccLessonCanManage(ctx,date)||!Object.hasOwn(ccStatus,status))throw Error('Aula ou status inválido.');
+ const state=ccDateState(ctx,d,date),rows=ccLessonRows(ctx,date),registered=new Set(rows.map(l=>l.student_id)),next={...d,payloads:ccClone(d.payloads),schedule:d.schedule?ccClone(d.schedule):null};
+ if(!ctx.group&&ccGroupForDate(ctx.members[0].id,date))throw Error('Gerencie esta aula no calendário da turma.');
+ if(ctx.lessons.some(l=>l.lesson_date===date&&!rows.some(r=>r.id===l.id)))throw Error('Existe outro registro nesta data; atualize o calendário.');
+ if(original&&(!['done','planned'].includes(status)||!ccRegisteredReplacementAvailable(ctx,d,date,original)))throw Error('Reposição indisponível. Verifique a falta de origem.');
+ const previousTo=state.event?.rescheduled_to;
+ if(status==='rescheduled'){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(to)||to===date)throw Error('Escolha uma nova data válida.');
+  if(to!==previousTo)ccDestinationFree(ctx,d,to);
+  if(state.event?.rescheduled_from)throw Error('Esta aula já é destino de um reagendamento. Corrija o reagendamento original.');
+ }
+ for(const member of ctx.members){
+  const x=next.payloads[member.id],old=x.events[date]||{};
+  if(ctx.group&&x.events[date]&&!ccLegacyGroupRow(ctx,d,member.id,date))throw Error('Há um registro individual independente nesta data.');
+  if(!['absent','owed','teacher'].includes(status)&&Object.entries(x.events).some(([day,e])=>day!==date&&e.original===date&&!e.skip))throw Error('Corrija a reposição vinculada antes de alterar a falta original.');
+  if(previousTo&&previousTo!==to){
+   if(ccRegistered(ctx,member.id,previousTo))throw Error('O destino do reagendamento já tem aula cadastrada.');
+   if(x.events[previousTo]?.rescheduled_from===date){if(ccIsHabitual(x,previousTo))x.events[previousTo]={skip:true};else delete x.events[previousTo];}
+  }
+ }
+ const shared={...ccSharedFields(state.event),status,time:state.event?.time||ccSchedule(ccModel(ctx,d),date).time};
+ delete shared.skip;delete shared.original;delete shared.rescheduled_to;
+ if(original)shared.original=original;
+ if(status==='rescheduled')shared.rescheduled_to=to;
+ if(ctx.group){
+  next.schedule.events[date]=shared;
+  if(previousTo&&previousTo!==to)delete next.schedule.events[previousTo];
+  if(status==='rescheduled')next.schedule.events[to]={status:'planned',time:shared.time,rescheduled_from:date};
+ }
+ for(const member of ctx.members){
+  const x=next.payloads[member.id],old=x.events[date]||{},row=state.rows.find(r=>r.id===member.id);
+  const effective=ctx.group&&status==='done'&&!registered.has(member.id)&&ccAbsent(row.status)?'absent':ctx.group&&ccAbsent(status)?'owed':status;
+  const event={...old,...shared,status:effective,...(ctx.group?{group_id:ctx.group.id,group_status:status}:{})};
+  delete event.skip;if(!original)delete event.original;if(status!=='rescheduled')delete event.rescheduled_to;
+  if(ctx.group){delete event.attendance_override;if(effective==='absent'&&status==='done')event.attendance_override='absent';}
+  x.events[date]=event;
+  if(status==='rescheduled')x.events[to]={status:'planned',time:shared.time,rescheduled_from:date,...(ctx.group?{group_id:ctx.group.id,group_status:'planned'}:{})};
+ }
+ d.payloads=next.payloads;d.schedule=next.schedule;
+ (d.registeredStatuses??={})[date]={date,ids:rows.map(l=>l.id).sort()};
+}
+function ccChangeRegisteredStatus(){
+ if(ccSaving)return;
+ const ctx=ccContext(),d=ccDraft(ctx),date=ccSelected;
+ if(!d)return;
+ const value=document.getElementById('cc-registered-status').value,replacement=value.startsWith('replacement_'),status=replacement?value.slice(12):value,original=replacement?document.getElementById('cc-registered-original').value:'';
+ try{if(replacement&&!original)throw Error('Selecione a falta original.');ccStageRegisteredStatus(ctx,d,date,status,original,status==='rescheduled'?document.getElementById('cc-registered-to').value:'');ccMarkDirty(ctx,d);ccRefreshGrid();ccEditor();}
+ catch(error){alert(error.message);ccEditor();}
+}
 function ccLessonForm(ctx,d,date,state){
  const existing=ccLessonRows(ctx,date);
  if(!ctx.group){
@@ -139,7 +210,7 @@ function ccLessonForm(ctx,d,date,state){
  const targets=existing.length?existing.map(l=>l.student_id):state.rows.filter(r=>r.status==='done').map(r=>r.id);
  const resourceHtml=existing.map(l=>'<div class="box"><strong>'+ccEsc(ctx.group?(ctx.members.find(s=>s.id===l.student_id)?.full_name||'Aluno'):'Materiais cadastrados')+'</strong>'+(l.resources||[]).map(r=>typeof resourceRowWithEditHtml==='function'&&!ctx.group?resourceRowWithEditHtml(l,r):'<p>'+ccEsc(r.name)+' '+(r.file_path?'<button type="button" class="btn-ghost" onclick="previewFile(&quot;'+ccEsc(r.file_path)+'&quot;)">Visualizar</button>':'')+'</p>').join('')+'</div>').join('');
  const editing=existing.length&&d.editLessonDate===date;
- return '<section class="box cc-lesson-form" id="cc-lesson-form">'+(existing.length&&!editing?ccLessonConsultation(ctx,date,existing):'')+'<div id="cc-lesson-edit-fields" '+(existing.length&&!editing?'hidden':'')+'><div class="cc-lesson-edit-heading"><h3>'+(existing.length?'Editar aula':'Cadastrar aula')+'</h3>'+(existing.length?'<button type="button" class="btn-ghost" onclick="ccCloseRegisteredLesson()">Concluir edição</button>':'')+'</div><p class="small-note">A numeração acompanha a ordem das datas. Materiais são opcionais; salve todas as alterações pelo botão Salvar calendário.</p><label>Título da aula<input id="cc-lesson-title" value="'+ccLessonAttr(value)+'" oninput="ccLessonTitleEdit()"></label><label class="cc-lesson-number-toggle"><input type="checkbox" id="cc-lesson-auto" '+(automatic?'checked':'')+' onchange="ccLessonAuto()"><span>Numeração automática</span></label><label>Tópico da aula<input id="cc-lesson-topic" value="'+ccLessonAttr(topic)+'" oninput="ccCaptureLesson()"></label>'+(existing.length?'<label>Data da aula<input type="date" id="cc-lesson-date" value="'+ccLessonAttr(draft?.newDate||date)+'" onchange="ccChangeRegisteredDate(this)"></label><p class="small-note">A aula e seus materiais serão movidos para a nova data ao salvar o calendário.</p>':'<p>Data da aula: <strong>'+ccEsc(formatDate(date))+'</strong> · Para cadastrar em outra data, use o seletor acima ou clique no calendário.</p>')+resourceHtml+
+ return '<section class="box cc-lesson-form" id="cc-lesson-form">'+(existing.length&&!editing?ccLessonConsultation(ctx,date,existing):'')+'<div id="cc-lesson-edit-fields" '+(existing.length&&!editing?'hidden':'')+'><div class="cc-lesson-edit-heading"><h3>'+(existing.length?'Editar aula':'Cadastrar aula')+'</h3>'+(existing.length?'<button type="button" class="btn-ghost" onclick="ccCloseRegisteredLesson()">Concluir edição</button>':'')+'</div><p class="small-note">A numeração acompanha a ordem das datas. Materiais são opcionais; salve todas as alterações pelo botão Salvar calendário.</p><label>Título da aula<input id="cc-lesson-title" value="'+ccLessonAttr(value)+'" oninput="ccLessonTitleEdit()"></label><label class="cc-lesson-number-toggle"><input type="checkbox" id="cc-lesson-auto" '+(automatic?'checked':'')+' onchange="ccLessonAuto()"><span>Numeração automática</span></label><label>Tópico da aula<input id="cc-lesson-topic" value="'+ccLessonAttr(topic)+'" oninput="ccCaptureLesson()"></label>'+(existing.length?ccRegisteredReplacementFields(ctx,d,date,state)+'<label>Data da aula<input type="date" id="cc-lesson-date" value="'+ccLessonAttr(draft?.newDate||date)+'" onchange="ccChangeRegisteredDate(this)"></label><p class="small-note">A aula e seus materiais serão movidos para a nova data ao salvar o calendário.</p>':'<p>Data da aula: <strong>'+ccEsc(formatDate(date))+'</strong> · Para cadastrar em outra data, use o seletor acima ou clique no calendário.</p>')+resourceHtml+
  '<div class="cc-material-drop" id="cc-material-drop" ondragover="ccFileDrag(event,true)" ondragleave="ccFileDrag(event,false)" ondrop="ccFileDrop(event)"><strong>Arraste e solte os materiais aqui</strong><p class="small-note">Identificamos automaticamente o tipo pelo nome e pela extensão, seguindo a regra atual.</p><input type="file" id="cc-lesson-upload" multiple hidden onchange="ccCaptureFiles(this)"><button type="button" class="btn-ghost" onclick="document.getElementById(&quot;cc-lesson-upload&quot;).click()">+ Adicionar arquivos</button></div>'+
  (ctx.group?'<p class="small-note">Slides compartilhados e exercícios são enviados aos presentes. Para cada relatório de desempenho, escolha o integrante: <strong>'+targets.map(id=>ccEsc(ctx.members.find(s=>s.id===id)?.full_name||id)).join(' · ')+'</strong>.</p>':'')+
  '<div id="cc-lesson-files">'+ccLessonFilesHtml(draft,ctx,targets)+'</div><p class="small-note">Os arquivos e os dados da aula entram automaticamente no rascunho. Você pode trocar de data e salvar tudo de uma vez em <strong>Salvar calendário</strong>.</p></div></section>';
@@ -202,6 +273,7 @@ function ccProjectLessonMoves(ctx,d){
   if(destinations.has(to)||ccLessonMap(ctx).has(to)||ctx.lessons.some(l=>l.lesson_date===to))throw Error('Já há uma aula ou rascunho na nova data.');
   destinations.add(to);ccCanEditDate(ctx,next,to);
   const prior=ccDateState(ctx,next,from);
+  if(prior.status!=='done')throw Error('Para corrigir a data de uma aula não realizada, altere o status para Realizada primeiro ou use Reagendar para.');
   for(const member of ctx.members){
    const x=next.payloads[member.id],old=x.events[from]||{},target=x.events[to];
    if(target&&!target.skip&&!['holiday','break'].includes(target.status))throw Error('Já há um registro na nova data.');

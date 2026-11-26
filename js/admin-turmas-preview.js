@@ -53,7 +53,7 @@ function tgNormalizeAttendance(members,attendance){
 }
 function tgGroupReplacementEligible(groupId,date){
  const g=tgGroups.find(v=>v.id===groupId);if(!g)return false;
- return g.members.every(id=>{const e=ccRead(id).events?.[date];return !g.calendarLessons?.some(l=>l.student_id===id&&l.lesson_date===date&&l.group_id===groupId)&&e?.group_id===groupId&&['absent','owed'].includes(ccAttendanceStatus(g.calendar_events?.[date]?.status||e.status,e.attendance_override));});
+ return g.members.every(id=>{const e=ccRead(id).events?.[date];return !g.calendarLessons?.some(l=>l.student_id===id&&l.lesson_date===date&&l.group_id===groupId&&!ccAbsent(l.calendar_status))&&e?.group_id===groupId&&['absent','owed'].includes(ccAttendanceStatus(g.calendar_events?.[date]?.status||e.status,e.attendance_override));});
 }
 function tgGroupReplacementRows(){
  const result=[];
