@@ -119,6 +119,7 @@ function ccRegistered(ctx,id,date){return ctx.lessons.some(l=>l.student_id===id&
 function ccIsHabitual(x,date){return !!ccSchedule(x,date).time&&ccHabitual(x,date);}
 function ccEvent(ctx,d,id,date){const e=d.payloads[id].events[date];return ctx.group&&e?.group_id!==ctx.group.id?undefined:e;}
 function ccDateState(ctx,d,date){
+ if(typeof ccPendingLessonDeletion==='function'&&ccPendingLessonDeletion(ctx,date))return {rows:ctx.members.map(s=>({id:s.id,status:'',real:false,e:{skip:true},time:''})),status:'',base:ctx.group?{skip:true}:null,event:{skip:true},real:false,mixed:false};
  const x=ccModel(ctx,d),base=ctx.group?ccGroupBase(ctx,d,date):null;
  const individualGroup=!ctx.group?ccGroupForDate(ctx.members[0].id,date):null;
  const rows=ctx.members.map(s=>{
@@ -162,11 +163,11 @@ function ccStageConfig(){
  if(next.weekdays&&(!next.time||ctx.group&&!next.start)||next.end&&next.start&&next.end<next.start){ccMessage('Informe início e horário para os dias habituais e confira o período.');return false;}
  if(next.changes.some(c=>!next.start||c.from<next.start||next.end&&c.from>next.end)){ccMessage('As mudanças de horário precisam estar dentro do período configurado.');return false;}
  if(ctx.group)ccGroupProjection(d,next);else d.payloads[ctx.members[0].id]=next;
- ccMarkDirty(ctx,d);ccRefreshGrid();return true;
+ ccMarkDirty(ctx,d);ccRefreshGrid();const summary=document.getElementById('cc-schedule-label');if(summary)summary.textContent=ccScheduleLabel(next);return true;
 }
 function ccMessage(msg){const el=document.getElementById('cc-message');if(el)el.textContent=msg;}
 function ccMarkDirty(ctx,d){d.dirty=true;ccUpdateToolbar(d);}
-function ccUpdateToolbar(d){const btn=document.getElementById('cc-save-all'),discard=document.getElementById('cc-discard');if(btn)btn.disabled=ccSaving||!d.dirty;if(discard)discard.disabled=ccSaving||!d.dirty;ccMessage(d.dirty?'Alterações não salvas. Salve o calendário para confirmar.':'Calendário salvo.');}
+function ccUpdateToolbar(d){const btn=document.getElementById('cc-save-all'),discard=document.getElementById('cc-discard');if(btn)btn.disabled=ccSaving||!d.dirty;if(discard)discard.disabled=ccSaving||!d.dirty;ccMessage(d.dirty?'Alterações e arquivos no rascunho. Clique em Salvar calendário para confirmar.':'Calendário salvo.');}
 function ccChangeAdd(){
  const ctx=ccContext(),d=ccDraft(ctx);if(!d||ccSaving||!ccStageConfig())return;
  const x=ccModel(ctx,d),from=document.getElementById('cc-change-date').value,weekdays=ccPickedDays('cc-change-day'),time=document.getElementById('cc-change-time').value;
@@ -184,15 +185,20 @@ function ccChangeRemove(from){
 }
 function ccChangeEdit(from){const ctx=ccContext(),d=ccDraft(ctx),c=ccModel(ctx,d).changes.find(v=>v.from===from);if(!c)return;document.getElementById('cc-change-date').value=c.from;document.getElementById('cc-change-time').value=c.time;document.querySelectorAll('input[name="cc-change-day"]').forEach(e=>e.checked=c.weekdays.split(',').includes(e.value));}
 function ccLessons(s){return currentLessons.filter(l=>l.student_id===s.id&&l.lesson_date)}
+function ccScheduleLabel(x){
+ const current=ccSchedule(x,adminToday().date),days=current.weekdays.split(',').filter(Boolean).map(day=>['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][Number(day)-1]).filter(Boolean);
+ return days.length&&current.time?days.join(' · ')+' às '+current.time:'Sem horário habitual';
+}
+function ccScheduleToggle(el){const d=ccDraft();if(d&&el.isConnected)d.scheduleOpen=el.open;}
 function ccRender(){
  const ctx=ccContext();if(!ctx||!ctx.members.length)return;
  const root=document.getElementById(ctx.group?'tg-body':'tab-content');if(!root)return;
  const d=ccDraft(ctx);
- if(!ctx.group&&!currentLessonsReady){root.innerHTML='<p role="alert">Não foi possível carregar as aulas cadastradas. Atualize antes de editar.</p><button class="btn-ghost" onclick="ccImportCompletions()">Atualizar do servidor</button>';return;}
+ if(!ctx.group&&!currentLessonsReady){root.innerHTML='<p role="alert">Não foi possível carregar as aulas cadastradas. Atualize antes de editar.</p><button class="btn-ghost" onclick="ccImportCompletions()" title="Busca os dados mais recentes já salvos no sistema.">Recarregar dados</button>';return;}
  if(ctx.group&&ctx.members.length!==ctx.group.members.length){root.innerHTML='<p role="alert">Não foi possível carregar todos os integrantes da turma.</p>';return;}
  if(ccActiveKey!==ctx.key){ccActiveKey=ctx.key;ccDate=d.date;ccSelected=d.selected;}
  const x=ccModel(ctx,d);
- root.innerHTML='<div class="box cc-calendar-toolbar"><h3>'+(ctx.group?'Calendário da turma':'Calendário individual')+'</h3><p class="small-note">'+(ctx.group?'Este calendário é a origem das aulas coletivas: status, horários e observações são espelhados nos calendários dos integrantes.':'Nas aulas de turma, registre apenas a frequência individual; as demais informações vêm do calendário da turma.')+' Salve todas as alterações de uma vez.</p><div class="row"><button id="cc-save-all" class="btn-dark-sm" onclick="ccSaveAll()">Salvar calendário</button><button id="cc-discard" class="btn-ghost" onclick="ccDiscard()">Descartar alterações</button><button class="btn-ghost" onclick="ccImportCompletions()">Atualizar do servidor</button></div><p id="cc-message" class="small-note" role="status" aria-live="polite"></p></div><div class="box"><h3>Horário habitual</h3><div class="row"><label>Plano <select id="cc-plan" onchange="ccStageConfig()"><option value="">Selecionar</option><option value="48">Essencial · 48</option><option value="96">Intensivo · 96</option></select></label><label>Início <input id="cc-start" type="date" value="'+ccEsc(x.start)+'" onchange="ccStageConfig()"></label><label>Horário inicial <input id="cc-base-time" type="time" value="'+ccEsc(x.time)+'" onchange="ccStageConfig()"></label><label>Fim (opcional) <input id="cc-end" type="date" value="'+ccEsc(x.end)+'" onchange="ccStageConfig()"></label></div><p class="small-note">Dias habituais iniciais</p><div class="cc-weekday-group" onchange="ccStageConfig()">'+ccDayInputs(x.weekdays,'cc-base-day')+'</div></div><div class="box"><h3>Alterações de horário habitual</h3><p class="small-note">Escolha a data a partir da qual o novo horário vale. Para encerrar a recorrência, deixe todos os dias desmarcados.</p><div class="row"><label>A partir de <input id="cc-change-date" type="date" value="'+adminToday().date+'"></label><label>Horário <input id="cc-change-time" type="time" value="'+ccEsc(ccSchedule(x,adminToday().date).time)+'"></label></div><div class="cc-weekday-group">'+ccDayInputs(ccSchedule(x,adminToday().date).weekdays,'cc-change-day')+'</div><button class="btn-ghost" onclick="ccChangeAdd()">Adicionar alteração</button>'+x.changes.slice().sort((a,b)=>a.from.localeCompare(b.from)).map(c=>'<div class="resource-row"><div class="resource-info"><div class="name">A partir de '+ccEsc(formatDate(c.from))+'</div><div class="desc">'+ccEsc(c.weekdays.split(',').filter(Boolean).map(day=>['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][Number(day)-1]).join(', ')||'Sem recorrência')+' · '+ccEsc(c.time)+'</div></div><button class="btn-ghost" onclick="ccChangeEdit(&quot;'+ccEsc(c.from)+'&quot;)">Editar</button><button class="btn-ghost" onclick="ccChangeRemove(&quot;'+ccEsc(c.from)+'&quot;)">Excluir</button></div>').join('')+'</div><div class="box" id="cc-annual"></div><div class="box cc-month-panel"><div class="cc-month-navigation"><button class="btn-ghost" aria-label="Mês anterior" onclick="ccMove(-1)">←</button><h3 id="cc-month"></h3><button class="btn-ghost" aria-label="Próximo mês" onclick="ccMove(1)">→</button></div><div class="cc-month-grid" id="cc-grid"></div><div id="cc-edit"></div></div>';
+ root.innerHTML='<div class="box cc-calendar-toolbar"><h3>'+(ctx.group?'Calendário da turma':'Calendário individual')+'</h3><p class="small-note">'+(ctx.group?'Este calendário é a origem das aulas coletivas: status, horários e observações são espelhados nos calendários dos integrantes.':'Nas aulas de turma, registre apenas a frequência individual; as demais informações vêm do calendário da turma.')+' Salve todas as alterações de uma vez.</p><div class="row"><button id="cc-save-all" class="btn-dark-sm" onclick="ccSaveAll()">Salvar calendário</button><button id="cc-discard" class="btn-ghost" onclick="ccDiscard()" title="Cancela somente as alterações ainda não salvas e os anexos selecionados.">Cancelar alterações não salvas</button><button class="btn-ghost" onclick="ccImportCompletions()" title="Busca os dados mais recentes já salvos no sistema.">Recarregar dados</button></div><p id="cc-message" class="small-note" role="status" aria-live="polite"></p></div><details class="cc-schedule-settings" id="cc-schedule-settings" '+(d.scheduleOpen?'open':'')+' ontoggle="ccScheduleToggle(this)"><summary><span><strong>Configurar horário habitual</strong><small id="cc-schedule-label">'+ccEsc(ccScheduleLabel(x))+'</small></span><span class="cc-settings-count">'+x.changes.length+' alteração(ões)</span></summary><div class="cc-schedule-grid"><section class="box cc-schedule-card cc-schedule-base"><h3>Horário habitual</h3><div class="row cc-schedule-fields"><label>Plano <select id="cc-plan" onchange="ccStageConfig()"><option value="">Selecionar</option><option value="48">Essencial · 48</option><option value="96">Intensivo · 96</option></select></label><label>Início <input id="cc-start" type="date" value="'+ccEsc(x.start)+'" onchange="ccStageConfig()"></label><label>Horário inicial <input id="cc-base-time" type="time" value="'+ccEsc(x.time)+'" onchange="ccStageConfig()"></label><label>Fim (opcional) <input id="cc-end" type="date" value="'+ccEsc(x.end)+'" onchange="ccStageConfig()"></label></div><p class="small-note">Dias habituais iniciais</p><div class="cc-weekday-group" onchange="ccStageConfig()">'+ccDayInputs(x.weekdays,'cc-base-day')+'</div></section><section class="box cc-schedule-card cc-schedule-changes"><h3>Alterações de horário habitual</h3><p class="small-note">Escolha a data a partir da qual o novo horário vale. Para encerrar a recorrência, deixe todos os dias desmarcados.</p><div class="row cc-schedule-fields"><label>A partir de <input id="cc-change-date" type="date" value="'+adminToday().date+'"></label><label>Horário <input id="cc-change-time" type="time" value="'+ccEsc(ccSchedule(x,adminToday().date).time)+'"></label></div><div class="cc-weekday-group">'+ccDayInputs(ccSchedule(x,adminToday().date).weekdays,'cc-change-day')+'</div><button class="btn-ghost" onclick="ccChangeAdd()">Adicionar alteração</button>'+x.changes.slice().sort((a,b)=>a.from.localeCompare(b.from)).map(c=>'<div class="resource-row"><div class="resource-info"><div class="name">A partir de '+ccEsc(formatDate(c.from))+'</div><div class="desc">'+ccEsc(c.weekdays.split(',').filter(Boolean).map(day=>['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][Number(day)-1]).join(', ')||'Sem recorrência')+' · '+ccEsc(c.time)+'</div></div><button class="btn-ghost" onclick="ccChangeEdit(&quot;'+ccEsc(c.from)+'&quot;)">Editar</button><button class="btn-ghost" onclick="ccChangeRemove(&quot;'+ccEsc(c.from)+'&quot;)">Excluir</button></div>').join('')+'</section></div></details><div class="box" id="cc-annual"></div><div class="box cc-month-panel">'+(typeof ccLessonHistory==='function'?'<div class="row"><button class="btn-ghost" onclick="ccOpenSuggested()">Próxima aula</button><button class="btn-ghost" onclick="ccLessonHistory()">Histórico de aulas</button></div><label>Ir para data<input type="date" aria-label="Ir para data" onchange="ccSelectLessonDate(this)"></label><div id="cc-history" hidden></div>':'')+'<div class="cc-month-navigation"><button class="btn-ghost" aria-label="Mês anterior" onclick="ccMove(-1)">←</button><h3 id="cc-month"></h3><button class="btn-ghost" aria-label="Próximo mês" onclick="ccMove(1)">→</button></div><div class="cc-month-grid" id="cc-grid"></div><div id="cc-edit"></div></div>';
  root.querySelector('#cc-plan').value=x.plan;
  ccUpdateToolbar(d);ccRefreshGrid();if(ccSelected)ccEditor();
 }
@@ -227,7 +233,7 @@ function ccMove(direction){
  const editor=document.getElementById('cc-edit');if(editor)editor.innerHTML='';
  ccRefreshGrid();
 }
-function ccSelect(date){if(ccSaving||!ccFinishInput())return;const d=ccDraft();ccSelected=date;d.selected=date;ccRefreshGrid();ccEditor();}
+function ccSelect(date){if(ccSaving||!ccFinishInput())return;const d=ccDraft();if(ccSelected!==date)d.editLessonDate='';ccSelected=date;d.selected=date;ccRefreshGrid();ccEditor();}
 function ccReplacementAvailable(x,original,date,lessons,collective=false){
  if(x.events[original]?.group_id&&!collective)return false;
  if(!original||original>=date||!['owed','absent','teacher'].includes(x.events[original]?.status))return false;
@@ -332,19 +338,45 @@ function ccPublishedDetails(ctx,date){
   return '<p>Aula cadastrada: '+ccEsc(title)+'</p><p><strong>Tema:</strong> '+ccEsc(topic||'Não cadastrado')+'</p>';
  }).join('');
 }
+function ccDayHeading(date,state,time){
+ const label=ccDateLabel(state.status)||'Sem aula';
+ return '<div class="cc-day-heading"><div><h3>'+ccEsc(formatDate(date))+(state.status&&time?' · '+ccEsc(time):'')+'</h3></div><span class="cc-day-status" data-status="'+ccEsc(state.status||'empty')+'">'+ccEsc(label)+(state.mixed?' · frequência mista':'')+'</span></div>';
+}
+function ccQuickDayActions(ctx,state){
+ const status=state.status;
+ if(state.real)return '';
+ const real='<button type="button" class="btn-dark-sm" onclick="ccQuickDayStatus(&quot;done&quot;)">✓ Realizar aula</button>';
+ const schedule='<button type="button" class="btn-ghost" onclick="ccQuickDayStatus(&quot;planned&quot;)">Agendar aula</button>';
+ const absence='<details class="cc-absence-menu"><summary class="btn-ghost">Registrar falta</summary><div class="cc-absence-options">'+(ctx.group?'<button type="button" class="btn-ghost" onclick="ccQuickDayStatus(&quot;owed&quot;)">Falta de todos os integrantes</button><button type="button" class="btn-ghost" onclick="ccOpenDayDetails()">Frequência individual</button>':'<button type="button" class="btn-ghost" onclick="ccQuickDayStatus(&quot;absent&quot;)">Falta sem reposição</button><button type="button" class="btn-ghost" onclick="ccQuickDayStatus(&quot;owed&quot;)">Falta com reposição</button>')+'</div></details>';
+ const move='<button type="button" class="btn-ghost" onclick="ccQuickDayStatus(&quot;move&quot;)">Reagendar</button>';
+ const remove='<button type="button" class="resource-action cc-danger-action" onclick="ccRemove()">Excluir registro</button>';
+ return '<div class="cc-day-actions">'+(!status?schedule+real:status==='planned'?real+absence+move+remove:status==='done'?remove:real+schedule+remove)+'</div>';
+}
+function ccOpenDayDetails(){
+ const details=document.getElementById('cc-day-options');if(details)details.open=true;
+ const attendance=document.getElementById('cc-attendance');if(attendance)attendance.scrollIntoView({block:'nearest'});
+}
+function ccQuickDayStatus(status){
+ const el=document.getElementById('cc-status');if(!el||el.disabled||ccSaving)return;
+ if(status==='move')ccOpenDayDetails();
+ el.value=status;ccStatusChange();
+}
 function ccEditor(){
  const ctx=ccContext(),d=ccDraft(ctx),el=document.getElementById('cc-edit');if(!d||!el||!ccSelected)return;
  const date=ccSelected,state=ccDateState(ctx,d,date),x=ccModel(ctx,d),e=state.event||{};
  const group=!ctx.group&&ccGroupForDate(ctx.members[0].id,date);
- const header='<hr><h3>'+ccEsc(formatDate(date))+'</h3>';
+ const header=ccDayHeading(date,state,e.time||ccSchedule(x,date).time);
+ if(typeof ccPendingLessonDeletion==='function'&&ccPendingLessonDeletion(ctx,date)){el.innerHTML=header+ccLessonForm(ctx,d,date,state);return;}
  if(group){
   const base=group.calendar_events?.[date],own=d.payloads[ctx.members[0].id].events[date]||{};
   const permitted=!state.real&&!base?.skip&&!own.skip&&['planned','done','absent','owed'].includes(base?.status||own.status||state.status);
-  el.innerHTML=header+ccPublishedDetails(ctx,date)+'<p>Esta aula pertence à turma '+ccEsc(group.name)+'. Alterações coletivas são feitas no calendário da turma.</p>'+(permitted?'<label>Frequência deste aluno <select id="cc-own-attendance" onchange="ccChangeIndividualAttendance()"><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option></select></label><p class="small-note">A falta não altera os demais alunos. Só há reposição quando todos faltarem.</p>':'')+'<button class="btn-dark-sm" onclick="tgOpenDate(&quot;'+ccEsc(group.id)+'&quot;,&quot;'+date+'&quot;)">Abrir calendário da turma</button>';
+  const ownForm=state.real&&typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';
+  el.innerHTML=header+(ownForm?'':state.real&&typeof ccLessonConsultation==='function'?ccLessonConsultation(ctx,date,ctx.lessons.filter(l=>l.lesson_date===date),false):ccPublishedDetails(ctx,date))+'<p>Esta aula pertence à turma '+ccEsc(group.name)+'. Alterações coletivas são feitas no calendário da turma.</p>'+(permitted?'<label>Frequência deste aluno <select id="cc-own-attendance" onchange="ccChangeIndividualAttendance()"><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option></select></label><p class="small-note">A falta não altera os demais alunos. Só há reposição quando todos faltarem.</p>':'')+'<button class="btn-dark-sm" onclick="tgOpenDate(&quot;'+ccEsc(group.id)+'&quot;,&quot;'+date+'&quot;)">Abrir calendário da turma</button>';
+  if(ownForm)el.insertAdjacentHTML('beforeend',ownForm);
   if(permitted)document.getElementById('cc-own-attendance').value=ccGroupOverride(own,base||{status:own.group_status||'planned'})||'inherit';
   return;
  }
- if(state.real&&!ctx.group){el.innerHTML=header+ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas. Edite o cadastro em Aulas e materiais.</p>';return;}
+ if(state.real&&!ctx.group){const lesson=typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';el.innerHTML=header+(lesson||ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas.</p>');return;}
  try{if(!ctx.group||!state.real)ccCanEditDate(ctx,d,date);}catch(error){el.innerHTML=header+'<p role="alert">'+ccEsc(error.message)+'</p>';return;}
  if(state.status==='rescheduled'){
   el.innerHTML=header+'<p><strong>Reagendado</strong> para '+ccEsc(formatDate(e.rescheduled_to))+'</p><div class="row"><button class="btn-ghost" onclick="ccJump(&quot;'+ccEsc(e.rescheduled_to)+'&quot;)">Ir para nova data</button><button class="btn-ghost" onclick="ccRemove()">Excluir registro e cancelar reagendamento</button></div>';return;}
@@ -355,10 +387,12 @@ function ccEditor(){
   const row=d.payloads[s.id],ls=ctx.lessons.filter(l=>l.student_id===s.id);
   return ctx.group?ctx.members.every(m=>['absent','owed'].includes(d.payloads[m.id].events[from]?.status)&&d.payloads[m.id].events[from]?.group_id===ctx.group.id)&&ccReplacementAvailable(row,from,date,ls,true):ccReplacementAvailable(row,from,date,ls);
  }));
- el.innerHTML=header+(ctx.group&&state.real?ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas; a frequência dos integrantes sem cadastro ainda pode ser ajustada.</p>':'')+(e.rescheduled_from?'<p class="small-note">Reagendado de '+ccEsc(formatDate(e.rescheduled_from))+'</p>':'')+'<label>Status da aula <select id="cc-status" onchange="ccStatusChange()" '+(ctx.group&&state.real?'disabled':'')+'>'+(state.status?'':'<option value="">Selecione o status</option>')+options+'<option value="move">Reagendar para...</option></select></label><div id="cc-reschedule" hidden><label>Nova data <input id="cc-reschedule-date" type="date" onchange="ccApplyReschedule()"></label><p class="small-note">A data original será mantida como Reagendado.</p></div>'+(ctx.group?'<div id="cc-attendance"><h4>Frequência individual</h4>'+state.rows.map(r=>'<label>'+ccEsc(ctx.members.find(s=>s.id===r.id).full_name||r.id)+' · '+ccEsc(ccDateLabel(r.status)||'Sem aula')+'<select data-cc-member="'+ccEsc(r.id)+'" onchange="ccApplyDay(true)" '+(r.real||!['planned','done','absent','owed'].includes(state.base.status)?'disabled':'')+'><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option>'+'</select></label>').join('')+'</div>':'')+'<label>Reposição referente a <select id="cc-original" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+'><option value="">Não é reposição</option>'+candidates.map(([from])=>'<option value="'+from+'">'+ccEsc(formatDate(from))+'</option>').join('')+'</select></label><label>Horário <input id="cc-time" type="time" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+' value="'+ccEsc(e.time||ccSchedule(x,date).time||'')+'"></label><label>Observações <textarea id="cc-notes" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+'>'+ccEsc(e.notes||'')+'</textarea></label><div class="row"><button class="btn-ghost" onclick="ccRemove()" '+(ctx.group&&state.real?'disabled':'')+'>Excluir registro de aula</button></div><p class="small-note">Alterações nesta data ficam no rascunho. '+(ctx.group?'A reposição só é concedida quando todos os integrantes faltam.':'Uma aula habitual excluída não reaparece automaticamente.')+'</p>';
+ const lesson=typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';
+ el.innerHTML=header+(ctx.group&&state.real?(lesson||ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas; a frequência dos integrantes sem cadastro ainda pode ser ajustada.</p>'):'')+ccQuickDayActions(ctx,state)+(e.rescheduled_from?'<p class="small-note">Reagendado de '+ccEsc(formatDate(e.rescheduled_from))+'</p>':'')+'<details id="cc-day-options" class="cc-day-options"><summary>'+(ctx.group&&state.real?'Ajustar frequência individual':'Mais opções da aula')+'</summary><label>Status da aula <select id="cc-status" onchange="ccStatusChange()" '+(ctx.group&&state.real?'disabled':'')+'>'+(state.status?'':'<option value="">Selecione o status</option>')+options+'<option value="move">Reagendar para...</option></select></label><div id="cc-reschedule" hidden><label>Nova data <input id="cc-reschedule-date" type="date" onchange="ccApplyReschedule()"></label><p class="small-note">A data original será mantida como Reagendado.</p><button type="button" class="btn-ghost" onclick="ccEditor()">Cancelar reagendamento</button></div>'+(ctx.group?'<div id="cc-attendance"><h4>Frequência individual</h4>'+state.rows.map(r=>'<label>'+ccEsc(ctx.members.find(s=>s.id===r.id).full_name||r.id)+' · '+ccEsc(ccDateLabel(r.status)||'Sem aula')+'<select data-cc-member="'+ccEsc(r.id)+'" onchange="ccApplyDay(true)" '+(r.real||!['planned','done','absent','owed'].includes(state.base.status)?'disabled':'')+'><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option>'+'</select></label>').join('')+'</div>':'')+'<label>Reposição referente a <select id="cc-original" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+'><option value="">Não é reposição</option>'+candidates.map(([from])=>'<option value="'+from+'">'+ccEsc(formatDate(from))+'</option>').join('')+'</select></label><label>Horário <input id="cc-time" type="time" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+' value="'+ccEsc(e.time||ccSchedule(x,date).time||'')+'"></label><label>Observações <textarea id="cc-notes" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+'>'+ccEsc(e.notes||'')+'</textarea></label><div class="row"><button class="btn-ghost" onclick="ccRemove()" '+(ctx.group&&state.real?'disabled':'')+'>Excluir registro de aula</button></div><p class="small-note">Alterações nesta data ficam no rascunho. '+(ctx.group?'A reposição só é concedida quando todos os integrantes faltam.':'Uma aula habitual excluída não reaparece automaticamente.')+'</p></details>';
  document.getElementById('cc-status').value=selected;
  document.getElementById('cc-original').value=e.original||'';
  if(ctx.group)document.querySelectorAll('[data-cc-member]').forEach(input=>input.value=state.rows.find(r=>r.id===input.dataset.ccMember)?.override||'inherit');
+ if(lesson&&!(ctx.group&&state.real))el.insertAdjacentHTML('beforeend',lesson);
 }
 function ccStatusChange(){
  const status=document.getElementById('cc-status').value,move=document.getElementById('cc-reschedule');
@@ -423,30 +457,40 @@ function ccApplyDay(individual=false){
 }
 function ccFinishInput(){if(document.getElementById('cc-status')?.value==='move'){alert('Escolha a nova data ou selecione outro status antes de continuar.');return false;}return !document.getElementById('cc-plan')||ccStageConfig();}
 function ccRemove(){const ctx=ccContext(),d=ccDraft(ctx);if(!d||ccSaving||!confirm('Excluir este registro do calendário? A alteração só será confirmada ao salvar.'))return;try{ccDeleteDate(ctx,d,ccSelected);ccMarkDirty(ctx,d);ccRefreshGrid();ccEditor();}catch(e){alert(e.message);}}
-function ccJump(date){if(!ccFinishInput())return;const d=ccDraft();ccSelected=date;ccDate=new Date(date+'T12:00:00');d.selected=date;d.date=ccDate;ccRender();}
-function ccDiscard(){const ctx=ccContext(),d=ccDraft(ctx);if(!d||ccSaving||!confirm('Descartar todas as alterações ainda não salvas?'))return;ccDrafts.delete(ctx.key);ccActiveKey='';ccRender();}
+function ccJump(date){if(!ccFinishInput())return;const d=ccDraft();if(ccSelected!==date)d.editLessonDate='';ccSelected=date;ccDate=new Date(date+'T12:00:00');d.selected=date;d.date=ccDate;ccRender();}
+function ccDiscard(){const ctx=ccContext(),d=ccDraft(ctx);if(!d||ccSaving||!confirm('Descartar todas as alterações ainda não salvas?'))return;if(typeof ccLessonMap==='function')ccLessonMap(ctx).clear();ccDrafts.delete(ctx.key);ccActiveKey='';ccRender();}
 async function ccImportCompletions(){
  const ctx=ccContext(),d=ccDraft(ctx);if(!ctx||ccSaving)return;
- if(d?.dirty&&!confirm('Descartar as alterações não salvas e atualizar do servidor?'))return;
- try{await ccLoadCloud();await tgLoad();if(!ctx.group)await loadLessonsFor(ctx.members[0].id);ccDrafts.delete(ctx.key);ccActiveKey='';if(ccContext()?.key===ctx.key)ccRender();}catch(e){alert('Não foi possível atualizar o calendário.');}
+ if(d?.dirty&&!confirm('Cancelar as alterações não salvas e recarregar os dados já salvos?'))return;
+ try{await ccLoadCloud();await tgLoad();if(typeof ccLessonMap==='function')ccLessonMap(ctx).clear();if(!ctx.group)await loadLessonsFor(ctx.members[0].id);ccDrafts.delete(ctx.key);ccActiveKey='';if(ccContext()?.key===ctx.key)ccRender();}catch(e){alert('Não foi possível atualizar o calendário.');}
 }
 async function ccSaveAll(){
- const ctx=ccContext(),d=ccDraft(ctx);if(!d||ccSaving||!ccFinishInput()||!d.dirty)return;
+ const ctx=ccContext();let d=ccDraft(ctx);if(!d||ccSaving||!ccFinishInput()||!d.dirty)return;
  if([...ccDrafts.values()].some(other=>other.key!==ctx.key&&other.dirty&&ctx.members.some(s=>Object.hasOwn(other.payloads,s.id))))return alert('Há alterações pendentes em outro calendário relacionado. Descarte esse outro rascunho antes de salvar.');
  if(!ctx.members.every(s=>s.is_test_profile||ccCloudReady&&(ccCloud.get(s.id)?.revision||0)===d.revisions[s.id]))return alert('Calendário alterado em outro fluxo. Atualize do servidor antes de salvar.');
  // Preflight the dates touched by the draft against the current published lesson records.
  ccSaving=true;ccUpdateToolbar(d);
  try{
+  if(typeof ccValidateLessonDrafts==='function'){ccValidateLessonDrafts(ctx,d);await ccCheckLessonSchema(ctx);}
+  const deletions=typeof ccLessonDeletionEntries==='function'?ccLessonDeletionEntries(ctx):[];
+  const removedDates=new Set(deletions.map(e=>e.date));
+  if(deletions.length)d=ccProjectLessonDeletions(ctx,d);
   if(!ctx.members.every(s=>s.is_test_profile)){
    for(const member of ctx.members){
-    const dates=Object.keys({...d.base[member.id].events,...d.payloads[member.id].events}).filter(date=>JSON.stringify(d.base[member.id].events[date])!==JSON.stringify(d.payloads[member.id].events[date]));
+    const dates=Object.keys({...d.base[member.id].events,...d.payloads[member.id].events}).filter(date=>!removedDates.has(date)&&JSON.stringify(d.base[member.id].events[date])!==JSON.stringify(d.payloads[member.id].events[date]));
     for(let offset=0;offset<dates.length;offset+=80){
      const {data,error}=await sb.from('lessons').select('id,student_id,lesson_date').in('student_id',[member.id]).in('lesson_date',dates.slice(offset,offset+80)).limit(1);
      if(error)throw error;if(data?.length)throw Error('Uma aula cadastrada foi encontrada em '+formatDate(data[0].lesson_date)+'. Atualize o calendário antes de salvar.');
     }
    }
   }
-  if(ctx.group){
+  if(deletions.length){
+   const x=d.schedule,schedule=ctx.group?{...ctx.group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events}:null;
+   const {data,error}=await sb.rpc('portal_calendar_save_with_deletions',{p_group:ctx.group?.id||null,p_student:ctx.group?null:ctx.members[0].id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]})),p_deletions:deletions.map(e=>({date:e.date,ids:e.deleteIds}))});
+   if(error)throw error;
+   for(const entry of deletions)ccLessonMap(ctx).delete(entry.date);
+   if(!ctx.group){const id=ctx.members[0].id;ccCloud.set(id,{calendar_key:id,payload:ccClone(d.payloads[id]),revision:data});}
+  }else if(ctx.group){
    const x=d.schedule,schedule=JSON.stringify(x)===JSON.stringify(d.baseSchedule)?null:{...ctx.group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events};
    const {error}=await sb.rpc('portal_group_calendar_save',{p_group:ctx.group.id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]}))});
    if(error)throw error;
@@ -457,8 +501,11 @@ async function ccSaveAll(){
   }
   // Once the RPC succeeds, the draft has been committed; do not retry on a refresh failure.
   ccDrafts.delete(ctx.key);ccActiveKey='';
-  try{if(ctx.group){await ccLoadCloud();await tgLoad();}}catch(e){ccCloudReady=false;alert('Calendário salvo, mas não foi possível atualizar a tela. Recarregue antes de editar novamente.');return;}
-  if(ccContext()?.key===ctx.key)ccRender();
+  let lessonError=null;
+  try{if(typeof ccFlushLessons==='function')await ccFlushLessons(ctx,d);}catch(e){lessonError=e;console.error(e);}
+  try{if(ctx.group){await ccLoadCloud();await tgLoad();}else if(typeof ccFlushLessons==='function')await loadLessonsFor(ctx.members[0].id);}catch(e){ccCloudReady=false;alert('Calendário salvo, mas não foi possível atualizar a tela. Recarregue antes de editar novamente.');return;}
+  if(ccContext()?.key===ctx.key){const fresh=ccDraft(ccContext());fresh.date=d.date;fresh.selected=d.selected;if(lessonError)fresh.dirty=true;ccRender();}
+  if(lessonError)alert('Calendário salvo. Ainda há materiais/aulas no rascunho: '+lessonError.message+' Confira antes de tentar novamente.');
  }catch(e){console.error(e);alert('Não foi possível salvar. As alterações permanecem no rascunho. '+(e.message||''));}
  finally{ccSaving=false;const active=ccContext();if(active){const now=ccDraft(active);ccUpdateToolbar(now);}}
 }

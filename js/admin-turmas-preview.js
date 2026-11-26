@@ -15,10 +15,10 @@ function tgNew(){
 }
 async function tgCreate(){const name=document.getElementById('tg-name').value.trim(),members=[...document.querySelectorAll('[name=tg-members]:checked')].map(e=>e.value);if(!name||members.length<2)return alert('Informe o nome e selecione pelo menos dois alunos.');try{const {data,error}=await sb.from('portal_groups').insert({name,members}).select().single();if(error)throw error;await tgLoad();tgSelected=tgGroups.find(g=>g.id===data.id);tgTab='calendar';tgRender();}catch(e){alert(e.message);}}
 function tgSelect(id){tgSelected=tgGroups.find(g=>g.id===id);tgTab='calendar';ccDate=new Date();ccSelected='';ccActiveKey='';tgDetail();}
-function tgSwitch(tab){tgTab=tab;tgDetail();}
+function tgSwitch(tab){tgTab='calendar';tgDetail();if(tab==='lesson')ccOpenSuggested();if(tab==='history')ccLessonHistory();}
 function tgDetail(){
  const g=tgSelected;if(!g)return;
- document.getElementById('tg-detail').innerHTML='<section class="crm-panel"><div class="crm-panel-head"><div><h3>'+tgEsc(g.name)+'</h3><p class="small-note">'+tgMembers().map(s=>tgEsc(s.full_name||s.email)).join(' · ')+'</p></div></div><div class="row"><button class="btn-ghost" onclick="tgSwitch(&quot;calendar&quot;)">Calendário</button><button class="btn-ghost" onclick="tgSwitch(&quot;lesson&quot;)">Cadastrar aula</button><button class="btn-ghost" onclick="tgSwitch(&quot;history&quot;)">Histórico</button></div><div id="tg-body"></div></section>';
+ document.getElementById('tg-detail').innerHTML='<section class="crm-panel"><div class="crm-panel-head"><div><h3>'+tgEsc(g.name)+'</h3><p class="small-note">'+tgMembers().map(s=>tgEsc(s.full_name||s.email)).join(' · ')+'</p></div></div><div class="row"><button class="btn-ghost" onclick="tgSwitch(&quot;calendar&quot;)">Calendário e aulas</button></div><div id="tg-body"></div></section>';
  if(tgTab==='calendar')tgCalendar();else if(tgTab==='lesson')tgLesson();else tgHistory();
 }
 function tgCalendar(){ccRender();}
@@ -39,13 +39,13 @@ async function tgLoad(){
  const {data,error}=await sb.from('portal_groups').select('*').order('created_at');if(error)throw error;
  const ids=[...new Set((data||[]).flatMap(g=>g.members))],lessons=[];
  for(let offset=0;ids.length;offset+=500){
-  const {data:batch,error:le}=await sb.from('lessons').select('id,group_id,student_id,title,topic,lesson_date,resources(type,name)').in('student_id',ids).order('id',{ascending:true}).range(offset,offset+499);
+  const {data:batch,error:le}=await sb.from('lessons').select('*,resources(*)').in('student_id',ids).order('id',{ascending:true}).range(offset,offset+499);
   if(le)throw le;lessons.push(...(batch||[]));if((batch||[]).length<500)break;
  }
  const old=tgSelected?.id;
  tgGroups=(data||[]).map(row=>{const g={...row,days:'',time:'',start:'',end:'',...row.schedule,events:{},lessons:[],calendarLessons:lessons.filter(l=>row.members.includes(l.student_id))};const by=new Map();for(const l of (lessons||[]).filter(l=>l.group_id===g.id)){const k=l.lesson_date;let a=by.get(k);if(!a){a={id:l.id,date:k,title:l.title,topic:l.topic,slides:[],exercises:[],reports:{}};by.set(k,a);}for(const r of l.resources||[]){if(r.type==='rep')a.reports[l.student_id]=materialDisplayName(r);else{const arr=r.type==='ex'?a.exercises:a.slides;if(!arr.includes(r.name))arr.push(r.name);}}a.reports[l.student_id]??='Pendente';}g.lessons=[...by.values()];return g;});for(const g of tgGroups)for(const id of g.members){const s=students.find(s=>s.id===id);if(!s)continue;for(const [date,e] of Object.entries(ccData(s).events||{}))if(e.group_id===g.id&&!e.skip)(g.events[date]??={})[id]=e.status;}tgSelected=tgGroups.find(g=>g.id===old)||null;
 }
-function tgOpenMissing(groupId,date){tgSelected=tgGroups.find(g=>g.id===groupId);if(!tgSelected)return;currentView='turmas';renderNav();tgRender();tgSwitch('lesson');document.getElementById('tg-lesson-date').value=date;}
+function tgOpenMissing(groupId,date){return tgOpenDate(groupId,date);}
 
 function tgNormalizeAttendance(members,attendance){
  const allAbsent=members.every(id=>['absent','owed'].includes(attendance[id]));

@@ -151,9 +151,7 @@ async function loadReportPendencies(){
 }
 async function openMissingLesson(studentId,date){
   await openStudent(studentId);
-  switchTab('nova');
-  const input=document.getElementById('new-lesson-date');
-  if(input)input.value=date;
+  await ccOpenDate(studentId,date);
 }
 
 // Abre a videochamada da aula diretamente, sem navegar para o perfil.
@@ -700,8 +698,11 @@ async function openStudent(studentId){
 }
 
 function switchTab(tab){
-  currentTab = tab;
+  const alias=tab==='nova'||tab==='cadastradas';
+  currentTab = alias?'calendario':tab;
   renderStudentDetail();
+  if(tab==='nova')ccOpenSuggested();
+  if(tab==='cadastradas')ccLessonHistory();
 }
 
 async function loadLessonsFor(studentId){
@@ -744,7 +745,7 @@ function renderStudentDetail(){
     <section class="crm-profile-head crm-dossier-head"><span class="crm-avatar">${s.avatar_url?'<img src="'+escapeAttr(s.avatar_url)+'" alt="" class="crm-dossier-photo">':escapeHtml((s.full_name||s.email||'A').charAt(0).toUpperCase())}</span><div class="crm-dossier-identity"><h1>${escapeHtml(s.full_name||s.email)}</h1><p>${crmPlan(ccData(s))} · ${escapeHtml(s.email||'')}</p><small class="crm-muted">${s.is_test_profile?'Perfil de teste':(s.lesson_weekday?WEEKDAY_LABELS[s.lesson_weekday-1]+' · '+escapeHtml((s.lesson_time||'').slice(0,5)):'Horário habitual não definido')}</small></div><button class="btn-ghost" onclick="openTodayClassCall(currentStudent.id)">${crmIcon('video')} Videochamada</button></section>
     <section class="crm-kpis crm-kpis-three">${crmKpi('Carga anual',metrics.count+'/'+(metrics.target??'—'),'chart')}${crmKpi('Reposições',metrics.pending,'refresh')}${crmKpi('Frequência',metrics.frequency,'calendar')}</section>
     <div class="crm-dossier-layout"><nav class="crm-dossier-nav" aria-label="Ficha do aluno">
-    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário','calendar'],['cadastradas','Aulas e materiais','book'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation']]],['CAIXA DE ENTRADA',[['pedidos','Material do Aluno','file','materials'],['duvidas','Perguntas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings'],['nova','Cadastrar aula','plus']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
+    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário e aulas','calendar'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation']]],['CAIXA DE ENTRADA',[['pedidos','Material do Aluno','file','materials'],['duvidas','Perguntas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
     </nav><div class="crm-dossier-content">
     <div id="tab-content"></div></div></div></div>
   `;
@@ -1271,16 +1272,7 @@ function renderNovaAulaTab(){
   }
 }
 
-function inferQuickResourceType(fileName){
-  const normalizedName = (fileName || '').trim();
-  // Prioriza os padrões de nome, independentemente da extensão.
-  if (/report\s*-\s*class/i.test(normalizedName)) return 'rep';
-  if (/^\d+/.test(normalizedName)) return 'ppt';
-  const extension = (normalizedName.split('.').pop() || '').toLowerCase();
-  if (['ppt', 'pptx', 'odp'].includes(extension)) return 'ppt';
-  if (['doc', 'docx', 'odt', 'xls', 'xlsx'].includes(extension)) return 'ex';
-  return 'pdf';
-}
+
 
 function addQuickLessonFiles(fileList){
   if (!fileList || !fileList.length) return;
@@ -1325,13 +1317,10 @@ function renderQuickUploadFiles(){
 
 // Leva diretamente à área de anexos sem alterar a aula escolhida nem apagar os materiais existentes.
 function openAddMaterialToLesson(lessonId){
-  currentTab = 'nova';
-  renderStudentDetail();
-  const lessonSelect = document.getElementById('resource-lesson');
-  if (lessonSelect) lessonSelect.value = lessonId;
-  document.getElementById('existing-lesson-materials')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+ const lesson=currentLessons.find(l=>l.id===lessonId);if(!lesson)return;
+ if(lesson.group_id)return tgOpenDate(lesson.group_id,lesson.lesson_date);
+ currentTab='calendario';renderStudentDetail();ccJump(lesson.lesson_date);
 }
-
 function resourceRowHtml(rowIndex){
   return `
     <div class="lesson-card" id="resource-row-${rowIndex}" style="padding:14px 16px;margin-bottom:10px;">
@@ -1784,39 +1773,22 @@ async function crmStudentInboxTab(tab){
  el.innerHTML='<section class="box"><h3>'+(questions?'Perguntas do aluno':'Textos para correção')+'</h3><p class="small-note">Consulte os envios deste aluno. Use o módulo pedagógico para responder ou corrigir.</p><button class="btn-dark-sm" onclick="'+(questions?'openDanielModule()':'openTextosModule()')+'">Abrir módulo de atendimento</button>'+ (result.error?'<p>Não foi possível carregar os envios.</p>':rows.map(r=>'<div class="resource-row">'+crmIcon(questions?'message':'file')+'<div class="resource-info"><div class="name">'+(questions?(r.answer==null?'Aguardando resposta':'Respondida'):(r.status==='pending'?'Aguardando correção':'Correção pronta'))+'</div><div class="desc">'+escapeHtml(new Date(r.created_at).toLocaleString('pt-BR'))+'</div></div></div>').join('')||'<p class="small-note">Nenhum envio registrado.</p>')+'</section>';
 }
 
-function crmMaterialNormalize(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();}
 function crmMaterialSearch(studentId=''){
  currentStudent=null;currentView='materiais-busca';renderNav();
- const root=document.getElementById('main-content');
- root.innerHTML='<div class="topline"><div><h1>Buscador de materiais</h1><p class="sub">Consulte o histórico de temas utilizados em aulas cadastradas.</p></div></div><section class="box crm-material-search"><form id="crm-material-form" class="crm-search-fields"><label>Tópico da aula<input id="crm-material-query" required placeholder="Ex.: Productivity, Future, Travel"></label><label>Aluno para verificar repetição<select id="crm-material-student"><option value="">Todos os alunos</option>'+students.filter(s=>!s.is_test_profile).map(s=>'<option value="'+escapeAttr(s.id)+'">'+escapeHtml(s.full_name||s.email)+'</option>').join('')+'</select></label><button type="submit" class="btn-dark-sm">Buscar</button></form><div id="crm-material-results" aria-live="polite"><p class="small-note">Digite um tópico para consultar todas as ocorrências. Selecione um aluno para destacar os temas que ele já estudou.</p></div></section>';
- root.querySelector('#crm-material-student').value=studentId;
- root.querySelector('#crm-material-form').addEventListener('submit',e=>{e.preventDefault();crmMaterialResults();});
- root.querySelector('#crm-material-student').addEventListener('change',()=>{if(root.querySelector('#crm-material-query').value.trim())crmMaterialResults();});
- root.querySelector('#crm-material-query').focus();
-}
-let crmMaterialRequest=0;
-async function crmMaterialResults(){
- const root=document.getElementById('crm-material-results'),query=crmMaterialNormalize(document.getElementById('crm-material-query').value),target=document.getElementById('crm-material-student').value,request=++crmMaterialRequest;
- if(!query){root.textContent='Digite um tópico para buscar.';return;}
- root.innerHTML='<p>Consultando histórico...</p>';
- try{
-  const byId=new Map(students.filter(s=>!s.is_test_profile).map(s=>[s.id,s]));
-  const rows=[];const size=500;
-  for(let offset=0;;offset+=size){
-    const {data,error}=await sb.from('lessons').select('id,student_id,title,topic,lesson_date').order('id',{ascending:true}).range(offset,offset+size-1);
-    if(error)throw error;
-    if(!root.isConnected||request!==crmMaterialRequest)return;
-    const batch=data||[];
-    rows.push(...batch.filter(l=>byId.has(l.student_id)&&crmMaterialNormalize(l.topic).includes(query)));
-    if(batch.length<size)break;
+ crmRenderMaterialSearch(document.getElementById('main-content'),students,studentId,async()=>{
+  const rows=[];
+  for(let offset=0;;offset+=500){
+   const {data,error}=await sb.from('lessons').select('id,student_id,group_id,title,topic,lesson_date').order('id',{ascending:true}).range(offset,offset+499);
+   if(error)throw error;
+   rows.push(...(data||[]));if((data||[]).length<500)break;
   }
-  rows.sort((a,b)=>(b.lesson_date||'').localeCompare(a.lesson_date||'')||String(a.id).localeCompare(String(b.id)));
-  const own=rows.filter(l=>l.student_id===target),student=byId.get(target);
-  const summary='<div class="crm-search-result-summary"><strong>'+rows.length+' ocorrência(s) · '+new Set(rows.map(l=>l.student_id)).size+' aluno(s)</strong></div>';
-  const warning=student?'<div class="box" style="padding:12px;margin:10px 0;border-left:4px solid '+(own.length?'var(--amber)':'var(--sage)')+'"><strong>'+escapeHtml(student.full_name||student.email)+'</strong> — '+(own.length?'Já possui '+own.length+' aula(s) com tópico correspondente. Confira as datas destacadas abaixo.':'Nenhuma aula com tópico correspondente foi encontrada no histórico cadastrado.')+'</div>':'';
-  root.innerHTML=summary+warning+(rows.length?'<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Tópico</th><th>Aluno</th><th>Data</th><th>Aula</th><th>Ações</th></tr></thead><tbody>'+rows.map(l=>'<tr class="'+(l.student_id===target?'crm-repeat-match':'')+'"><td><strong>'+escapeHtml(l.topic||'')+'</strong></td><td>'+escapeHtml(byId.get(l.student_id).full_name||byId.get(l.student_id).email)+'</td><td>'+escapeHtml(l.lesson_date?formatDate(l.lesson_date):'Sem data')+'</td><td>'+escapeHtml(l.title||'')+'</td><td><button class="btn-ghost" data-crm-open-lesson="'+escapeAttr(l.id)+'" data-crm-student="'+escapeAttr(l.student_id)+'">Ver aula e materiais</button></td></tr>').join('')+'</tbody></table></div>':'<p class="small-note">Nenhum tópico correspondente encontrado.</p>');
-  root.querySelectorAll('[data-crm-open-lesson]').forEach(btn=>btn.addEventListener('click',async()=>{const id=btn.dataset.crmStudent,lesson=btn.dataset.crmOpenLesson;await openStudent(id);if(currentStudent?.id!==id||currentView!=='student')return;switchTab('cadastradas');const card=document.getElementById('crm-lesson-'+lesson);if(card){card.scrollIntoView({block:'center'});card.style.outline='2px solid var(--crm-blue)';}}));
- }catch(error){console.error(error);if(root.isConnected&&request===crmMaterialRequest)root.innerHTML='<p role="alert">Não foi possível consultar o histórico completo. Tente novamente.</p>';}
+  return rows;
+ },async row=>{
+  if(row.group_id&&row.lesson_date){await tgOpenDate(row.group_id,row.lesson_date);return;}
+  await openStudent(row.student_id);
+  if(currentStudent?.id!==row.student_id||currentView!=='student')return;
+  if(row.lesson_date){switchTab('calendario');ccJump(row.lesson_date);}
+ });
 }
 
 function crmEditLesson(id){

@@ -265,3 +265,228 @@ test('month navigation updates only grid, reserves six weeks and preserves draft
   }
  }
 });
+
+const lessonCode=readFileSync('js/admin-calendar-lessons.js','utf8');
+function setupUnified(group=false){
+ const {run,ctx}=setup({group});vm.runInContext(lessonCode,ctx);return {run,ctx};
+}
+test('unified calendar suggests chronological title and next habitual date',()=>{
+ const {run}=setupUnified();
+ run("ctx.lessons.push({id:'a',student_id:'s1',lesson_date:'2026-11-09',title:'Class #1'},{id:'b',student_id:'s1',lesson_date:'2026-11-23',title:'Class #2'})");
+ assert.equal(run("ccLessonNumber(ctx,'2026-11-16')"),'Class #2');
+ assert.equal(run("ccNextLessonDate(ctx,draft)"),'2026-11-30');
+ run("draft.payloads.s1.events['2026-11-30']={skip:true}");
+ assert.equal(run("ccNextLessonDate(ctx,draft)"),'2026-12-07');
+ run("ccLessonMap(ctx).set('2026-11-16',{date:'2026-11-16',automatic:true,files:[]})");
+ assert.equal(run("ccLessonNumber(ctx,'2026-11-30')"),'Class #4');
+});
+test('group numbering counts common historic dates once and never counts separate individual dates',()=>{
+ const {run}=setupUnified(true);
+ run("ctx.lessons.push({student_id:'s1',lesson_date:'2026-11-09',title:'Class #1',topic:'Intro'},{student_id:'s2',lesson_date:'2026-11-09',title:'Class #1',topic:'Intro'},{student_id:'s1',lesson_date:'2026-11-16',title:'Class #2',topic:'Extra'},{student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #2'},{student_id:'s2',group_id:'g1',lesson_date:'2026-11-23',title:'Class #2'})");
+ assert.equal(run("ccLessonNumber(ctx,'2026-11-30')"),'Class #3');
+});
+test('material form appears only for realized sessions and targets present group members',()=>{
+ const {run}=setupUnified(true);
+ assert.equal(run("ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))"),'');
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true)");
+ const html=run("ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))");
+ assert.match(html,/Class #1/);assert.match(html,/Slides compartilhados/);
+ assert.match(html,/Arraste e solte os materiais aqui/);assert.match(html,/Two/);assert.doesNotMatch(html,/One/);assert.doesNotMatch(html,/Adicionar ao próximo salvamento/);
+});
+test('lesson drafts refuse save when the underlying class is not completed',()=>{
+ const {run}=setupUnified();
+ run("ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',automatic:true,files:[]})");
+ assert.throws(()=>run("ccValidateLessonDrafts(ctx,draft)"),/Realizada/);
+});
+test('flush sends explicit manual titles and preserves attendance boundary',async()=>{
+ const {run,ctx}=setupUnified(true);ctx.calls=[];
+ ctx.sb={rpc:async(name,args)=>{ctx.calls.push({name,args});return {}}};
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true);ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',automatic:false,title:'Class #12',topic:'Topic',files:[]})");
+ await run("ccFlushLessons(ctx,draft)");
+ assert.equal(ctx.calls[0].name,'portal_calendar_lesson_save');
+ assert.deepEqual(Array.from(ctx.calls[0].args.p_members),['s2']);
+ assert.equal(ctx.calls[0].args.p_title,'Class #12');
+ assert.equal(run("ccLessonMap(ctx).size"),0);
+});
+
+test('drag upload keeps the original file classification rules and permits correction',()=>{
+ const {run}=setupUnified();
+ assert.equal(run("inferQuickResourceType('Report - Class 39 - Ana.pdf')"),'rep');
+ assert.equal(run("inferQuickResourceType('39 - Conversation.pdf')"),'ppt');
+ assert.equal(run("inferQuickResourceType('Conversation.pptx')"),'ppt');
+ assert.equal(run("inferQuickResourceType('Practice.docx')"),'ex');
+ assert.equal(run("inferQuickResourceType('Reading.pdf')"),'pdf');
+ const html=run("ccLessonFilesHtml({files:[{file:{name:'Report - Class 39.pdf'},type:'rep'}]},ctx,['s1'])");
+ assert.match(html,/value="rep" selected/);
+ assert.match(html,/ccChangeLessonFileType/);
+ assert.doesNotMatch(html,/Destinatário do relatório/);
+});
+test('group report requires explicit eligible recipient; shared materials do not',()=>{
+ const {run}=setupUnified(true);
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true);ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',automatic:true,files:[{file:{name:'Report - Class 1.pdf'},type:'rep',student:null}]})");
+ const html=run("ccLessonFilesHtml(ccLessonMap(ctx).get('2026-11-23'),ctx,ccLessonTargets(ctx,draft,'2026-11-23'))");
+ assert.match(html,/Selecione o aluno/);assert.match(html,/value="s2"/);assert.doesNotMatch(html,/value="s1"/);
+ assert.throws(()=>run("ccValidateLessonDrafts(ctx,draft)"),/Escolha um integrante presente/);
+ run("ccLessonMap(ctx).get('2026-11-23').files[0].student='s1'");
+ assert.throws(()=>run("ccValidateLessonDrafts(ctx,draft)"),/Escolha um integrante presente/);
+ run("ccLessonMap(ctx).get('2026-11-23').files[0].student='s2'");
+ assert.doesNotThrow(()=>run("ccValidateLessonDrafts(ctx,draft)"));
+});
+
+test('one drop stages mixed file types automatically without an extra add-to-save button',()=>{
+ const {run,ctx}=setupUnified();
+ const elements=new Map([['cc-lesson-title',{value:'Class #1'}],['cc-lesson-topic',{value:'Topic'}],['cc-lesson-auto',{checked:true}],['cc-lesson-files',{innerHTML:''}]]);
+ ctx.document={getElementById:id=>elements.get(id)||null};
+ run("ccSelected='2026-11-23';draft.payloads.s1.events['2026-11-23']={status:'done'};ccAddLessonFiles([{name:'01 - slides.pdf'},{name:'Report - Class 1.pdf'},{name:'Practice.docx'}])");
+ assert.equal(run("ccLessonMap(ctx).get(ccSelected).files.map(r=>r.type).join(',')"),'ppt,rep,ex');
+ assert.equal(run("draft.dirty"),true);
+ assert.match(elements.get('cc-lesson-files').innerHTML,/Report - Class 1.pdf/);
+ run("ccChangeLessonFileType(2,'pdf');ccRemoveLessonFile(0)");
+ assert.equal(run("ccLessonMap(ctx).get(ccSelected).files.map(r=>r.type).join(',')"),'rep,pdf');
+});
+
+test('automatic numbering is a compact checkbox immediately after the editable title',()=>{
+ const {run}=setupUnified();
+ run("draft.payloads.s1.events['2026-11-23']={status:'done'}");
+ const html=run("ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))");
+ assert.match(html,/<label class="cc-lesson-number-toggle"><input type="checkbox" id="cc-lesson-auto" checked onchange="ccLessonAuto\(\)">/);
+ assert.ok(html.indexOf('id="cc-lesson-title"')<html.indexOf('id="cc-lesson-auto"'));
+ assert.ok(html.indexOf('id="cc-lesson-auto"')<html.indexOf('id="cc-lesson-topic"'));
+ const css=readFileSync('admin-crm.css','utf8');
+ assert.match(css,/\.cc-lesson-number-toggle input\[type="checkbox"\]\{[^}]*width:15px;height:15px/);
+});
+
+test('both calendar contexts share a responsive grid for habitual schedule and changes',()=>{
+ const markup=readFileSync('js/admin-calendar-test.js','utf8');
+ const css=readFileSync('admin-crm.css','utf8');
+ assert.match(markup,/<div class="cc-schedule-grid"><section class="box cc-schedule-card cc-schedule-base"><h3>Horário habitual<\/h3>/);
+ assert.match(markup,/<\/section><section class="box cc-schedule-card cc-schedule-changes"><h3>Alterações de horário habitual<\/h3>/);
+ assert.match(markup,/<\/section><\/div><\/details><div class="box" id="cc-annual">/);
+ assert.match(css,/\.cc-schedule-grid\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,460px\),1fr\)\)/);
+ assert.match(css,/\.cc-schedule-card \.cc-schedule-fields>label\{min-width:0/);
+});
+
+for(const group of [false,true])test((group?'group':'individual')+': registered lesson actions, staged deletion and undo',async()=>{
+ const {run,ctx}=setupUnified(group);ctx.calls=[];
+ ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),rpc:async(name,args)=>{ctx.calls.push({name,args});return {data:3}}};
+ run((group?"tgSelected.calendarLessons.push({id:'one',student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #1'},{id:'two',student_id:'s2',group_id:'g1',lesson_date:'2026-11-23',title:'Class #1'});":"currentLessons.push({id:'one',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1'});")+"ctx=ccContext();ccSelected='2026-11-23';ccEditor=()=>{};");
+ const html=run("ccLessonForm(ctx,draft,ccSelected,ccDateState(ctx,draft,ccSelected))");
+ assert.match(html,/>Editar aula<\/button>/);assert.match(html,/>Excluir aula<\/button>/);
+ run("ccStageLessonDelete()");
+ assert.equal(ctx.calls.length,0);
+ assert.equal(run("ccLessonMap(ctx).get(ccSelected).deleteIds.join(',')"),group?'one,two':'one');
+ assert.match(run("ccLessonForm(ctx,draft,ccSelected,ccDateState(ctx,draft,ccSelected))"),/Desfazer exclusão/);
+ assert.equal(run("ccDateState(ctx,draft,ccSelected).status"),'');
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-30').status"),'planned');
+ run("ccUndoLessonDelete()");assert.equal(run("ccLessonMap(ctx).size"),0);
+ assert.equal(run("ccDateState(ctx,draft,ccSelected).rows[0].status"),'done');
+ run("ccStageLessonDelete();ccValidateLessonDrafts(ctx,draft);ccRender=()=>{};ccLoadCloud=async()=>{};tgLoad=async()=>{};loadLessonsFor=async()=>{};");
+ await run("ccSaveAll()");
+ assert.equal(ctx.calls.length,1);
+ assert.equal(ctx.calls[0].name,'portal_calendar_save_with_deletions');
+ assert.deepEqual(Array.from(ctx.calls[0].args.p_deletions[0].ids),group?['one','two']:['one']);
+ assert.equal(ctx.calls[0].args.p_deletions[0].date,'2026-11-23');
+ for(const c of ctx.calls[0].args.p_changes)assert.equal(c.payload.events['2026-11-23'].skip,true);
+ if(group)assert.equal(ctx.calls[0].args.p_schedule.calendar_events['2026-11-23'].skip,true);
+ assert.equal(run("ccLessonMap(ctx).size"),0);
+});
+test('historical group editing and deletion require an unambiguous matching session',()=>{
+ const {run}=setupUnified(true);
+ run("ctx.lessons.push({id:'one',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1',topic:'Intro'},{id:'two',student_id:'s2',lesson_date:'2026-11-23',title:'Class #1',topic:'Intro'})");
+ assert.equal(run("ccLessonCanManage(ctx,'2026-11-23')"),true);
+ run("ctx.lessons.push({id:'extra',student_id:'s1',lesson_date:'2026-11-23',title:'Extra'})");
+ assert.equal(run("ccLessonCanManage(ctx,'2026-11-23')"),false);
+});
+test('delete RPC checks administrative authorization and exact lesson IDs before deleting and renumbering',()=>{
+ const sql=readFileSync('supabase-calendar-lesson-numbering.sql','utf8');
+ const body=sql.slice(sql.indexOf('create or replace function public.portal_calendar_lesson_delete'),sql.indexOf('create or replace function public.portal_calendar_save_with_deletions'));
+ assert.match(body,/security invoker/);assert.match(body,/not coalesce\(public\.is_admin\(\),false\)/);
+ assert.match(body,/ids <@ p_ids and p_ids <@ ids/);assert.match(body,/delete from public\.lessons where id=any\(ids\)/);
+ assert.match(body,/portal_calendar_resequence/);assert.doesNotMatch(body,/delete from storage/);
+});
+
+test('atomic lesson deletion failure leaves original calendar and deletion draft intact',async()=>{
+ const {run,ctx}=setupUnified();
+ ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),rpc:async()=>({error:new Error('revision conflict')})};
+ run("currentLessons.push({id:'one',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1'});ctx=ccContext();ccSelected='2026-11-23';ccEditor=()=>{};ccStageLessonDelete();");
+ await run("ccSaveAll()");
+ assert.equal(run("ccLessonMap(ctx).size"),1);
+ assert.equal(run("ccDrafts.get(ctx.key).dirty"),true);
+ assert.equal(run("ccRead('s1').events['2026-11-23']"),undefined);
+ run("ccUndoLessonDelete()");
+ assert.equal(run("ccDateState(ctx,ccDraft(ctx),'2026-11-23').status"),'done');
+});
+test('prospective deletion removes manual completion and writes an exception without changing other dates',()=>{
+ const {run}=setupUnified();
+ run("currentLessons.push({id:'one',student_id:'s1',lesson_date:'2026-11-23',title:'Class #1'});ctx=ccContext();ccSelected='2026-11-23';draft.payloads.s1.events[ccSelected]={status:'done'};draft.payloads.s1.events['2026-11-30']={status:'planned'};ccEditor=()=>{};ccStageLessonDelete();var projected=ccProjectLessonDeletions(ctx,draft);");
+ assert.equal(run("projected.payloads.s1.events['2026-11-23'].skip"),true);
+ assert.equal(run("ccManualDoneDates(projected.payloads.s1).length"),0);
+ assert.equal(run("projected.payloads.s1.events['2026-11-30'].status"),'planned');
+ assert.equal(run("draft.payloads.s1.events['2026-11-23'].status"),'done');
+});
+test('deletion SQL wraps exact scoped deletion and revision-checked calendar saves in one function',()=>{
+ const sql=readFileSync('supabase-calendar-lesson-numbering.sql','utf8');
+ const body=sql.slice(sql.indexOf('create or replace function public.portal_calendar_save_with_deletions'),sql.indexOf('create or replace function public.portal_calendar_lesson_save'));
+ assert.match(body,/security invoker/);assert.match(body,/Missing calendar deletion/);assert.match(body,/Other lesson on this date/);
+ assert.match(body,/portal_calendar_lesson_delete\(p_group,p_student,day,ids\)/);
+ assert.match(body,/portal_group_calendar_save\(p_group,p_schedule,p_changes\)/);
+ assert.match(body,/save_admin_calendar\(p_student::text/);
+});
+
+test('isolated demo persists deletion and mirrors an empty group date into both individual calendars',async()=>{
+ const {randomUUID}=await import('node:crypto');
+ const c=vm.createContext({console,crypto:{randomUUID},window:{addEventListener(){}},document:{getElementById(){return null}},alert(){},confirm:()=>true});
+ vm.runInContext(code+'\n'+lessonCode+'\n'+readFileSync('js/calendar-preview-demo.js','utf8').replace('(async()=>{await ccLoadCloud();demoSelect(false)})();',''),c);
+ const run=s=>vm.runInContext(s,c);
+ await run("ccLoadCloud();");
+ run("ccRender=()=>{};ccEditor=()=>{};ccRefreshGrid=()=>{};tgGroups=[demoGroup];tgSelected=demoGroup;currentView='turmas';tgTab='calendar';demoRefresh();ccSelected='2026-11-19';ccStageLessonDelete();");
+ await run("ccSaveAll()");
+ assert.equal(run("demoLessons.filter(l=>l.group_id===demoGroup.id&&l.lesson_date==='2026-11-19').length"),0);
+ assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-19').status"),'');
+ assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-26').status"),'done');
+ for(const id of ['demo-2','demo-3']){
+  run("currentView='student';currentTab='calendario';currentStudent=students.find(s=>s.id==='"+id+"');demoRefresh()");
+  assert.equal(run("ccRead(currentStudent.id).events['2026-11-19'].skip"),true);
+  assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-19').status"),'');
+ }
+ run("currentStudent=students[0];demoRefresh();ccSelected='2026-11-19';ccStageLessonDelete();");
+ await run("ccSaveAll()");
+ assert.equal(run("demoLessons.filter(l=>l.student_id==='demo-1'&&l.lesson_date==='2026-11-19').length"),0);
+ assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-19').status"),'');
+ assert.equal(run("demoLessons.find(l=>l.student_id==='demo-1'&&l.lesson_date==='2026-11-26').title"),'Class #1');
+});
+
+test('habitual schedule settings are collapsed by default and contain the original cards',()=>{
+ const {run,ctx}=setupUnified();const elements=new Map();
+ const elem=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',value:'',textContent:'',querySelector:q=>elem(q.slice(1))});return elements.get(id)};
+ ctx.document={getElementById:elem,querySelectorAll:()=>[]};
+ run("ccRender()");
+ assert.match(elem('tab-content').innerHTML,/<details class="cc-schedule-settings" id="cc-schedule-settings"  ontoggle=/);
+ assert.match(elem('tab-content').innerHTML,/Configurar horário habitual/);
+ run("draft.scheduleOpen=true;ccRender()");
+ assert.match(elem('tab-content').innerHTML,/<details class="cc-schedule-settings" id="cc-schedule-settings" open/);
+});
+test('quick actions depend on date state and keep full status controls accessible',()=>{
+ const {run}=setupUnified();
+ const planned=run("ccQuickDayActions(ctx,{status:'planned',real:false})");
+ for(const label of ['Realizar aula','Registrar falta','Reagendar','Excluir registro','Falta com reposição','Falta sem reposição'])assert.match(planned,new RegExp(label));
+ assert.doesNotMatch(run("ccQuickDayActions(ctx,{status:'',real:false})"),/Reagendar|Excluir registro/);
+ assert.equal(run("ccQuickDayActions(ctx,{status:'done',real:true})"),'');
+ const group=setupUnified(true);
+ assert.match(group.run("ccQuickDayActions(ctx,{status:'planned',real:false})"),/Falta de todos os integrantes/);
+});
+test('registered lesson consultation hides edit fields by default, shows title and unique shared files, and can enter and leave editing',()=>{
+ const {run}=setupUnified(true);
+ run("ctx.lessons.push({id:'a',student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #7',topic:'Conversation',resources:[{type:'ppt',name:'Slides.pdf',file_path:'group/slides.pdf'}]},{id:'b',student_id:'s2',group_id:'g1',lesson_date:'2026-11-23',title:'Class #7',topic:'Conversation',resources:[{type:'ppt',name:'Slides.pdf',file_path:'group/slides.pdf'}]});");
+ const expression="ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))";
+ const view=run(expression);
+ assert.match(view,/<h3>Conversation<\/h3><p>Class #7<\/p>/);
+ assert.match(view,/id="cc-lesson-edit-fields" hidden/);
+ assert.equal((view.split('id="cc-lesson-edit-fields"')[0].match(/Slides\.pdf/g)||[]).length,1);
+ run("draft.editLessonDate='2026-11-23'");
+ const edit=run(expression);
+ assert.doesNotMatch(edit,/id="cc-lesson-edit-fields" hidden/);
+ assert.match(edit,/Concluir edição/);assert.match(edit,/id="cc-lesson-title"/);
+ run("draft.editLessonDate=''");
+ assert.match(run(expression),/id="cc-lesson-edit-fields" hidden/);
+});

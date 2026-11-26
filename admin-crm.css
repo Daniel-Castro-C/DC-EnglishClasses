@@ -85,3 +85,69 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .cc-day.cc-selected{outline:2px solid var(--crm-blue);background:var(--sky-soft)}
 .admin-crm #cc-reschedule[hidden]{display:none}
 @media(max-width:600px){.admin-crm .cc-month-navigation{gap:6px}.admin-crm .cc-month-navigation h3{font-size:13px}.admin-crm .cc-month-grid{gap:2px;grid-template-rows:auto repeat(6,minmax(75px,1fr))}.admin-crm .cc-month-grid .cc-day{min-height:75px;padding:4px}.admin-crm .cc-day small{font-size:9px}}
+
+/* Unified calendar material intake */
+.admin-crm .cc-material-drop{border:2px dashed var(--line);border-radius:10px;padding:22px 12px;text-align:center;margin:12px 0;background:var(--paper-card);transition:background .15s,border-color .15s}
+.admin-crm .cc-material-drop.is-dragging{background:var(--sky-soft);border-color:var(--crm-blue)}
+.admin-crm .cc-material-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:10px 0}
+.admin-crm .cc-material-row label{margin:0;flex:1;min-width:160px}
+.admin-crm .cc-material-name{flex:2;min-width:120px;overflow-wrap:anywhere;font-size:13px}
+.admin-crm .cc-material-row select{margin:3px 0 0}
+.admin-crm .cc-material-drop input[hidden]{display:none}
+
+/* Compact, accessible numbering option below the lesson title. */
+.admin-crm .cc-lesson-form .cc-lesson-number-toggle{display:flex;align-items:center;gap:8px;width:fit-content;margin:4px 0 14px;cursor:pointer;line-height:1.4}
+.admin-crm .cc-lesson-form .cc-lesson-number-toggle input[type="checkbox"]{appearance:auto;flex:0 0 15px;width:15px;height:15px;min-width:15px;min-height:15px;max-width:15px;margin:0;padding:0;accent-color:var(--crm-blue);cursor:pointer}
+
+/* Use the available calendar width, not the viewport width (the admin has a sidebar). */
+.admin-crm .cc-schedule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:14px;align-items:stretch;margin:8px 0 14px}
+.admin-crm .cc-schedule-grid>.cc-schedule-card{min-width:0;margin:0;container-type:inline-size}
+.admin-crm .cc-schedule-card .cc-schedule-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+.admin-crm .cc-schedule-card .cc-schedule-fields>label{min-width:0;margin-bottom:0}
+.admin-crm .cc-schedule-card .cc-schedule-fields input,.admin-crm .cc-schedule-card .cc-schedule-fields select{width:100%;min-width:0;max-width:100%}
+.admin-crm .cc-schedule-card .cc-weekday-group{gap:6px;margin-bottom:12px}
+.admin-crm .cc-schedule-card .cc-weekday-chip{min-width:50px;padding:7px 8px;gap:5px}
+@container (min-width:600px){.admin-crm .cc-schedule-base .cc-schedule-fields{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@container (max-width:300px){.admin-crm .cc-schedule-card .cc-schedule-fields{grid-template-columns:minmax(0,1fr)}}
+.admin-crm .cc-lesson-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+
+/* Calendar-first experience: quick contextual actions and progressive disclosure. */
+.admin-crm .cc-schedule-settings{margin:8px 0 14px;border:1px solid var(--line);border-radius:9px;background:var(--paper-card);padding:0 14px}
+.admin-crm .cc-schedule-settings>summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none;padding:12px 2px}
+.admin-crm .cc-schedule-settings>summary::-webkit-details-marker,.admin-crm .cc-day-options>summary::-webkit-details-marker,.admin-crm .cc-absence-menu>summary::-webkit-details-marker{display:none}
+.admin-crm .cc-schedule-settings>summary>span:first-child{flex:1;min-width:0}
+.admin-crm .cc-schedule-settings summary small{display:block;color:var(--text-soft);font-size:12px;margin-top:3px}
+.admin-crm .cc-settings-count{font-size:12px;color:var(--text-soft)}
+.admin-crm .cc-schedule-settings>summary::after,.admin-crm .cc-day-options>summary::after{content:'▾';color:var(--crm-blue);font-size:14px;flex:none}
+.admin-crm .cc-schedule-settings[open]>summary::after,.admin-crm .cc-day-options[open]>summary::after{transform:rotate(180deg)}
+.admin-crm #cc-edit:not(:empty){border-top:1px solid var(--line);margin-top:14px;padding-top:16px}
+.admin-crm .cc-day-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.admin-crm .cc-day-heading h3{margin:0}
+.admin-crm .cc-day-status{font-size:12px;font-weight:600;border-radius:20px;padding:5px 10px;background:var(--sky-soft);color:var(--text)}
+.admin-crm .cc-day-status[data-status="done"]{background:var(--sage-soft,var(--sky-soft));color:var(--sage,var(--text))}
+.admin-crm .cc-day-status[data-status="empty"]{background:var(--paper);color:var(--text-soft)}
+.admin-crm .cc-day-actions{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+.admin-crm .cc-day-actions button,.admin-crm .cc-day-actions summary{min-height:36px}
+.admin-crm .cc-absence-menu>summary{list-style:none;display:flex;align-items:center;cursor:pointer}
+.admin-crm .cc-absence-menu>summary::after{content:' ▾';margin-left:8px}
+.admin-crm .cc-absence-menu[open]{max-width:100%}
+.admin-crm .cc-absence-options{display:flex;gap:6px;flex-direction:column;margin-top:5px}
+.admin-crm .cc-danger-action{color:#b53b43;font-weight:600}
+.admin-crm.dark-mode .cc-danger-action{color:#ff9c9c}
+.admin-crm .cc-day-options{border:1px solid var(--line);border-radius:7px;padding:0 12px;margin:10px 0}
+.admin-crm .cc-day-options>summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;color:var(--crm-blue);font-weight:600;font-size:13px;padding:11px 0}
+.admin-crm .cc-day-options[open]{padding-bottom:12px}
+.admin-crm .cc-lesson-consultation h4{font-size:13px;margin:12px 0 8px}
+.admin-crm .cc-lesson-summary h3{font-size:21px!important;line-height:1.25;margin:0 0 3px}
+.admin-crm .cc-lesson-summary p{color:var(--text-soft);margin:0}
+.admin-crm .cc-pending-label{color:var(--text-soft);display:block;margin:5px 0}
+.admin-crm .cc-material-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:8px}
+.admin-crm .cc-material-card{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;border:1px solid var(--line);border-radius:7px;padding:10px 12px}
+.admin-crm .cc-material-info{min-width:0;overflow-wrap:anywhere;flex:1}
+.admin-crm .cc-material-info small{display:block;color:var(--text-soft);font-size:11px;margin-bottom:3px}
+.admin-crm .cc-material-info strong{font-size:13px}
+.admin-crm .cc-material-actions{display:flex;gap:5px;flex-wrap:wrap}
+.admin-crm .cc-lesson-edit-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.admin-crm .cc-lesson-edit-heading h3{margin:0}
+.admin-crm #cc-lesson-edit-fields[hidden]{display:none}
+@media(max-width:600px){.admin-crm .cc-settings-count{display:none}.admin-crm .cc-material-card{align-items:flex-start;flex-wrap:wrap}.admin-crm .cc-day-actions>*{flex:1 1 auto}}

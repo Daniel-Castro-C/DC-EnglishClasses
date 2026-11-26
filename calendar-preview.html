@@ -1,0 +1,12 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portal DC — teste do calendário integrado</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="admin-crm.css"></head>
+<body class="admin-crm"><main class="main">
+<header class="crm-heading"><div><h1>Calendário e aulas — teste isolado</h1><p>Dados fictícios. Nada é enviado ao Supabase, nem a alunos. Recarregar restaura os exemplos.</p></div></header>
+<div class="box"><p>Experimente cadastrar a aula retroativa de 25/11: as aulas de 19/11 e 26/11 já estão cadastradas. Selecione o dia, marque Realizada, digite o tópico, anexe arquivos (opcional) e clique em Salvar calendário. Depois abra o histórico ou o Buscador de materiais.</p><div class="row"><button class="btn-ghost" onclick="demoSelect(false)">Aluno individual</button><button class="btn-ghost" onclick="demoSelect(true)">Turma</button><button class="btn-ghost" onclick="demoOpenMaterials()">Buscador de materiais</button></div></div>
+<div id="demo-materials" hidden></div><div id="tab-content"></div><div id="tg-body"></div>
+</main>
+<script src="js/admin-calendar-test.js"></script>
+<script src="js/admin-turmas-preview.js"></script>
+<script src="js/admin-calendar-lessons.js"></script>
+<script src="js/admin-material-search.js"></script>
+<script src="js/calendar-preview-demo.js"></script>
+</body></html>
