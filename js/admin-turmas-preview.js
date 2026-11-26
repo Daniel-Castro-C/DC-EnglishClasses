@@ -40,6 +40,7 @@ function tgPendingSummary(){
   }
   const dates=Object.entries(g.events);
   for(const [date,attendance] of dates){
+   const missing=g.members.filter(id=>attendance[id]==='done'&&!g.lessons.some(l=>l.date===date&&Object.hasOwn(l.reports,id)));if(missing.length)rows.push({g,date,ids:missing,type:'missing'});
    const ids=g.members.filter(id=>['owed','teacher'].includes(attendance[id])&&!g.resolvedReplacements?.[date]?.[id]);
    if(ids.length)rows.push({g,date,ids,type:'replacement'});
   }
@@ -50,7 +51,7 @@ function tgPendingHtml(){
  const rows=tgPendingSummary();
  if(!tgGroups.length)return '';
  const name=id=>tgEsc(students.find(s=>s.id===id)?.full_name||'Aluno');
- return '<div class="box" style="margin-top:16px"><h3>Turmas — pendências de teste</h3><p class="small-note">Simulação separada dos registros reais · '+rows.reduce((n,r)=>n+r.ids.length,0)+' pendência(s) individual(is).</p>'+ (rows.map(r=>'<div class="crm-pending-row">'+crmIcon(r.type==='report'?'file':'refresh')+'<div class="crm-pending-text"><strong>'+tgEsc(r.g.name)+'</strong><small>'+(r.type==='report'?'Relatório pendente · '+tgEsc(r.l.title)+' · '+tgEsc(r.l.date):'Reposição pendente · '+tgEsc(r.date))+' · '+r.ids.length+' de '+r.g.members.length+' alunos</small>'+r.ids.map(id=>'<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>'+name(id)+'</span>'+(r.type==='report'?'<button class="btn-ghost" onclick="tgResolveReport(&quot;'+r.g.id+'&quot;,&quot;'+r.l.id+'&quot;,&quot;'+id+'&quot;)">Adicionar relatório</button>':'<button class="btn-ghost" onclick="tgResolveReplacement(&quot;'+r.g.id+'&quot;,&quot;'+r.date+'&quot;,&quot;'+id+'&quot;)">Registrar reposição</button>')+'</div>').join('')+'</div></div>').join('')||'<p class="small-note">Nenhuma pendência simulada.</p>')+'</div>';
+ return '<div class="box" style="margin-top:16px"><h3>Turmas — pendências de teste</h3><p class="small-note">Simulação separada dos registros reais · '+rows.reduce((n,r)=>n+r.ids.length,0)+' pendência(s) individual(is).</p>'+ (rows.map(r=>'<div class="crm-pending-row">'+crmIcon(r.type==='replacement'?'refresh':'file')+'<div class="crm-pending-text"><strong>'+tgEsc(r.g.name)+'</strong><small>'+(r.type==='report'?'Relatório pendente · '+tgEsc(r.l.title)+' · '+tgEsc(r.l.date):r.type==='missing'?'Cadastro da aula e relatório pendentes · '+tgEsc(r.date):'Reposição pendente · '+tgEsc(r.date))+' · '+r.ids.length+' de '+r.g.members.length+' alunos</small>'+r.ids.map(id=>'<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>'+name(id)+'</span>'+(r.type==='report'?'<button class="btn-ghost" onclick="tgResolveReport(&quot;'+r.g.id+'&quot;,&quot;'+r.l.id+'&quot;,&quot;'+id+'&quot;)">Adicionar relatório</button>':r.type==='missing'?'<button class="btn-ghost" onclick="tgOpenMissing(&quot;'+r.g.id+'&quot;,&quot;'+r.date+'&quot;)">Cadastrar aula</button>':'<button class="btn-ghost" onclick="tgResolveReplacement(&quot;'+r.g.id+'&quot;,&quot;'+r.date+'&quot;,&quot;'+id+'&quot;)">Registrar reposição</button>')+'</div>').join('')+'</div></div>').join('')||'<p class="small-note">Nenhuma pendência simulada.</p>')+'</div>';
 }
 function tgRefreshPending(){const el=document.getElementById('tg-home-pending');if(el)el.innerHTML=tgPendingHtml();}
 function tgResolveReport(groupId,lessonId,studentId){
@@ -65,3 +66,5 @@ function tgResolveReplacement(groupId,date,studentId){
  if(!confirm('Simular a conclusão da reposição deste aluno? Nenhum calendário real será alterado.'))return;
  g.resolvedReplacements??={};g.resolvedReplacements[date]??={};g.resolvedReplacements[date][studentId]=true;tgRefreshPending();
 }
+
+function tgOpenMissing(groupId,date){tgSelected=tgGroups.find(g=>g.id===groupId);if(!tgSelected)return;tgOpen();tgSwitch('lesson');document.getElementById('tg-lesson-date').value=date;}
