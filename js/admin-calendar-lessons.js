@@ -58,8 +58,35 @@ function ccLessonCanManage(ctx,date){
  return rows.length>0&&new Set(rows.map(l=>l.student_id)).size===rows.length&&rows.every(l=>l.id);
 }
 function ccEditRegisteredLesson(){
+ const d=ccDraft();if(!d)return;
+ d.editLessonDate=ccSelected;ccEditor();
  const el=document.getElementById('cc-lesson-title');if(!el)return;
  el.focus();el.scrollIntoView({block:'nearest'});
+}
+function ccCloseRegisteredLesson(){
+ const d=ccDraft();if(!d)return;
+ d.editLessonDate='';ccEditor();
+}
+function ccCalendarMaterialAction(button,action){
+ const path=button.dataset.path;
+ if(!path)return;
+ if(action==='preview'&&typeof previewFile==='function')previewFile(path);
+ if(action==='download'&&typeof downloadLessonResource==='function')downloadLessonResource(path);
+}
+function ccLessonConsultation(ctx,date,existing,manage=true){
+ if(!existing.length)return '';
+ const draft=ccLessonMap(ctx).get(date),first=existing[0],topic=draft?.topic??first.topic??'',title=draft?.automatic?ccLessonNumber(ctx,date):draft?.title??first.title??'';
+ const seen=new Set(),resources=[];
+ for(const l of existing)for(const r of l.resources||[]){
+  const personal=ctx.group&&r.type==='rep',recipient=personal?(ctx.members.find(s=>s.id===l.student_id)?.full_name||'Aluno'):'';
+  const key=JSON.stringify([r.type,r.file_path||r.name,personal?l.student_id:null]);
+  if(seen.has(key))continue;seen.add(key);
+  const name=typeof materialDisplayName==='function'?materialDisplayName(r):r.name;
+  const actions=r.file_path?(typeof previewFile==='function'&&/\.pdf$/i.test(r.file_path)?'<button type="button" class="resource-action" data-path="'+ccLessonAttr(r.file_path)+'" onclick="ccCalendarMaterialAction(this,&quot;preview&quot;)">Visualizar</button>':'')+(typeof downloadLessonResource==='function'?'<button type="button" class="resource-action" data-path="'+ccLessonAttr(r.file_path)+'" onclick="ccCalendarMaterialAction(this,&quot;download&quot;)">Baixar</button>':''):'';
+  resources.push('<div class="cc-material-card"><div class="cc-material-info"><small>'+ccEsc(ccMaterialLabels[r.type]||'Material')+(recipient?' · '+ccEsc(recipient):'')+'</small><strong>'+ccEsc(name)+'</strong></div><div class="cc-material-actions">'+actions+'</div></div>');
+ }
+ for(const r of draft?.files||[])resources.push('<div class="cc-material-card"><div class="cc-material-info"><small>Arquivo no rascunho · '+ccEsc(ccMaterialLabels[r.type]||'Material')+'</small><strong>'+ccEsc(r.file.name)+'</strong></div></div>');
+ return '<div class="cc-lesson-consultation"><div class="cc-lesson-summary"><h3>'+ccEsc(topic||'Tema não cadastrado')+'</h3><p>'+ccEsc(title)+'</p>'+(draft?'<small class="cc-pending-label">Alterações não salvas</small>':'')+'</div><h4>Materiais da aula</h4>'+(resources.length?'<div class="cc-material-list">'+resources.join('')+'</div>':'<p class="small-note">Nenhum material cadastrado.</p>')+(manage?'<div class="cc-lesson-actions"><button type="button" class="btn-ghost" onclick="ccEditRegisteredLesson()">Editar aula</button><button type="button" class="resource-action cc-danger-action" onclick="ccStageLessonDelete()">Excluir aula</button></div>':'')+'</div>';
 }
 function ccLessonDeletionEntries(ctx){return [...ccLessonMap(ctx).values()].filter(e=>e.deleteIds);}
 function ccPendingLessonDeletion(ctx,date){return Boolean(ccLessonMap(ctx).get(date)?.deleteIds);}
@@ -111,10 +138,11 @@ function ccLessonForm(ctx,d,date,state){
  const topic=draft?.topic??first?.topic??'';
  const targets=existing.length?existing.map(l=>l.student_id):state.rows.filter(r=>r.status==='done').map(r=>r.id);
  const resourceHtml=existing.map(l=>'<div class="box"><strong>'+ccEsc(ctx.group?(ctx.members.find(s=>s.id===l.student_id)?.full_name||'Aluno'):'Materiais cadastrados')+'</strong>'+(l.resources||[]).map(r=>typeof resourceRowWithEditHtml==='function'&&!ctx.group?resourceRowWithEditHtml(l,r):'<p>'+ccEsc(r.name)+' '+(r.file_path?'<button type="button" class="btn-ghost" onclick="previewFile(&quot;'+ccEsc(r.file_path)+'&quot;)">Visualizar</button>':'')+'</p>').join('')+'</div>').join('');
- return '<section class="box cc-lesson-form" id="cc-lesson-form"><h3>'+(existing.length?'Aula e materiais cadastrados':'Cadastrar aula e materiais')+'</h3>'+ (existing.length?'<div class="cc-lesson-actions"><button type="button" class="btn-ghost" onclick="ccEditRegisteredLesson()">Editar aula</button><button type="button" class="resource-action" onclick="ccStageLessonDelete()">Excluir aula</button></div>':'') +'<p class="small-note">A numeração acompanha a ordem das datas. Materiais são opcionais; salve todas as alterações pelo botão Salvar calendário.</p><label>Título da aula<input id="cc-lesson-title" value="'+ccLessonAttr(value)+'" oninput="ccLessonTitleEdit()"></label><label class="cc-lesson-number-toggle"><input type="checkbox" id="cc-lesson-auto" '+(automatic?'checked':'')+' onchange="ccLessonAuto()"><span>Numeração automática</span></label><label>Tópico da aula<input id="cc-lesson-topic" value="'+ccLessonAttr(topic)+'" oninput="ccCaptureLesson()"></label><p>Data da aula: <strong>'+ccEsc(formatDate(date))+'</strong> · Para cadastrar em outra data, use o seletor acima ou clique no calendário.</p>'+resourceHtml+
+ const editing=existing.length&&d.editLessonDate===date;
+ return '<section class="box cc-lesson-form" id="cc-lesson-form">'+(existing.length&&!editing?ccLessonConsultation(ctx,date,existing):'')+'<div id="cc-lesson-edit-fields" '+(existing.length&&!editing?'hidden':'')+'><div class="cc-lesson-edit-heading"><h3>'+(existing.length?'Editar aula':'Cadastrar aula')+'</h3>'+(existing.length?'<button type="button" class="btn-ghost" onclick="ccCloseRegisteredLesson()">Concluir edição</button>':'')+'</div><p class="small-note">A numeração acompanha a ordem das datas. Materiais são opcionais; salve todas as alterações pelo botão Salvar calendário.</p><label>Título da aula<input id="cc-lesson-title" value="'+ccLessonAttr(value)+'" oninput="ccLessonTitleEdit()"></label><label class="cc-lesson-number-toggle"><input type="checkbox" id="cc-lesson-auto" '+(automatic?'checked':'')+' onchange="ccLessonAuto()"><span>Numeração automática</span></label><label>Tópico da aula<input id="cc-lesson-topic" value="'+ccLessonAttr(topic)+'" oninput="ccCaptureLesson()"></label><p>Data da aula: <strong>'+ccEsc(formatDate(date))+'</strong> · Para cadastrar em outra data, use o seletor acima ou clique no calendário.</p>'+resourceHtml+
  '<div class="cc-material-drop" id="cc-material-drop" ondragover="ccFileDrag(event,true)" ondragleave="ccFileDrag(event,false)" ondrop="ccFileDrop(event)"><strong>Arraste e solte os materiais aqui</strong><p class="small-note">Identificamos automaticamente o tipo pelo nome e pela extensão, seguindo a regra atual.</p><input type="file" id="cc-lesson-upload" multiple hidden onchange="ccCaptureFiles(this)"><button type="button" class="btn-ghost" onclick="document.getElementById(&quot;cc-lesson-upload&quot;).click()">+ Adicionar arquivos</button></div>'+
  (ctx.group?'<p class="small-note">Slides compartilhados e exercícios são enviados aos presentes. Para cada relatório de desempenho, escolha o integrante: <strong>'+targets.map(id=>ccEsc(ctx.members.find(s=>s.id===id)?.full_name||id)).join(' · ')+'</strong>.</p>':'')+
- '<div id="cc-lesson-files">'+ccLessonFilesHtml(draft,ctx,targets)+'</div><p class="small-note">Os arquivos e os dados da aula entram automaticamente no rascunho. Você pode trocar de data e salvar tudo de uma vez em <strong>Salvar calendário</strong>.</p></section>';
+ '<div id="cc-lesson-files">'+ccLessonFilesHtml(draft,ctx,targets)+'</div><p class="small-note">Os arquivos e os dados da aula entram automaticamente no rascunho. Você pode trocar de data e salvar tudo de uma vez em <strong>Salvar calendário</strong>.</p></div></section>';
 }
 function ccLessonTargets(ctx,d,date){
  const existing=ccLessonRows(ctx,date);

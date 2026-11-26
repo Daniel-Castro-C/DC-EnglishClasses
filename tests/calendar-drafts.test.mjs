@@ -361,7 +361,7 @@ test('both calendar contexts share a responsive grid for habitual schedule and c
  const css=readFileSync('admin-crm.css','utf8');
  assert.match(markup,/<div class="cc-schedule-grid"><section class="box cc-schedule-card cc-schedule-base"><h3>Horário habitual<\/h3>/);
  assert.match(markup,/<\/section><section class="box cc-schedule-card cc-schedule-changes"><h3>Alterações de horário habitual<\/h3>/);
- assert.match(markup,/<\/section><\/div><div class="box" id="cc-annual">/);
+ assert.match(markup,/<\/section><\/div><\/details><div class="box" id="cc-annual">/);
  assert.match(css,/\.cc-schedule-grid\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,460px\),1fr\)\)/);
  assert.match(css,/\.cc-schedule-card \.cc-schedule-fields>label\{min-width:0/);
 });
@@ -454,4 +454,39 @@ test('isolated demo persists deletion and mirrors an empty group date into both 
  assert.equal(run("demoLessons.filter(l=>l.student_id==='demo-1'&&l.lesson_date==='2026-11-19').length"),0);
  assert.equal(run("ccDateState(ccContext(),ccDraft(),'2026-11-19').status"),'');
  assert.equal(run("demoLessons.find(l=>l.student_id==='demo-1'&&l.lesson_date==='2026-11-26').title"),'Class #1');
+});
+
+test('habitual schedule settings are collapsed by default and contain the original cards',()=>{
+ const {run,ctx}=setupUnified();const elements=new Map();
+ const elem=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',value:'',textContent:'',querySelector:q=>elem(q.slice(1))});return elements.get(id)};
+ ctx.document={getElementById:elem,querySelectorAll:()=>[]};
+ run("ccRender()");
+ assert.match(elem('tab-content').innerHTML,/<details class="cc-schedule-settings" id="cc-schedule-settings"  ontoggle=/);
+ assert.match(elem('tab-content').innerHTML,/Configurar horário habitual/);
+ run("draft.scheduleOpen=true;ccRender()");
+ assert.match(elem('tab-content').innerHTML,/<details class="cc-schedule-settings" id="cc-schedule-settings" open/);
+});
+test('quick actions depend on date state and keep full status controls accessible',()=>{
+ const {run}=setupUnified();
+ const planned=run("ccQuickDayActions(ctx,{status:'planned',real:false})");
+ for(const label of ['Realizar aula','Registrar falta','Reagendar','Excluir registro','Falta com reposição','Falta sem reposição'])assert.match(planned,new RegExp(label));
+ assert.doesNotMatch(run("ccQuickDayActions(ctx,{status:'',real:false})"),/Reagendar|Excluir registro/);
+ assert.equal(run("ccQuickDayActions(ctx,{status:'done',real:true})"),'');
+ const group=setupUnified(true);
+ assert.match(group.run("ccQuickDayActions(ctx,{status:'planned',real:false})"),/Falta de todos os integrantes/);
+});
+test('registered lesson consultation hides edit fields by default, shows title and unique shared files, and can enter and leave editing',()=>{
+ const {run}=setupUnified(true);
+ run("ctx.lessons.push({id:'a',student_id:'s1',group_id:'g1',lesson_date:'2026-11-23',title:'Class #7',topic:'Conversation',resources:[{type:'ppt',name:'Slides.pdf',file_path:'group/slides.pdf'}]},{id:'b',student_id:'s2',group_id:'g1',lesson_date:'2026-11-23',title:'Class #7',topic:'Conversation',resources:[{type:'ppt',name:'Slides.pdf',file_path:'group/slides.pdf'}]});");
+ const expression="ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))";
+ const view=run(expression);
+ assert.match(view,/<h3>Conversation<\/h3><p>Class #7<\/p>/);
+ assert.match(view,/id="cc-lesson-edit-fields" hidden/);
+ assert.equal((view.split('id="cc-lesson-edit-fields"')[0].match(/Slides\.pdf/g)||[]).length,1);
+ run("draft.editLessonDate='2026-11-23'");
+ const edit=run(expression);
+ assert.doesNotMatch(edit,/id="cc-lesson-edit-fields" hidden/);
+ assert.match(edit,/Concluir edição/);assert.match(edit,/id="cc-lesson-title"/);
+ run("draft.editLessonDate=''");
+ assert.match(run(expression),/id="cc-lesson-edit-fields" hidden/);
 });
