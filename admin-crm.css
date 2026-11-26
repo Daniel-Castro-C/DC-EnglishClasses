@@ -151,3 +151,9 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .cc-lesson-edit-heading h3{margin:0}
 .admin-crm #cc-lesson-edit-fields[hidden]{display:none}
 @media(max-width:600px){.admin-crm .cc-settings-count{display:none}.admin-crm .cc-material-card{align-items:flex-start;flex-wrap:wrap}.admin-crm .cc-day-actions>*{flex:1 1 auto}}
+
+/* Unavailable days remain selectable, including days with exceptional lessons. */
+.admin-crm .cc-month-grid .cc-day.cc-unavailable{background:#e5e7eb;border-color:#aeb4bf;color:#303640}
+.admin-crm .cc-month-grid .cc-day.cc-unavailable.cc-selected{outline:2px solid var(--crm-blue);background:#d6d9de}
+.admin-crm .cc-unavailable-label{font-weight:600}
+.admin-crm .cc-unavailable-note{background:#e5e7eb;color:#303640;padding:8px 12px;border-radius:6px}

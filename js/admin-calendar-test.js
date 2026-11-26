@@ -209,8 +209,8 @@ function ccRefreshGrid(){
  let cells=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(day=>'<small>'+day+'</small>').join('')+emptyCell.repeat(offset);
  for(let day=1;day<=n;day++){
   const date=ccISO(y,m,day),{status,event,mixed}=ccDateState(ctx,d,date);
-  const label=ccDateLabel(status);
-  cells+='<button class="btn-ghost cc-day'+(date===ccSelected?' cc-selected':'')+'" aria-label="'+ccEsc(formatDate(date)+(label?' · '+label:''))+'" onclick="ccSelect(&quot;'+date+'&quot;)"><b>'+day+'</b><small>'+ccEsc(label)+(mixed?'<br>Frequência mista':'')+(status?'<br>'+ccEsc(event?.time||ccSchedule(x,date).time||''):'')+(event?.rescheduled_to?'<br>→ '+ccEsc(formatDate(event.rescheduled_to)):event?.rescheduled_from?'<br>De '+ccEsc(formatDate(event.rescheduled_from)):event?.original?'<br>Ref. '+ccEsc(formatDate(event.original)):'')+'</small></button>';
+  const moveLabel=typeof ccPendingMoveLabel==='function'?ccPendingMoveLabel(ctx,date):'',unavailable=ccUnavailable(date,status),label=ccDateLabel(status),holidayLabel=unavailable&&unavailable!==label?unavailable:'';
+  cells+='<button class="btn-ghost cc-day'+(date===ccSelected?' cc-selected':'')+(unavailable?' cc-unavailable':'')+'" aria-label="'+ccEsc(formatDate(date)+(label?' · '+label:'')+(holidayLabel?' · '+holidayLabel:'')+(moveLabel?' · '+moveLabel:''))+'" onclick="ccSelect(&quot;'+date+'&quot;)"><b>'+day+'</b><small>'+ccEsc(label)+(moveLabel?'<br>'+ccEsc(moveLabel):'')+(holidayLabel?'<br><span class="cc-unavailable-label">'+ccEsc(holidayLabel)+'</span>':'')+(mixed?'<br>Frequência mista':'')+(status&&!['holiday','break'].includes(status)?'<br>'+ccEsc(event?.time||ccSchedule(x,date).time||''):'')+(event?.rescheduled_to?'<br>→ '+ccEsc(formatDate(event.rescheduled_to)):event?.rescheduled_from?'<br>De '+ccEsc(formatDate(event.rescheduled_from)):event?.original?'<br>Ref. '+ccEsc(formatDate(event.original)):'')+'</small></button>';
  }
  // Reserve six complete weeks so the calendar height never depends on the month length.
  grid.innerHTML=cells+emptyCell.repeat(42-offset-n);document.getElementById('cc-month').textContent=ccDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
@@ -248,10 +248,10 @@ function ccCanEditDate(ctx,d,date){
 function ccDestinationFree(ctx,d,date){
  ccCanEditDate(ctx,d,date);
  const model=ccModel(ctx,d);
- if(ccGlobalStatus(date))throw Error('A nova data está bloqueada por feriado ou recesso.');
+ // Feriados e recessos indicam indisponibilidade habitual, mas permitem exceções manuais.
  for(const s of ctx.members){
   const x=d.payloads[s.id],e=x.events[date];
-  if(e&&!e.skip||!e?.skip&&(((!ctx.group||model.start)&&ccIsHabitual(model,date))||ccIsHabitual(x,date)))throw Error('Já existe uma aula agendada ou um registro nesta data. Escolha outra data.');
+  if(e&&!e.skip||!e?.skip&&!ccGlobalStatus(date)&&(((!ctx.group||model.start)&&ccIsHabitual(model,date))||ccIsHabitual(x,date)))throw Error('Já existe uma aula agendada ou um registro nesta data. Escolha outra data.');
   if(!ctx.group&&ccGroupForDate(s.id,date))throw Error('A nova data está reservada para a turma.');
  }
 }
@@ -339,8 +339,8 @@ function ccPublishedDetails(ctx,date){
  }).join('');
 }
 function ccDayHeading(date,state,time){
- const label=ccDateLabel(state.status)||'Sem aula';
- return '<div class="cc-day-heading"><div><h3>'+ccEsc(formatDate(date))+(state.status&&time?' · '+ccEsc(time):'')+'</h3></div><span class="cc-day-status" data-status="'+ccEsc(state.status||'empty')+'">'+ccEsc(label)+(state.mixed?' · frequência mista':'')+'</span></div>';
+ const label=ccDateLabel(state.status)||'Sem aula',unavailable=ccUnavailable(date,state.status);
+ return '<div class="cc-day-heading"><div><h3>'+ccEsc(formatDate(date))+(state.status&&!['holiday','break'].includes(state.status)&&time?' · '+ccEsc(time):'')+'</h3></div><span class="cc-day-status" data-status="'+ccEsc(state.status||'empty')+'">'+ccEsc(label)+(state.mixed?' · frequência mista':'')+'</span></div>'+(unavailable?'<p class="cc-unavailable-note">'+ccEsc(unavailable)+' · Dia normalmente indisponível. É possível registrar uma aula excepcional.</p>':'');
 }
 function ccQuickDayActions(ctx,state){
  const status=state.status;
@@ -473,8 +473,10 @@ async function ccSaveAll(){
  try{
   if(typeof ccValidateLessonDrafts==='function'){ccValidateLessonDrafts(ctx,d);await ccCheckLessonSchema(ctx);}
   const deletions=typeof ccLessonDeletionEntries==='function'?ccLessonDeletionEntries(ctx):[];
-  const removedDates=new Set(deletions.map(e=>e.date));
+  const moves=typeof ccLessonMoveEntries==='function'?ccLessonMoveEntries(ctx):[];
+  const removedDates=new Set([...deletions,...moves].map(e=>e.date));
   if(deletions.length)d=ccProjectLessonDeletions(ctx,d);
+  if(moves.length)d=ccProjectLessonMoves(ctx,d);
   if(!ctx.members.every(s=>s.is_test_profile)){
    for(const member of ctx.members){
     const dates=Object.keys({...d.base[member.id].events,...d.payloads[member.id].events}).filter(date=>!removedDates.has(date)&&JSON.stringify(d.base[member.id].events[date])!==JSON.stringify(d.payloads[member.id].events[date]));
@@ -484,7 +486,19 @@ async function ccSaveAll(){
     }
    }
   }
-  if(deletions.length){
+  if(moves.length){
+   const x=d.schedule,schedule=ctx.group?{...ctx.group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events}:null;
+   const requests=[];
+   for(const entry of moves){
+    const rows=ccLessonRows(ctx,entry.date),targets=rows.map(l=>l.student_id);
+    requests.push({date:entry.date,to:entry.newDate,ids:rows.map(l=>l.id),title:entry.automatic?null:entry.title,topic:entry.topic,materials:await ccPrepareLessonMaterials(ctx,entry,targets)});
+   }
+   const {data,error}=await sb.rpc('portal_calendar_save_with_moves',{p_group:ctx.group?.id||null,p_student:ctx.group?null:ctx.members[0].id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]})),p_moves:requests,p_deletions:deletions.map(e=>({date:e.date,ids:e.deleteIds}))});
+   if(error)throw error;
+   for(const entry of [...moves,...deletions])ccLessonMap(ctx).delete(entry.date);
+   const moved=moves.find(e=>e.date===d.selected);if(moved){d.selected=moved.newDate;d.date=new Date(moved.newDate+'T12:00:00');}
+   if(!ctx.group){const id=ctx.members[0].id;ccCloud.set(id,{calendar_key:id,payload:ccClone(d.payloads[id]),revision:data});}
+  }else if(deletions.length){
    const x=d.schedule,schedule=ctx.group?{...ctx.group.schedule,start:x.start,end:x.end,days:x.weekdays,time:x.time,plan:x.plan,changes:x.changes,calendar_events:x.events}:null;
    const {data,error}=await sb.rpc('portal_calendar_save_with_deletions',{p_group:ctx.group?.id||null,p_student:ctx.group?null:ctx.members[0].id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]})),p_deletions:deletions.map(e=>({date:e.date,ids:e.deleteIds}))});
    if(error)throw error;
@@ -515,15 +529,29 @@ async function ccOpen(id){await openStudent(id);ccActiveKey='';ccSelected='';swi
 
 function ccTarget(x,y){if(!x.plan||!x.start)return null;let total=0;for(let m=0;m<12;m++){let first=ccISO(y,m,1),last=ccISO(y,m,new Date(y,m+1,0).getDate());if(x.start>last||(x.end&&x.end<first))continue;let days=new Date(y,m+1,0).getDate(),a=x.start>first?Number(x.start.slice(-2)):1,b=x.end&&x.end<last?Number(x.end.slice(-2)):days;total+=Math.round(Number(x.plan)/12*(b-a+1)/days)}return Math.max(0,total-Object.entries(x.events).filter(([d,e])=>d.startsWith(y+'-')&&d>=x.start&&(!x.end||d<=x.end)&&e.status==='vacation'&&e.discounted!==false).length)}
 function ccPending(x,byDate={}){const entries=Object.entries(x.events);return entries.filter(([d,e])=>(!e.group_id||tgGroupReplacementEligible(e.group_id,d))&&(['owed','teacher'].includes(e.status)||e.status==='absent'&&entries.some(([rd,r])=>r.original===d))&&!byDate[d]&&!entries.some(([rd,r])=>r.original===d&&(r.status==='done'||byDate[rd]?.length))).length}
-function ccGlobal(){return JSON.parse(JSON.stringify(ccCloud.get('global')?.payload||[]));}
-function ccGlobalStatus(d){return ccGlobal().find(e=>d>=e.start&&d<=e.end)?.status||''}
+// Previsão nacional de 2027. Carnaval e Corpus Christi não são feriados nacionais.
+const ccNationalHolidays2027=Object.freeze([
+ ['2027-01-01','Confraternização Universal'],['2027-03-26','Sexta-feira Santa'],
+ ['2027-04-21','Tiradentes'],['2027-05-01','Dia do Trabalho'],
+ ['2027-09-07','Independência do Brasil'],['2027-10-12','Nossa Senhora Aparecida'],
+ ['2027-11-02','Finados'],['2027-11-15','Proclamação da República'],
+ ['2027-11-20','Consciência Negra'],['2027-12-25','Natal']
+].map(([date,name])=>({start:date,end:date,status:'holiday',name,preset:true})));
+function ccGlobalRaw(){return ccClone(ccCloud.get('global')?.payload||[]);}
+function ccGlobal(){
+ const raw=ccGlobalRaw(),active=raw.filter(e=>!e.disabled);
+ return [...active,...ccNationalHolidays2027.filter(p=>!raw.some(e=>e.start<=p.start&&e.end>=p.start&&(e.disabled||e.status==='holiday')))].sort((a,b)=>a.start.localeCompare(b.start));
+}
+function ccGlobalEntry(d){const entries=ccGlobal().filter(e=>d>=e.start&&d<=e.end);return entries.find(e=>e.status==='holiday')||entries[0];}
+function ccGlobalStatus(d){return ccGlobalEntry(d)?.status||'';}
+function ccUnavailable(date,status){const entry=ccGlobalEntry(date);return entry?(entry.name||ccStatus[entry.status]):['holiday','break'].includes(status)?ccStatus[status]:'';}
 function ccAgenda(today,completedIds=null,keepRecorded=false){return students.filter(s=>!s.is_test_profile).flatMap(s=>{const x=ccData(s),e=x.events[today.date],habitual=ccHabitual(x,today.date)&&ccSchedule(x,today.date).time,registered=completedIds?.has(s.id),global=ccGlobalStatus(today.date);if(!registered&&(e?.skip||e?.status==='rescheduled'))return [];if(!registered&&!e&&!habitual)return [];if(!keepRecorded&&!registered&&((e&&!['planned','done'].includes(e.status))||(!e&&global)))return [];if(!registered&&!e&&global)return [];return [{...s,lesson_time:e?.time||ccSchedule(x,today.date).time||'',ccType:e?.rescheduled_from?'Reagendamento · '+e.rescheduled_from.split('-').reverse().join('/'):e?.original?'Reposição · '+e.original.split('-').reverse().join('/'):habitual?'Regular':'Adicional',ccDate:today.date,ccStatus:registered?'done':e?.status||'planned',ccRegistered:!!registered}] }).sort((a,b)=>(a.lesson_time||'99').localeCompare(b.lesson_time||'99'))}
 function ccQuickStatus(student){const status=student.ccStatus;return '<select class="crm-quick-status" data-status="'+ccEsc(status)+'" aria-label="Status da aula de '+ccEsc(student.full_name||student.email||'Aluno')+'" '+(student.ccRegistered?'disabled title="Aula realizada automaticamente pelo cadastro de materiais"':'onchange="ccQuickSave(this,&quot;'+ccEsc(student.id)+'&quot;,&quot;'+ccEsc(student.ccDate)+'&quot;)"')+'>'+Object.entries(ccStatus).filter(([k])=>k!=='rescheduled').map(([k,v])=>'<option value="'+k+'" '+(k===status?'selected':'')+'>'+ccEsc(v)+'</option>').join('')+'</select>'+(student.ccRegistered?'<small class="crm-muted" style="display:block">Via cadastro</small>':'')}
 async function ccQuickSave(select,id,date){const s=students.find(v=>v.id===id),status=select.value,previous=select.dataset.status;if(!s||!Object.hasOwn(ccStatus,status)||status==='rescheduled')return;select.disabled=true;try{const {data,error}=await sb.from('lessons').select('id').eq('student_id',id).eq('lesson_date',date).limit(1);if(error)throw error;if(data?.length){select.value='done';select.dataset.status='done';select.title='Aula realizada automaticamente pelo cadastro de materiais';alert('Esta aula já está cadastrada como realizada.');if(currentView==='home')await renderHome();return;}if(ccHasDirtyForMember(id)){select.value=previous;return alert('Salve as alterações pendentes no calendário individual.');}const x=ccData(s);if(ccGroupForDate(id,date)){select.value=previous;return alert('Registre a frequência da turma pelo módulo Turmas.');}x.events[date]={...(x.events[date]||{}),status};if(!await ccWrite(id,x)){select.value=previous;return;}select.dataset.status=status;const feedback=document.getElementById('crm-agenda-feedback');if(feedback)feedback.textContent='Status salvo no calendário de '+(s.full_name||s.email)+'.';const other=document.getElementById('crm-other-pending');if(other)other.innerHTML=crmOtherPending();const count=document.getElementById('crm-replacement-stat');if(count)count.textContent=students.filter(v=>!v.is_test_profile).reduce((a,v)=>a+ccPending(ccData(v)),0);if(currentView==='home')await renderHome();}catch(error){console.error(error);select.value=previous;alert('Não foi possível salvar o status. Tente novamente.');}finally{if(select.isConnected)select.disabled=false}}
 async function ccOpenDate(id,date){await openStudent(id);ccDate=new Date(date+'T12:00:00');ccSelected=date;const existing=ccDrafts.get('student:'+id);if(existing){existing.date=ccDate;existing.selected=date;}ccActiveKey='';switchTab('calendario')}
-function ccGlobalView(){currentView='agenda';currentStudent=null;renderNav();let root=document.getElementById('main-content');root.innerHTML='<div class="topline"><h1>Agenda</h1></div><div class="box"><h3>Feriados e recessos</h3><div class="row"><label>Início<input type="date" id="cg-start"></label><label>Fim<input type="date" id="cg-end"></label><label>Tipo<select id="cg-type"><option value="holiday">Feriado</option><option value="break">Recesso</option></select></label><button class="btn-dark-sm" onclick="ccGlobalSave()">Adicionar</button></div>'+ccGlobal().map((e,i)=>'<p>'+ccEsc(e.start)+' a '+ccEsc(e.end)+' · '+ccEsc(ccStatus[e.status])+' <button class="btn-ghost" onclick="ccGlobalRemove('+i+')">Excluir</button></p>').join('')+'</div><div class="box"><h3>Agenda de hoje</h3>'+ccAgenda(adminToday()).map(s=>'<p>'+ccEsc(s.lesson_time.slice(0,5)||'Sem horário')+' · '+ccEsc(s.full_name||s.email)+' · '+ccEsc(s.ccType)+' <button class="btn-ghost" onclick="ccOpenDate(&quot;'+s.id+'&quot;,&quot;'+s.ccDate+'&quot;)">Calendário</button></p>').join('')+'</div>'}
-async function ccGlobalSave(){let a=document.getElementById('cg-start').value,b=document.getElementById('cg-end').value||a;if(!a||b<a)return alert('Informe um período válido.');if(await ccSaveCloud('global',[...ccGlobal(),{start:a,end:b,status:document.getElementById('cg-type').value}]))ccGlobalView()}
-async function ccGlobalRemove(i){let a=ccGlobal();a.splice(i,1);if(await ccSaveCloud('global',a))ccGlobalView()}
+function ccGlobalView(){currentView='agenda';currentStudent=null;renderNav();let root=document.getElementById('main-content');root.innerHTML='<div class="topline"><h1>Agenda</h1></div><div class="box"><h3>Feriados e recessos</h3><div class="row"><label>Início<input type="date" id="cg-start"></label><label>Fim<input type="date" id="cg-end"></label><label>Tipo<select id="cg-type"><option value="holiday">Feriado</option><option value="break">Recesso</option></select></label><button class="btn-dark-sm" onclick="ccGlobalSave()">Adicionar</button></div>'+ccGlobal().map((e,i)=>'<p>'+ccEsc(e.start)+' a '+ccEsc(e.end)+' · '+ccEsc(ccStatus[e.status])+(e.name?' · '+ccEsc(e.name):'')+' <button class="btn-ghost" onclick="ccGlobalRemove('+i+')">Excluir</button></p>').join('')+'</div><div class="box"><h3>Agenda de hoje</h3>'+ccAgenda(adminToday()).map(s=>'<p>'+ccEsc(s.lesson_time.slice(0,5)||'Sem horário')+' · '+ccEsc(s.full_name||s.email)+' · '+ccEsc(s.ccType)+' <button class="btn-ghost" onclick="ccOpenDate(&quot;'+s.id+'&quot;,&quot;'+s.ccDate+'&quot;)">Calendário</button></p>').join('')+'</div>'}
+async function ccGlobalSave(){let a=document.getElementById('cg-start').value,b=document.getElementById('cg-end').value||a;if(!a||b<a)return alert('Informe um período válido.');if(await ccSaveCloud('global',[...ccGlobalRaw(),{start:a,end:b,status:document.getElementById('cg-type').value}]))ccGlobalView()}
+async function ccGlobalRemove(i){const selected=ccGlobal()[i];if(!selected)return;let a=ccGlobalRaw();if(selected.preset)a.push({...selected,disabled:true});else {const index=a.findIndex(e=>JSON.stringify(e)===JSON.stringify(selected));if(index>=0)a.splice(index,1);}if(await ccSaveCloud('global',a))ccGlobalView()}
 function ccRoster(){let root=document.getElementById('main-content');currentStudent=null;currentView='alunos';renderNav();root.innerHTML='<div class="topline"><h1>Alunos</h1></div><div class="box"><div class="row"><input id="crm-search" placeholder="Buscar aluno" oninput="ccRosterRows()"><select id="crm-filter" onchange="ccRosterRows()"><option value="">Todos os planos</option><option value="48">Essencial</option><option value="96">Intensivo</option><option value="pending">Com reposições</option><option value="inbox">Com envios pendentes</option></select></div><div id="crm-roster"></div></div>';ccRosterRows()}
 async function ccRosterRows(){let el=document.getElementById('crm-roster');if(!el)return;let q=document.getElementById('crm-search').value.toLowerCase(),f=document.getElementById('crm-filter').value;let list=students.filter(s=>!s.is_test_profile&&String(s.full_name||s.email).toLowerCase().includes(q));el.innerHTML='<p>Carregando...</p>';let {data,error}=await sb.from('lessons').select('id,student_id,lesson_date').gte('lesson_date',adminToday().date.slice(0,4)+'-01-01').lte('lesson_date',adminToday().date.slice(0,4)+'-12-31');if(!el.isConnected)return;let rows=list.map(s=>{let x=ccData(s),l=(data||[]).filter(v=>v.student_id===s.id),by={};l.forEach(v=>by[v.lesson_date]=[v]);return {s,x,l,p:ccPending(x,by)}}).filter(r=>!f||(f==='pending'?r.p>0:f==='inbox'?crmInboxCount(r.s.id)>0:r.x.plan===f));el.innerHTML=(error?'<p>Não foi possível consultar aulas.</p>':'')+'<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Aluno</th><th>Plano</th><th>Horário</th><th>Aulas cadastradas / meta</th><th>Reposições</th><th>Notificações</th><th>Ações</th></tr></thead><tbody>'+rows.map(({s,x,l,p})=>'<tr><td><button type="button" class="crm-student-name" style="background:none;border:0;padding:0;color:var(--crm-blue);font:inherit;font-weight:600;text-align:left;text-decoration:underline;text-underline-offset:3px;cursor:pointer" onclick="openStudent(&quot;'+ccEsc(s.id)+'&quot;)">'+ccEsc(s.full_name||s.email)+'</button></td><td>'+ (x.plan==='48'?'Essencial':x.plan==='96'?'Intensivo':'Não definido')+'</td><td>'+ccEsc((s.lesson_time||'').slice(0,5))+'</td><td>'+(error?'—':l.length)+' / '+(ccTarget(x,Number(adminToday().date.slice(0,4)))??'—')+'</td><td>'+p+'</td><td><button class="crm-icon-btn" title="Consultar envios e dúvidas" onclick="openStudent(&quot;'+s.id+'&quot;)">'+crmIcon('bell')+'<span data-crm-inbox="'+ccEsc(s.id)+'">'+crmCountBadge(crmInboxCount(s.id),'Envios e dúvidas')+'</span></button></td><td><button class="btn-ghost" onclick="ccOpen(&quot;'+s.id+'&quot;)">Calendário</button></td></tr>').join('')+'</tbody></table></div>'}
 
