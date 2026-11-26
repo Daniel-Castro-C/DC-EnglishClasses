@@ -244,3 +244,24 @@ test('individual details are not grouped or deduplicated',()=>{
  run(`ctx.lessons.push({student_id:'s1',lesson_date:'2026-11-05',title:'Class #39',topic:'Movie Critics'},{student_id:'s1',lesson_date:'2026-11-05',title:'Class #39',topic:'Movie Critics'})`);
  assert.equal((run("ccPublishedDetails(ctx,'2026-11-05')").match(/Class #39/g)||[]).length,2);
 });
+test('month navigation updates only grid, reserves six weeks and preserves draft in both calendars',()=>{
+ for(const group of [false,true]){
+  const {run,ctx}=setup({group});
+  const nodes=new Map();
+  const elem=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',value:''});return nodes.get(id)};
+  ctx.document={getElementById:elem,querySelectorAll:()=>[]};
+  run("ccFinishInput=()=>true;ccRender=()=>{throw Error('month navigation must not remount calendar')};ccDate=new Date(2026,6,1);draft.date=ccDate;draft.dirty=true;ccSelected='2026-07-06';draft.selected=ccSelected;ccRefreshGrid()");
+  elem('cc-edit').innerHTML='previous selection';
+  const grid=elem('cc-grid');
+  const month=elem('cc-month');
+  for(const [direction,label,dayCount] of [[1,'agosto de 2026',31],[-1,'julho de 2026',31],[-1,'junho de 2026',30]]){
+   run("ccMove("+direction+")");
+   assert.equal(month.textContent,label);
+   assert.equal((grid.innerHTML.match(/class="btn-ghost cc-day/g)||[]).length,dayCount);
+   assert.equal((grid.innerHTML.match(/class="cc-empty-day"/g)||[]).length,42-dayCount);
+   assert.equal(elem('cc-edit').innerHTML,'');
+   assert.equal(run("draft.dirty"),true);
+   assert.equal(run("draft.selected"),'');
+  }
+ }
+});
