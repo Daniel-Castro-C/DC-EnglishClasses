@@ -6,7 +6,7 @@ const students=[{id:'demo-1',full_name:'Aluno de teste',lesson_weekday:4,lesson_
 let currentStudent=students[0],currentView='student',currentTab='calendario',currentLessons=[],currentLessonsReady=true;
 const crmRegisteredDates=new Set(),materialDisplayName=r=>r.name;
 const demoGroup={id:'demo-group',name:'Dupla de teste',members:['demo-2','demo-3'],start:'2026-11-19',days:'4',time:'21:00',calendar_events:{},calendarLessons:[],lessons:[],events:{}};
-let demoLessons=students.flatMap(s=>['2026-11-19','2026-11-26'].map((date,i)=>({id:crypto.randomUUID(),student_id:s.id,group_id:s.id==='demo-1'?null:demoGroup.id,lesson_date:date,title:'Class #'+(i+1),title_automatic:true,topic:i?'Conversation':'Introductions',resources:[]})));
+let demoLessons=students.flatMap(s=>['2026-11-19','2026-11-26'].map((date,i)=>({id:crypto.randomUUID(),student_id:s.id,group_id:s.id==='demo-1'?null:demoGroup.id,lesson_date:date,title:'Class #'+(i+1),title_automatic:true,topic:i?'Conversation':'Introductions',resources:[{id:crypto.randomUUID(),name:(i?'Conversation':'Introductions')+' — Slides.pdf',type:'ppt'},{id:crypto.randomUUID(),name:(i?'Conversation':'Introductions')+' — Exercícios.docx',type:'ex'}]})));
 const demoStates=new Map(students.map(s=>[s.id,{calendar_key:s.id,revision:1,payload:{start:'2026-11-19',weekdays:'4',time:'21:00',events:{}}}]));
 function demoRefresh(){currentLessons=demoLessons.filter(l=>l.student_id===currentStudent?.id);demoGroup.calendarLessons=demoLessons.filter(l=>demoGroup.members.includes(l.student_id));}
 const sb={
@@ -30,10 +30,19 @@ const sb={
 ccLoadCloud=async()=>{ccCloud.clear();for(const [id,row] of demoStates)ccCloud.set(id,ccClone(row));ccCloudReady=true;};
 tgLoad=async()=>{demoRefresh();tgGroups=[demoGroup];tgSelected=demoGroup;};
 async function loadLessonsFor(){demoRefresh();}
-function demoSelect(group){
- if([...ccDrafts.values()].some(d=>d.dirty)&&!confirm('Descartar alterações de teste não salvas?'))return;
+function demoSelect(group,studentId='demo-1'){
+ if([...ccDrafts.values()].some(d=>d.dirty)&&!confirm('Descartar alterações de teste não salvas?'))return false;
  ccDrafts.clear();ccLessonDrafts.clear();ccActiveKey='';ccSelected='';ccDate=new Date(2026,10,1);
- currentView=group?'turmas':'student';currentStudent=students[0];currentTab='calendario';tgGroups=[demoGroup];tgSelected=demoGroup;tgTab='calendar';
- document.getElementById('tab-content').innerHTML='';document.getElementById('tg-body').innerHTML='';demoRefresh();ccRender();
+ currentView=group?'turmas':'student';currentStudent=students.find(s=>s.id===studentId)||students[0];currentTab='calendario';tgGroups=[demoGroup];tgSelected=demoGroup;tgTab='calendar';
+ document.getElementById('demo-materials').hidden=true;document.getElementById('demo-materials').innerHTML='';
+ document.getElementById('tab-content').hidden=false;document.getElementById('tg-body').hidden=false;
+ document.getElementById('tab-content').innerHTML='';document.getElementById('tg-body').innerHTML='';demoRefresh();ccRender();return true;
+}
+function demoOpenMaterials(){
+ const root=document.getElementById('demo-materials');
+ document.getElementById('tab-content').hidden=true;document.getElementById('tg-body').hidden=true;root.hidden=false;
+ crmRenderMaterialSearch(root,students,'',async()=>demoLessons.slice(),row=>{
+  if(demoSelect(Boolean(row.group_id),row.student_id)){ccJump(row.lesson_date);document.getElementById('cc-edit')?.scrollIntoView({block:'start'});}
+ });
 }
 (async()=>{await ccLoadCloud();demoSelect(false)})();
