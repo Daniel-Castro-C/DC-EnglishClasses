@@ -22,14 +22,7 @@
   .welcome-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--sky-soft);}
   .welcome-row{display:flex;align-items:center;gap:16px;margin-bottom:34px;}
 
-  .home-lesson-call{display:flex;align-items:center;gap:14px;margin:0 0 24px;padding:18px 20px;background:var(--paper-card);border:1px solid var(--line);border-radius:12px;}
-  .home-lesson-call-icon{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:10px;background:var(--sky-soft);color:var(--ink);}
-  .home-lesson-call-icon svg,.home-lesson-call-action svg{width:22px;height:22px;}
-  .home-lesson-call-copy{flex:1;min-width:0;}
-  .home-lesson-call-copy h2{font:700 16px/1.4 'IBM Plex Sans',sans-serif;margin:0 0 4px;color:var(--text);}
-  .home-lesson-call-copy p{font-size:13.5px;color:var(--text-soft);margin:0;line-height:1.5;}
-  .home-lesson-call-action.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;flex:none;padding:13px 20px;text-decoration:none;text-align:center;}
-  @media(max-width:600px){.home-lesson-call{flex-wrap:wrap;padding:16px;gap:12px;}.home-lesson-call-action.btn-primary{width:100%;}}
+
 
   /* Onboarding (pop-up de boas-vindas no primeiro acesso) */
   .onboarding-overlay{position:fixed;inset:0;background:rgba(14,21,36,0.55);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;}
@@ -162,6 +155,7 @@ html.welcome-tour-active,html.welcome-tour-active body{overflow:hidden!important
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabaseClient.js"></script>
 <script src="js/common.js"></script>
+<script src="js/home-lesson-call.js"></script>
 <script>
 
 async function renderRecentDashboardMaterials(studentId){
@@ -333,23 +327,8 @@ function previewBadgeCelebration(){
   pendingBadgeCelebration = completedError ? null : getBadgeToCelebrate(profile.id, completedCount);
   const achievementsHtml = buildAchievementsSection(completedCount);
   const isEnglish = getLang() === 'en';
-  const isDemoCall = isTestStudentProfile(profile);
-  let callUrl = '';
-  try {
-    const raw = String(profile.permanent_lesson_link || '').trim();
-    if (raw) {
-      const parsed = new URL(raw);
-      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') callUrl = parsed.href;
-    }
-  } catch (_) {}
-  const callIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3"/></svg>';
-  const lessonCallHtml = callUrl || isDemoCall ? `
-    <section class="home-lesson-call" aria-label="${isEnglish ? 'Online lesson' : 'Aula online'}">
-      <span class="home-lesson-call-icon">${callIcon}</span>
-      <div class="home-lesson-call-copy"><h2>${isEnglish ? 'Your online lesson' : 'Sua aula online'}</h2><p>${isEnglish ? 'Access your lesson video call directly.' : 'Acesse diretamente a videochamada da sua aula.'}</p></div>
-      ${callUrl ? `<a class="btn-primary home-lesson-call-action" href="${escapeHtml(callUrl)}" target="_blank" rel="noopener noreferrer">${callIcon}${isEnglish ? 'Join video call' : 'Entrar na videochamada'}</a>` : `<button type="button" class="btn-primary home-lesson-call-action" onclick="alert(getLang()==='en'?'Example button: no real video call is opened in test mode.':'Botão demonstrativo: nenhuma videochamada real é aberta no modo de teste.')">${callIcon}${isEnglish ? 'Join video call' : 'Entrar na videochamada'}</button>`}
-    </section>` : '';
-
+  let lessonToday = await homeHasLessonToday(profile);
+  const lessonCallHtml = renderHomeLessonCall({url:profile.permanent_lesson_link,demo:isTestStudentProfile(profile),today:lessonToday,lang:getLang()});
 
 
   document.getElementById('main-content').innerHTML = `
@@ -365,9 +344,9 @@ function previewBadgeCelebration(){
         </div>
       </header>
 
-      ${lessonCallHtml}
+      <div id="home-lesson-call-container">${lessonCallHtml}</div>
       ${achievementsHtml}
-      ${isTestStudentProfile(profile) ? `<div class="badge-preview-tools"><button type="button" onclick="previewBadgeCelebration()">✦ ${t('badge_celebration_preview')}</button></div>` : ''}
+      ${isTestStudentProfile(profile) ? `<div class="badge-preview-tools"><button type="button" onclick="previewBadgeCelebration()">✦ ${t('badge_celebration_preview')}</button><button type="button" onclick="toggleHomeLessonDayPreview()">${isEnglish ? 'Preview lesson day' : 'Simular dia de aula'}</button></div>` : ''}
 
       <section class="dashboard-hero" aria-label="${t('dashboard_continue')}">
         <div class="dashboard-hero-copy">
@@ -423,6 +402,21 @@ function previewBadgeCelebration(){
       </div>
     </div>
   `;
+  // Re-evaluate when returning to the Home or crossing midnight in the teaching timezone.
+  if (!isTestStudentProfile(profile) && homeLessonCallUrl(profile.permanent_lesson_link)) {
+    let refreshingLessonDay = false;
+    const refreshLessonDay = async () => {
+      if (document.hidden || refreshingLessonDay) return;
+      refreshingLessonDay = true;
+      try {
+        const next = await homeHasLessonToday(profile);
+        if (next !== lessonToday) { lessonToday = next; updateHomeLessonCall(profile,next); }
+      } finally { refreshingLessonDay = false; }
+    };
+    document.addEventListener('visibilitychange', refreshLessonDay);
+    window.addEventListener('focus', refreshLessonDay);
+    setInterval(refreshLessonDay, 60000);
+  }
   // Os materiais são buscados apenas entre aulas pertencentes ao aluno logado.
   renderRecentDashboardMaterials(profile.id);
 
