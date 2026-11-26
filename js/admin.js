@@ -140,7 +140,7 @@ async function loadReportPendencies(){
   }
   for(const student of studentById.values()){
     for(const date of ccManualDoneDates(ccData(student))){
-      if(registered.has(student.id+'|'+date))continue;
+      if(registered.has(student.id+'|'+date)||crmDismissed(student.id,'missing:'+date))continue;
       pending.push({lesson:{student_id:student.id,lesson_date:date,title:'Aula realizada'},studentName:student.full_name||student.email||'Aluno',missingLesson:true});
     }
   }
@@ -215,7 +215,7 @@ async function renderHome(){
           ${lesson.lesson_date ? escapeHtml(formatDate(lesson.lesson_date)) : 'não informado'}
           ${lesson.lesson_date ? '' : `(${escapeHtml(lesson.title)})`}</small></div>
           <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
-            ${missingLesson ? `<button class="btn-ghost" onclick="openMissingLesson(\'${lesson.student_id}\', \'${lesson.lesson_date}\')">Cadastrar aula</button>` : `<button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
+            ${missingLesson ? `<button class="btn-ghost" onclick="openMissingLesson(\'${lesson.student_id}\', \'${lesson.lesson_date}\')">Cadastrar aula</button>${crmDismissButton(lesson.student_id,"missing:"+lesson.lesson_date)}` : `<button class="btn-ghost" onclick="openPendingReport('${lesson.student_id}', '${lesson.id}')">Adicionar relatório</button>
             <button class="resource-action" onclick="dismissReportPending('${lesson.id}')" aria-label="Descartar pendência da aula ${escapeAttr(lesson.title)}">Descartar pendência</button>`}
           </div>
         </div>`).join('')
