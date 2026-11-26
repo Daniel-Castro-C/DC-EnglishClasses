@@ -39,7 +39,40 @@ async function tgLoad(){
  tgGroups=(data||[]).map(row=>{const g={...row,days:'',time:'',start:'',end:'',...row.schedule,events:{},lessons:[]};for(const id of g.members){const s=students.find(s=>s.id===id);if(!s)continue;for(const [date,e] of Object.entries(ccData(s).events||{}))if(e.group_id===g.id)(g.events[date]??={})[id]=e.status;}const by=new Map();for(const l of (lessons||[]).filter(l=>l.group_id===g.id)){const k=l.lesson_date;let a=by.get(k);if(!a){a={id:l.id,date:k,title:l.title,topic:l.topic,slides:[],exercises:[],reports:{}};by.set(k,a);}for(const r of l.resources||[]){if(r.type==='rep')a.reports[l.student_id]=r.name;else{const arr=r.type==='ex'?a.exercises:a.slides;if(!arr.includes(r.name))arr.push(r.name);}}a.reports[l.student_id]??='Pendente';}g.lessons=[...by.values()];return g;});tgSelected=tgGroups.find(g=>g.id===old)||null;
 }
 async function tgCalendarCommit(g,schedule,date,attendance){
- const changes=g.members.map(id=>{const s=students.find(s=>s.id===id);if(!s)throw Error('Integrante não encontrado');const x=ccData(s);if(schedule){if(!x.start){x.start=schedule.start;x.weekdays=schedule.days;x.time=schedule.time;x.end=schedule.end;}else{x.changes=x.changes.filter(c=>c.from!==schedule.start);x.changes.push({from:schedule.start,weekdays:schedule.days,time:schedule.time});if(schedule.end){const d=new Date(schedule.end+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+1);const next=d.toISOString().slice(0,10);x.changes=x.changes.filter(c=>c.from!==next);x.changes.push({from:next,weekdays:'',time:''});}}}else{x.events[date]={...(x.events[date]||{}),status:attendance[id],group_id:g.id};}return {id,payload:x,revision:ccCloud.get(id)?.revision||0};});
+ const changes=g.members.map(id=>{const s=students.find(s=>s.id===id);if(!s)throw Error('Integrante não encontrado');const x=ccData(s);if(schedule){if(!x.start){x.start=schedule.start;x.weekdays=schedule.days;x.time=schedule.time;x.end=schedule.end;}else{x.changes=x.changes.filter(c=>c.from!==schedule.start);x.changes.push({from:schedule.start,weekdays:schedule.days,time:schedule.time});if(schedule.end){const d=new Date(schedule.end+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+1);const next=d.toISOString().slice(0,10);x.changes=x.changes.filter(c=>c.from!==next);x.changes.push({from:next,weekdays:'',time:''});}}}else{x.events[date]={...(x.events[date]||{}),status:tgNormalizeAttendance(g.members,attendance)[id],group_id:g.id};}return {id,payload:x,revision:ccCloud.get(id)?.revision||0};});
  const {error}=await sb.rpc('portal_group_calendar_save',{p_group:g.id,p_schedule:schedule,p_changes:changes});if(error)throw error;await ccLoadCloud();
 }
 function tgOpenMissing(groupId,date){tgSelected=tgGroups.find(g=>g.id===groupId);if(!tgSelected)return;currentView='turmas';renderNav();tgRender();tgSwitch('lesson');document.getElementById('tg-lesson-date').value=date;}
+
+function tgNormalizeAttendance(members,attendance){
+ const allAbsent=members.every(id=>['absent','owed'].includes(attendance[id]));
+ return Object.fromEntries(members.map(id=>[id,['absent','owed'].includes(attendance[id])?(allAbsent?'owed':'absent'):attendance[id]]));
+}
+function tgGroupReplacementEligible(groupId,date){
+ const g=tgGroups.find(v=>v.id===groupId);if(!g)return false;
+ return g.members.every(id=>{const e=ccRead(id).events?.[date];return e?.group_id===groupId&&['absent','owed'].includes(e.status);});
+}
+function tgGroupReplacementRows(){
+ const result=[];
+ for(const g of tgGroups){
+ const dates=new Set(g.members.flatMap(id=>Object.entries(ccRead(id).events||{}).filter(([d,e])=>e.group_id===g.id&&['absent','owed'].includes(e.status)).map(([d])=>d)));
+ for(const date of dates){
+ if(!tgGroupReplacementEligible(g.id,date))continue;
+ const pending=g.members.filter(id=>!Object.entries(ccRead(id).events||{}).some(([d,e])=>e.original===date&&e.group_id===g.id&&(e.status==='done'||crmRegisteredDates?.has(id+'|'+d))));
+ if(pending.length)result.push({g,date,pending,visible:pending.filter(id=>!crmDismissed(id,'replacement:'+date))});
+ }}
+ return result;
+}
+async function tgOpenReplacement(groupId,date){
+ await tgLoad();tgSelected=tgGroups.find(g=>g.id===groupId);if(!tgSelected||!tgGroupReplacementEligible(groupId,date))return alert('Reposição coletiva indisponível.');
+ currentView='turmas';renderNav();tgTab='calendar';tgRender();
+ const root=document.getElementById('tg-body');root.insertAdjacentHTML('afterbegin','<div class="box"><h3>Reposição coletiva</h3><p>Referente à aula de '+tgEsc(formatDate(date))+'</p><label>Data da reposição<input type="date" id="tg-replacement-date" value="'+adminToday().date+'"></label><label>Horário<input type="time" id="tg-replacement-time" value="'+tgEsc(tgSelected.time)+'"></label><button class="btn-dark-sm" onclick="tgSaveReplacement(&quot;'+groupId+'&quot;,&quot;'+date+'&quot;,false)">Agendar reposição</button> <button class="btn-ghost" onclick="tgSaveReplacement(&quot;'+groupId+'&quot;,&quot;'+date+'&quot;,true)">Marcar reposição realizada</button></div>');
+}
+async function tgSaveReplacement(groupId,original,done){
+ const g=tgGroups.find(v=>v.id===groupId),date=document.getElementById('tg-replacement-date').value,time=document.getElementById('tg-replacement-time').value;
+ if(!g||!date||date<=original||!time||!tgGroupReplacementEligible(groupId,original))return alert('Selecione uma data posterior à falta coletiva e um horário.');
+ try{
+ const changes=g.members.map(id=>{const s=students.find(s=>s.id===id),x=ccData(s);if(!ccReplacementAvailable(x,original,date,[])||x.events[date]&&! (x.events[date].original===original&&x.events[date].group_id===groupId))throw Error('Já existe um registro ou reposição para um integrante.');x.events[date]={status:done?'done':'planned',original,time,group_id:groupId};return {id,payload:x,revision:ccCloud.get(id)?.revision||0};});
+ const {error}=await sb.rpc('portal_group_calendar_save',{p_group:groupId,p_schedule:null,p_changes:changes});if(error)throw error;await ccLoadCloud();await tgLoad();tgDetail();
+ }catch(e){alert(e.message);}
+}
