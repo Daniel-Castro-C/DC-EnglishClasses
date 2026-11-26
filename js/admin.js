@@ -12,6 +12,7 @@ let students = [];
 let teacherTestProfile = null;
 let currentStudent = null;
 let currentLessons = [];
+let currentLessonsReady = false;
 let currentTab = 'geral';
 let currentView = 'home'; // 'home' | 'comunicados' | 'student'
 let danielPendingTotal = 0;
@@ -704,15 +705,16 @@ function switchTab(tab){
 }
 
 async function loadLessonsFor(studentId){
-  const { data, error } = await sb
-    .from('lessons')
-    .select('*, resources(*)')
-    .eq('student_id', studentId);
-
-  if (error) { console.error(error); currentLessons = []; return; }
-  currentLessons = sortLessonsByDate(data || [], false);
+  currentLessonsReady=false;
+  const rows=[];
+  for(let offset=0;;offset+=500){
+    const {data,error}=await sb.from('lessons').select('*, resources(*)').eq('student_id',studentId).order('id',{ascending:true}).range(offset,offset+499);
+    if(currentStudent?.id!==studentId)return;
+    if(error){console.error(error);currentLessons=[];return;}
+    rows.push(...(data||[]));if((data||[]).length<500)break;
+  }
+  currentLessons=sortLessonsByDate(rows,false);currentLessonsReady=true;
 }
-
 function renderStudentDetail(){
   const s = currentStudent;
 
@@ -742,7 +744,7 @@ function renderStudentDetail(){
     <section class="crm-profile-head crm-dossier-head"><span class="crm-avatar">${s.avatar_url?'<img src="'+escapeAttr(s.avatar_url)+'" alt="" class="crm-dossier-photo">':escapeHtml((s.full_name||s.email||'A').charAt(0).toUpperCase())}</span><div class="crm-dossier-identity"><h1>${escapeHtml(s.full_name||s.email)}</h1><p>${crmPlan(ccData(s))} · ${escapeHtml(s.email||'')}</p><small class="crm-muted">${s.is_test_profile?'Perfil de teste':(s.lesson_weekday?WEEKDAY_LABELS[s.lesson_weekday-1]+' · '+escapeHtml((s.lesson_time||'').slice(0,5)):'Horário habitual não definido')}</small></div><button class="btn-ghost" onclick="openTodayClassCall(currentStudent.id)">${crmIcon('video')} Videochamada</button></section>
     <section class="crm-kpis crm-kpis-three">${crmKpi('Carga anual',metrics.count+'/'+(metrics.target??'—'),'chart')}${crmKpi('Reposições',metrics.pending,'refresh')}${crmKpi('Frequência',metrics.frequency,'calendar')}</section>
     <div class="crm-dossier-layout"><nav class="crm-dossier-nav" aria-label="Ficha do aluno">
-    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário','calendar'],['cadastradas','Aulas e materiais','book'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation']]],['CAIXA DE ENTRADA',[['pedidos','Pedidos de material','file','materials'],['duvidas','Perguntas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings'],['nova','Cadastrar aula','plus']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
+    ${[['ACOMPANHAMENTO',[['resumo','Resumo','dashboard'],['calendario','Calendário','calendar'],['cadastradas','Aulas e materiais','book'],['atividade','Atividades','chart'],['estudos','Estudos e conquistas','graduation']]],['CAIXA DE ENTRADA',[['pedidos','Material do Aluno','file','materials'],['duvidas','Perguntas','message','questions'],['textos-aluno','Textos para correção','file','texts']]],['CONFIGURAÇÕES',[['perfil','Cadastro','settings'],['nova','Cadastrar aula','plus']]]].map(([group,items])=>'<div class="crm-dossier-label">'+group+'</div>'+items.map(([k,label,icon,kind])=>'<button class="'+(currentTab===k?'active':'')+'" onclick="switchTab(&quot;'+k+'&quot;)">'+crmIcon(icon)+'<span>'+label+'</span>'+(kind?'<span data-crm-inbox="'+escapeAttr(s.id)+'" data-crm-kind="'+kind+'">'+crmCountBadge(crmInboxFor(s.id)[kind].length,label)+'</span>':'')+'</button>').join('')).join('')}
     </nav><div class="crm-dossier-content">
     <div id="tab-content"></div></div></div></div>
   `;
@@ -1580,6 +1582,10 @@ async function createLesson(){
   }
 
   const studentId = currentStudent.id;
+  if(ccHasDirtyForMember(studentId)){alert('Salve o calendário antes de cadastrar aulas.');return;}
+  const calendarEvent=date&&ccData(currentStudent).events[date];
+  if(date&&ccGroupForDate(studentId,date)){alert('Esta aula pertence à turma. Cadastre os materiais pelo painel de turmas.');return;}
+  if(calendarEvent&&(calendarEvent.skip||calendarEvent.status==='rescheduled')){alert('Esta data foi excluída ou reagendada no calendário. Escolha a data correta.');return;}
   btn.disabled = true;
   btn.textContent = 'Salvando aula...';
 
@@ -1824,8 +1830,8 @@ function crmEditLesson(id){
   e.preventDefault();const sid=lesson.student_id,date=form.elements.date.value||null,topic=form.elements.topic.value.trim(),status=form.querySelector('[role=status]'),btn=form.querySelector('button[type=submit]');
   if(currentStudent?.id!==sid)return;
   const x=ccData(currentStudent),old=lesson.lesson_date;
-  const linked=old&&old!==date&&(x.events[old]?.original||Object.values(x.events).some(r=>r.original===old));
-  if(linked){status.textContent='Esta data possui vínculo de reposição no calendário. Desvincule ou ajuste o registro antes de alterar a data, para preservar o histórico.';return;}
+  const linked=old&&old!==date&&(x.events[old]?.original||x.events[old]?.rescheduled_from||x.events[old]?.rescheduled_to||Object.values(x.events).some(r=>r.original===old));
+  if(linked){status.textContent='Esta data possui vínculo de reposição ou reagendamento no calendário. Desvincule ou ajuste o registro antes de alterar a data, para preservar o histórico.';return;}
   btn.disabled=true;status.textContent='Salvando...';
   try{
    const {data,error}=await sb.from('lessons').update({topic,lesson_date:date}).eq('id',id).eq('student_id',sid).select('id').single();

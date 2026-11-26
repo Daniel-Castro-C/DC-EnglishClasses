@@ -17,7 +17,7 @@ Use a nomenclatura abaixo em títulos, menus, formulários, notificações e tex
 | Recurso de vocabulário | Expandindo seu vocabulário | Expanding your vocabulary | Novos Vocabulários / New Vocabulary |
 | Recurso de escrita | Aprimorando a Escrita | Improving Your Writing | Devolutiva como nome da correção |
 | Guias | Guias de Gramática | Grammar Guides | Guias de gramática como rótulo de menu alternativo |
-| Envios do aluno para uso em aula | Pedidos de material | Material requests | Materiais recebidos / Materiais do aluno |
+| Envios do aluno para uso em aula | Material do Aluno | Student materials | Materiais recebidos / Pedidos de material |
 | Pergunte ao Daniel | Perguntas | Questions | Dúvidas como rótulo concorrente na caixa de entrada |
 | Estado de pergunta não respondida | Aguardando resposta | Waiting for answer | Aguardando (sem contexto) |
 | Estado da correção entregue | Correção pronta | Correction ready | Correção disponível |
@@ -30,6 +30,6 @@ Use a nomenclatura abaixo em títulos, menus, formulários, notificações e tex
 - `materialDisplayName(resource)` normaliza somente a expressão legada de relatórios do tipo `rep` na exibição. Nomes gravados e caminhos existentes não são reescritos.
 - Identificadores técnicos (`rep`, `ppt`, `done`, tabelas, nomes de funções, IDs e rotas) não são texto de interface. Não os renomeie por motivos editoriais.
 - Termos do conteúdo didático em inglês, títulos de aulas, nomes personalizados dos materiais e expressões genéricas podem ser distintos. Não traduza nem substitua indiscriminadamente.
-- Agenda é a visão global; Calendário é o controle individual ou compartilhado da turma. Enviar material é a ação do aluno, Pedidos de material é a coleção recebida pelo professor. Modo visitante e Modo aluno de teste são ambientes distintos.
+- Agenda é a visão global; Calendário é o controle individual ou compartilhado da turma. Enviar material é a ação do aluno, Material do Aluno é a coleção recebida pelo professor. Modo visitante e Modo aluno de teste são ambientes distintos.
 - O PDF estático `guia-portal-do-aluno.pdf` é um guia histórico sem fonte editável no repositório; refere-se à Área do aluno como página inicial. Sua atualização editorial completa deve acompanhar a renovação do guia (não alterar o PDF sem sua fonte).
 - Os PDFs demonstrativos novos são gerados com o rótulo padronizado; antigos caminhos públicos permanecem como aliases de compatibilidade. O texto pedagógico dos PDFs continua em inglês.
