@@ -1272,16 +1272,7 @@ function renderNovaAulaTab(){
   }
 }
 
-function inferQuickResourceType(fileName){
-  const normalizedName = (fileName || '').trim();
-  // Prioriza os padrões de nome, independentemente da extensão.
-  if (/report\s*-\s*class/i.test(normalizedName)) return 'rep';
-  if (/^\d+/.test(normalizedName)) return 'ppt';
-  const extension = (normalizedName.split('.').pop() || '').toLowerCase();
-  if (['ppt', 'pptx', 'odp'].includes(extension)) return 'ppt';
-  if (['doc', 'docx', 'odt', 'xls', 'xlsx'].includes(extension)) return 'ex';
-  return 'pdf';
-}
+
 
 function addQuickLessonFiles(fileList){
   if (!fileList || !fileList.length) return;

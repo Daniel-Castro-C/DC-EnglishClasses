@@ -291,7 +291,7 @@ test('material form appears only for realized sessions and targets present group
  run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true)");
  const html=run("ccLessonForm(ctx,draft,'2026-11-23',ccDateState(ctx,draft,'2026-11-23'))");
  assert.match(html,/Class #1/);assert.match(html,/Slides compartilhados/);
- assert.match(html,/data-cc-student="s2"/);assert.doesNotMatch(html,/data-cc-student="s1"/);
+ assert.match(html,/Arraste e solte os materiais aqui/);assert.match(html,/Two/);assert.doesNotMatch(html,/One/);assert.doesNotMatch(html,/Adicionar ao próximo salvamento/);
 });
 test('lesson drafts refuse save when the underlying class is not completed',()=>{
  const {run}=setupUnified();
@@ -307,4 +307,40 @@ test('flush sends explicit manual titles and preserves attendance boundary',asyn
  assert.deepEqual(Array.from(ctx.calls[0].args.p_members),['s2']);
  assert.equal(ctx.calls[0].args.p_title,'Class #12');
  assert.equal(run("ccLessonMap(ctx).size"),0);
+});
+
+test('drag upload keeps the original file classification rules and permits correction',()=>{
+ const {run}=setupUnified();
+ assert.equal(run("inferQuickResourceType('Report - Class 39 - Ana.pdf')"),'rep');
+ assert.equal(run("inferQuickResourceType('39 - Conversation.pdf')"),'ppt');
+ assert.equal(run("inferQuickResourceType('Conversation.pptx')"),'ppt');
+ assert.equal(run("inferQuickResourceType('Practice.docx')"),'ex');
+ assert.equal(run("inferQuickResourceType('Reading.pdf')"),'pdf');
+ const html=run("ccLessonFilesHtml({files:[{file:{name:'Report - Class 39.pdf'},type:'rep'}]},ctx,['s1'])");
+ assert.match(html,/value="rep" selected/);
+ assert.match(html,/ccChangeLessonFileType/);
+ assert.doesNotMatch(html,/Destinatário do relatório/);
+});
+test('group report requires explicit eligible recipient; shared materials do not',()=>{
+ const {run}=setupUnified(true);
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true);ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',automatic:true,files:[{file:{name:'Report - Class 1.pdf'},type:'rep',student:null}]})");
+ const html=run("ccLessonFilesHtml(ccLessonMap(ctx).get('2026-11-23'),ctx,ccLessonTargets(ctx,draft,'2026-11-23'))");
+ assert.match(html,/Selecione o aluno/);assert.match(html,/value="s2"/);assert.doesNotMatch(html,/value="s1"/);
+ assert.throws(()=>run("ccValidateLessonDrafts(ctx,draft)"),/Escolha um integrante presente/);
+ run("ccLessonMap(ctx).get('2026-11-23').files[0].student='s1'");
+ assert.throws(()=>run("ccValidateLessonDrafts(ctx,draft)"),/Escolha um integrante presente/);
+ run("ccLessonMap(ctx).get('2026-11-23').files[0].student='s2'");
+ assert.doesNotThrow(()=>run("ccValidateLessonDrafts(ctx,draft)"));
+});
+
+test('one drop stages mixed file types automatically without an extra add-to-save button',()=>{
+ const {run,ctx}=setupUnified();
+ const elements=new Map([['cc-lesson-title',{value:'Class #1'}],['cc-lesson-topic',{value:'Topic'}],['cc-lesson-auto',{checked:true}],['cc-lesson-files',{innerHTML:''}]]);
+ ctx.document={getElementById:id=>elements.get(id)||null};
+ run("ccSelected='2026-11-23';draft.payloads.s1.events['2026-11-23']={status:'done'};ccAddLessonFiles([{name:'01 - slides.pdf'},{name:'Report - Class 1.pdf'},{name:'Practice.docx'}])");
+ assert.equal(run("ccLessonMap(ctx).get(ccSelected).files.map(r=>r.type).join(',')"),'ppt,rep,ex');
+ assert.equal(run("draft.dirty"),true);
+ assert.match(elements.get('cc-lesson-files').innerHTML,/Report - Class 1.pdf/);
+ run("ccChangeLessonFileType(2,'pdf');ccRemoveLessonFile(0)");
+ assert.equal(run("ccLessonMap(ctx).get(ccSelected).files.map(r=>r.type).join(',')"),'rep,pdf');
 });
