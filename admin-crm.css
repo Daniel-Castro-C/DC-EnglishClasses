@@ -158,20 +158,28 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .cc-unavailable-label{font-weight:600}
 .admin-crm .cc-unavailable-note{background:#e5e7eb;color:#303640;padding:8px 12px;border-radius:6px}
 
-/* Home: compact, read-only monthly agenda. */
-.admin-crm .crm-month-header{flex-wrap:wrap}
-.admin-crm .crm-month-nav{display:flex;align-items:center;gap:8px;margin-left:auto}
-.admin-crm .crm-month-title{font-size:14px;font-weight:600;text-align:center;min-width:145px;text-transform:capitalize;color:var(--text)}
-.admin-crm .crm-month-nav button{width:32px;height:32px;border:1px solid var(--line);font-size:16px;font-weight:600}
-.admin-crm .crm-month-scroll{overflow-x:auto;max-width:100%;border-radius:6px}
-.admin-crm .crm-month-grid{display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:3px;min-width:718px}
-.admin-crm .crm-month-weekday{text-align:center;font-size:11px;color:var(--text-soft);font-weight:500;padding:4px}
-.admin-crm .crm-month-day{min-height:78px;min-width:0;border:1px solid var(--line);border-radius:5px;padding:5px;background:var(--paper-card)}
+/* Home: today's agenda and a compact, read-only monthly calendar. */
+.admin-crm .crm-agenda-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:16px;align-items:start}
+.admin-crm .crm-agenda-layout>.crm-panel{margin-bottom:0;padding:14px;min-width:0}
+.admin-crm .crm-today-panel .crm-panel-head{flex-wrap:wrap}
+.admin-crm .crm-today-panel .crm-table td,.admin-crm .crm-today-panel .crm-table th{padding:8px 5px}
+.admin-crm .crm-today-panel .crm-row-actions{gap:2px}
+.admin-crm .crm-today-panel .crm-table button{margin:0;padding:4px}
+.admin-crm .crm-today-panel .crm-quick-status{min-width:0;width:118px;max-width:100%;padding:5px 18px 5px 5px;font-size:11px}
+.admin-crm .crm-month-header{flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.admin-crm .crm-month-nav{display:flex;align-items:center;gap:4px;margin-left:auto}
+.admin-crm .crm-month-title{font-size:12px;font-weight:600;text-align:center;min-width:118px;text-transform:capitalize;color:var(--text)}
+.admin-crm .crm-month-nav button{width:27px;height:27px;border:1px solid var(--line);font-size:14px;font-weight:600}
+.admin-crm .crm-month-scroll{overflow-x:auto;max-width:100%;border-radius:5px}
+.admin-crm .crm-month-grid{display:grid;grid-template-columns:repeat(7,minmax(51px,1fr));gap:2px;min-width:369px}
+.admin-crm .crm-month-weekday{text-align:center;font-size:10px;color:var(--text-soft);font-weight:500;padding:2px}
+.admin-crm .crm-month-day{min-height:45px;min-width:0;border:1px solid var(--line);border-radius:4px;padding:3px;background:var(--paper-card)}
 .admin-crm .crm-month-day.is-outside{background:var(--crm-bg);border-color:transparent}
 .admin-crm .crm-month-day.is-today{border-color:var(--crm-blue);background:var(--sky-soft)}
-.admin-crm .crm-month-day-number{font-size:11px;font-weight:600;color:var(--text);margin:0 0 4px 2px;line-height:1.2}
-.admin-crm .crm-month-class{display:flex;align-items:baseline;gap:5px;background:var(--sky-soft);border-left:2px solid var(--crm-blue);border-radius:3px;padding:4px 5px;margin-top:3px;font-size:11px;line-height:1.35;color:var(--text)}
+.admin-crm .crm-month-day-number{font-size:10px;font-weight:600;color:var(--text);margin:0 0 2px 1px;line-height:1.15}
+.admin-crm .crm-month-class{display:flex;flex-direction:column;gap:0;background:var(--sky-soft);border-left:2px solid var(--crm-blue);border-radius:3px;padding:2px 3px;margin-top:2px;font-size:10px;line-height:1.25;color:var(--text)}
 .admin-crm .crm-month-class time{font-weight:600;color:var(--crm-blue);white-space:nowrap;flex:0 0 auto;font-variant-numeric:tabular-nums}
 .admin-crm .crm-month-class span{min-width:0;overflow-wrap:anywhere}
-.admin-crm .crm-month-feedback{margin:8px 0 0}
-@media(max-width:860px){.admin-crm .crm-month-header{gap:8px}.admin-crm .crm-month-nav{margin-left:0}.admin-crm .crm-month-class{flex-direction:column;gap:1px}}
+.admin-crm .crm-month-feedback{margin:5px 0 0}
+@media(min-width:1180px){.admin-crm .crm-agenda-layout{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}}
+@media(max-width:860px){.admin-crm .crm-month-nav{margin-left:0}}
