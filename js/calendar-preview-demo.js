@@ -75,6 +75,17 @@ function demoSelect(group,studentId='demo-1'){
  document.getElementById('tab-content').hidden=false;document.getElementById('tg-body').hidden=false;
  document.getElementById('tab-content').innerHTML='';document.getElementById('tg-body').innerHTML='';demoRefresh();ccRender();return true;
 }
+// Isolated worked example: an owed lesson followed by a scheduled make-up.
+async function demoMissedReplacement(group){
+ if(!demoSelect(group))return;
+ const date='2026-12-03',replacement='2026-12-04',source={status:'owed',time:'21:00'},makeup={status:'planned',time:'21:00',original:date};
+ if(group)Object.assign(demoGroup.calendar_events,{[date]:source,[replacement]:makeup});
+ for(const id of group?demoGroup.members:['demo-1']){
+  const payload=demoStates.get(id).payload;
+  for(const [day,event] of [[date,source],[replacement,makeup]])payload.events[day]={...event,...(group?{group_id:demoGroup.id,group_status:event.status}:{})};
+ }
+ await ccLoadCloud();ccDrafts.clear();ccActiveKey='';ccSelected='';ccDate=new Date(2026,11,1);ccRender();ccJump(replacement);
+}
 async function demoLegacyConflict(){
  if(!demoSelect(true))return;
  demoGroup.start='2026-02-05';

@@ -126,7 +126,7 @@ function ccUndoLessonDelete(){
 function ccRegisteredReplacementAvailable(ctx,d,date,original){
  if(ctx.group&&ccGroupBase(ctx,d,original).status==='absent')return false;
  return ctx.members.every(s=>{
-  const x=d.payloads[s.id],source=x.events[original],ls=ctx.lessons.filter(l=>l.student_id===s.id).map(l=>d.registeredStatuses?.[l.lesson_date]?{...l,calendar_status:x.events[l.lesson_date]?.status}:l);
+  const x=d.payloads[s.id],source=x.events[original],ls=ccDraftReplacementLessons(ctx,d,s.id);
   if(ctx.group&&(!source||source.group_id!==ctx.group.id||!ccAbsent(source.status)))return false;
   return ccReplacementAvailable(x,original,date,ls,!!ctx.group);
  });
@@ -149,7 +149,8 @@ function ccStageRegisteredStatus(ctx,d,date,status,original='',to=''){
  const state=ccDateState(ctx,d,date),rows=ccLessonRows(ctx,date),registered=new Set(rows.map(l=>l.student_id)),next={...d,payloads:ccClone(d.payloads),schedule:d.schedule?ccClone(d.schedule):null};
  if(!ctx.group&&ccGroupForDate(ctx.members[0].id,date))throw Error('Gerencie esta aula no calendário da turma.');
  if(ctx.lessons.some(l=>l.lesson_date===date&&!rows.some(r=>r.id===l.id)))throw Error('Existe outro registro nesta data; atualize o calendário.');
- if(original&&(!['done','planned'].includes(status)||!ccRegisteredReplacementAvailable(ctx,d,date,original)))throw Error('Reposição indisponível. Verifique a falta de origem.');
+ if(status==='absent'&&state.event?.original)original=state.event.original;
+ if(original&&(!['done','planned','absent'].includes(status)||!ccRegisteredReplacementAvailable(ctx,d,date,original)))throw Error('Reposição indisponível. Verifique a falta de origem.');
  const previousTo=state.event?.rescheduled_to;
  if(status==='rescheduled'){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(to)||to===date)throw Error('Escolha uma nova data válida.');

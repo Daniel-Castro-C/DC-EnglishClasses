@@ -63,14 +63,14 @@ function tgGroupReplacementRows(){
  const dates=new Set(g.members.flatMap(id=>Object.entries(ccRead(id).events||{}).filter(([d,e])=>e.group_id===g.id&&['absent','owed'].includes(e.status)).map(([d])=>d)));
  for(const date of dates){
  if(!tgGroupReplacementEligible(g.id,date))continue;
- const pending=g.members.filter(id=>!Object.entries(ccRead(id).events||{}).some(([d,e])=>e.original===date&&e.group_id===g.id&&(e.status==='done'||crmRegisteredDates?.has(id+'|'+d))));
+ const pending=g.members.filter(id=>{const student=students.find(s=>s.id===id);return student&&!ccReplacementSettled(ccData(student),date,rd=>crmRegisteredDates?.has(id+'|'+rd)||ccRegisteredClosed((g.calendarLessons||[]).filter(l=>l.student_id===id),rd));});
  if(pending.length)result.push({g,date,pending,visible:pending.filter(id=>!crmDismissed(id,'replacement:'+date))});
  }}
  return result;
 }
 async function tgOpenReplacement(groupId,date){
  await tgOpenDate(groupId,date);
- const ctx=ccContext();if(!ctx?.group||ctx.group.id!==groupId||!tgGroupReplacementEligible(groupId,date))return alert('Reposição coletiva indisponível.');
+ const ctx=ccContext();if(!ctx?.group||ctx.group.id!==groupId||!tgGroupReplacementRows().some(r=>r.g.id===groupId&&r.date===date&&r.pending.length))return alert('Reposição coletiva indisponível.');
  document.getElementById('cc-edit').insertAdjacentHTML('afterbegin','<div class="box"><h3>Reposição coletiva</h3><p>Referente à aula de '+tgEsc(formatDate(date))+'</p><label>Data da reposição<input type="date" id="tg-replacement-date"></label><label>Horário<input type="time" id="tg-replacement-time" value="'+tgEsc(ccSchedule(ccDraft(ctx).schedule,date).time)+'"></label><button class="btn-ghost" onclick="tgStageReplacement(&quot;'+date+'&quot;,false)">Agendar reposição</button> <button class="btn-ghost" onclick="tgStageReplacement(&quot;'+date+'&quot;,true)">Marcar reposição realizada</button><p class="small-note">Use Salvar calendário para confirmar.</p></div>');
 }
 function tgStageReplacement(original,done){
@@ -78,7 +78,7 @@ function tgStageReplacement(original,done){
  if(!ctx?.group||!date||date<=original||!time||ccSaving)return alert('Selecione uma data posterior à falta coletiva e um horário.');
  try{
   ccDestinationFree(ctx,d,date);
-  if(ccGroupBase(ctx,d,original).status==='absent'||!ctx.members.every(s=>{const x=d.payloads[s.id];return x.events[original]?.group_id===ctx.group.id&&['absent','owed'].includes(x.events[original]?.status)&&ccReplacementAvailable(x,original,date,ctx.lessons.filter(l=>l.student_id===s.id),true);}))throw Error('Reposição coletiva indisponível.');
+  if(ccGroupBase(ctx,d,original).status==='absent'||!ctx.members.every(s=>{const x=d.payloads[s.id];return x.events[original]?.group_id===ctx.group.id&&['absent','owed'].includes(x.events[original]?.status)&&ccReplacementAvailable(x,original,date,ccDraftReplacementLessons(ctx,d,s.id),true);}))throw Error('Reposição coletiva indisponível.');
   d.schedule.events[date]={status:done?'done':'planned',original,time};
   for(const s of ctx.members)d.payloads[s.id].events[date]={...d.schedule.events[date],group_id:ctx.group.id,group_status:d.schedule.events[date].status};
   ccMarkDirty(ctx,d);ccJump(date);
