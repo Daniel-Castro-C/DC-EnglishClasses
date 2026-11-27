@@ -124,6 +124,7 @@ function ccUndoLessonDelete(){
 }
 // Correct the calendar classification without recreating the registered lesson or its materials.
 function ccRegisteredReplacementAvailable(ctx,d,date,original){
+ if(ctx.group&&ccGroupBase(ctx,d,original).status==='absent')return false;
  return ctx.members.every(s=>{
   const x=d.payloads[s.id],source=x.events[original],ls=ctx.lessons.filter(l=>l.student_id===s.id).map(l=>d.registeredStatuses?.[l.lesson_date]?{...l,calendar_status:x.events[l.lesson_date]?.status}:l);
   if(ctx.group&&(!source||source.group_id!==ctx.group.id||!ccAbsent(source.status)))return false;
@@ -158,7 +159,7 @@ function ccStageRegisteredStatus(ctx,d,date,status,original='',to=''){
  for(const member of ctx.members){
   const x=next.payloads[member.id],old=x.events[date]||{};
   if(ctx.group&&x.events[date]&&!ccLegacyGroupRow(ctx,d,member.id,date))throw Error('Há um registro individual independente nesta data.');
-  if(!['absent','owed','teacher'].includes(status)&&Object.entries(x.events).some(([day,e])=>day!==date&&e.original===date&&!e.skip))throw Error('Corrija a reposição vinculada antes de alterar a falta original.');
+  if((ctx.group&&status==='absent'||!['absent','owed','teacher'].includes(status))&&Object.entries(x.events).some(([day,e])=>day!==date&&e.original===date&&!e.skip))throw Error('Corrija a reposição vinculada antes de alterar a falta original.');
   if(previousTo&&previousTo!==to){
    if(ccRegistered(ctx,member.id,previousTo))throw Error('O destino do reagendamento já tem aula cadastrada.');
    if(x.events[previousTo]?.rescheduled_from===date){if(ccIsHabitual(x,previousTo))x.events[previousTo]={skip:true};else delete x.events[previousTo];}
@@ -175,7 +176,7 @@ function ccStageRegisteredStatus(ctx,d,date,status,original='',to=''){
  }
  for(const member of ctx.members){
   const x=next.payloads[member.id],old=x.events[date]||{},row=state.rows.find(r=>r.id===member.id);
-  const effective=ctx.group&&status==='done'&&!registered.has(member.id)&&ccAbsent(row.status)?'absent':ctx.group&&ccAbsent(status)?'owed':status;
+  const effective=ctx.group&&status==='done'&&!registered.has(member.id)&&ccAbsent(row.status)?'absent':status;
   const event={...old,...shared,status:effective,...(ctx.group?{group_id:ctx.group.id,group_status:status}:{})};
   delete event.skip;if(!original)delete event.original;if(status!=='rescheduled')delete event.rescheduled_to;
   if(ctx.group){delete event.attendance_override;if(effective==='absent'&&status==='done')event.attendance_override='absent';}
