@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portal DC — Prévia de Recursos</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<button id="mobile-menu-btn" class="mobile-menu-btn" onclick="toggleMobileSidebar()">☰</button>
+<div id="sidebar-backdrop" class="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
+<div class="app-shell">
+  <div class="sidebar">
+    <div class="side-brand"><img class="logo" src="logo.png" alt="Logo"><div><span>D.C English Classes</span><small>Portal do aluno</small></div></div>
+    <div id="nav-container"></div>
+  </div>
+  <main class="main" id="main-content">
+    <div class="topline"><h1 id="preview-heading"></h1></div>
+    <p class="small-note">Prévia isolada da navegação real do Portal do Aluno. Nenhum dado de aluno é consultado.</p>
+    <div class="box"><p>Abra e feche Recursos e alterne entre os submenus para conferir a navegação.</p><label><input type="checkbox" id="preview-notification" style="width:auto;min-height:0"> Simular notificação de correção</label></div>
+  </main>
+</div>
+<script src="js/common.js"></script>
+<script>
+let section='vocab';
+const nav=document.getElementById('nav-container');
+const notification=document.getElementById('preview-notification');
+function renderPreview(){
+ nav.innerHTML=buildStudentTopNav('recursos',true,notification.checked?{recursos:1}:{},{resourceSection:section});
+ document.getElementById('preview-heading').textContent=t(section==='texto'?'recursos_texto':'recursos_vocab');
+}
+nav.addEventListener('click',event=>{
+ const link=event.target.closest('a');
+ if(!link)return;
+ event.preventDefault();
+ const target=new URL(link.href);
+ if(target.pathname.endsWith('/recursos.html')){
+  section=target.searchParams.get('s')==='texto'?'texto':'vocab';
+  renderPreview();closeMobileSidebar();
+ }
+});
+notification.addEventListener('change',renderPreview);
+renderPreview();
+</script>
+</body></html>

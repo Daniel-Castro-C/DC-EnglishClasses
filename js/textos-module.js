@@ -10,36 +10,7 @@
 (function () {
   'use strict';
 
-  // ---------- 1) ALUNO: sininho em "Recursos" ----------
-  if (typeof getNotificationCounts === 'function') {
-    const origCounts = window.getNotificationCounts;
-    window.getNotificationCounts = async function (studentId) {
-      const counts = await origCounts(studentId);
-      try {
-        const { count } = await sb.from('notifications')
-          .select('id', { count: 'exact', head: true })
-          .eq('student_id', studentId)
-          .eq('type', 'text_corrected')
-          .eq('read', false);
-        if (count) counts.recursos = count;
-      } catch (e) {
-        console.error('Erro ao buscar notificações de correção:', e);
-      }
-      return counts;
-    };
-  }
-
-  if (typeof buildStudentTopNav === 'function') {
-    const origNav = window.buildStudentTopNav;
-    window.buildStudentTopNav = function (activeKey, showGrammar, notifCounts) {
-      let html = origNav(activeKey, showGrammar, notifCounts);
-      if (notifCounts && notifCounts.recursos && typeof NOTIF_BELL_SVG !== 'undefined') {
-        // coloca o sininho dentro do item "Recursos" (o item é criado pelo recursos-module.js)
-        html = html.replace(/(onclick="window\.location\.href='recursos\.html'"><span>[^<]*<\/span>)/, '$1' + NOTIF_BELL_SVG);
-      }
-      return html;
-    };
-  }
+  // A contagem de notificações e o menu de Recursos são gerenciados em js/common.js.
 
   // ---------- 2) PROFESSOR: módulo "Textos para correção" ----------
   let pendingTotal = 0;

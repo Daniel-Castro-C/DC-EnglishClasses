@@ -130,3 +130,35 @@ test('Resources keeps vocabulary actions and exposes writing as submenu, not tab
   assert.match(html,/markAsUsed\(1\)/);
   assert.doesNotMatch(html,/role-switch|tabline/);
 });
+
+test('real student module load renders one Resources menu, keeps both submenus and the selected section in both languages',()=>{
+  const {ctx}=setup();
+  // In the browser global functions and window properties are the same binding.
+  vm.runInContext('window=globalThis;window.addEventListener=()=>{};document.createElement=()=>({});document.head={appendChild(){}}',ctx);
+  vm.runInContext(readFileSync('js/recursos-module.js','utf8'),ctx);
+  vm.runInContext(readFileSync('js/textos-module.js','utf8'),ctx);
+  for(const language of ['pt','en']){
+    vm.runInContext(`setLangLocal('${language}')`,ctx);
+    const render=vm.runInContext('buildStudentTopNav',ctx);
+    for(const page of ['home','perfil','aulas','gramatica','daniel','enviar','recursos']){
+      for(const section of ['vocab','texto']){
+        const nav=render(page,true,{recursos:2},{resourceSection:section});
+        const name=language==='pt'?'Recursos':'Resources';
+        assert.equal((nav.match(new RegExp('>'+name+'<','g'))||[]).length,1);
+        assert.equal((nav.match(/class="nav-resource-group"/g)||[]).length,1);
+        assert.equal((nav.match(/href="recursos\.html\?s=/g)||[]).length,2);
+        assert.doesNotMatch(nav,/onclick="window\.location\.href='recursos\.html'"/);
+        assert.ok(nav.slice(nav.indexOf('nav-resource-trigger'),nav.indexOf('</summary>')).includes(vm.runInContext('NOTIF_BELL_SVG',ctx)));
+        if(page==='recursos')assert.ok(nav.includes('href="recursos.html?s='+section+'" aria-current="page"'));
+      }
+    }
+  }
+});
+test('student notification counts include unread corrections in the single Resources menu',async()=>{
+  const {ctx}=setup();
+  const calls=[];
+  ctx.sb={from(table){calls.push(table);return {select(columns){calls.push(columns);return this},eq(key,value){calls.push([key,value]);if(key==='read')return Promise.resolve({data:[{type:'new_lesson'},{type:'daniel_answered'},{type:'text_corrected'},{type:'text_corrected'},{type:'unrelated'}]});return this}}}};
+  const counts=await vm.runInContext("getNotificationCounts('student-uid')",ctx);
+  assert.deepEqual(JSON.parse(JSON.stringify(counts)),{aulas:1,daniel:1,recursos:2});
+  assert.deepEqual(calls,['notifications','type',['student_id','student-uid'],['read',false]]);
+});
