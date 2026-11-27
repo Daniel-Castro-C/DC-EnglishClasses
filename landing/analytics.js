@@ -10,10 +10,12 @@
   const key='dc-analytics-'+kind, windowMs=30*60*1000;
   const endpoint='https://dgwbjgngewymzgedlzix.supabase.co/rest/v1/landing_visit_events';
   const apiKey='sb_publishable_Zlgeqn4PhdY11rZPD6i8-w_T42hrmgN';
+  const internalKey='dc-analytics-exclude-browser';
   let attempted=false;
   function record(){
     if(attempted||document.visibilityState==='hidden'||document.visibilityState==='prerender')return;
     attempted=true;
+    try{if(localStorage.getItem(internalKey)==='1')return;}catch(_){return;} // respect unavailable preference storage
     const stamp=Date.now().toString();
     try{
       const last=Number(sessionStorage.getItem(key)||0);
