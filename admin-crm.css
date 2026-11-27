@@ -34,7 +34,6 @@ body.admin-crm .crm-table td{padding:13px 10px}
 body.admin-crm .crm-time{font-weight:600;font-variant-numeric:tabular-nums}
 body.admin-crm .crm-kind{color:var(--crm-blue);font-size:12px}
 body.admin-crm .crm-kind.is-replacement{color:var(--amber)}
-body.admin-crm .crm-lower{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}
 body.admin-crm .crm-pending-row,.admin-crm .crm-history{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
 body.admin-crm .crm-pending-row>.crm-icon{color:var(--crm-blue)}
 body.admin-crm .crm-pending-text{flex:1;min-width:0}
@@ -52,7 +51,7 @@ body.admin-crm .crm-quick .crm-icon{color:var(--crm-blue)}
 body.admin-crm .crm-history time{font-size:12px;color:var(--text-soft);min-width:80px}
 body.admin-crm .crm-history i{height:8px;width:8px;border-radius:50%;background:var(--amber);flex:none}
 body.admin-crm .crm-history i.is-done{background:var(--sage)}
-@media(max-width:1100px){body.admin-crm .crm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}body.admin-crm .crm-kpis-three{grid-template-columns:repeat(3,minmax(0,1fr))}body.admin-crm .crm-quick{grid-template-columns:repeat(2,minmax(0,1fr))}body.admin-crm .crm-lower{grid-template-columns:1fr}}
+@media(max-width:1100px){body.admin-crm .crm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}body.admin-crm .crm-kpis-three{grid-template-columns:repeat(3,minmax(0,1fr))}body.admin-crm .crm-quick{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:860px){body.admin-crm .main{padding:70px 14px 20px}body.admin-crm .crm-panel{padding:14px}body.admin-crm .crm-kpi{padding:12px}body.admin-crm .crm-kpi strong{font-size:24px}}
 
 body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;margin:0;padding:6px 24px 6px 9px;font-size:12px;font-weight:500;border-radius:6px;background:var(--paper-card);color:var(--text-soft)}body.admin-crm .crm-quick-status[data-status="done"]{color:var(--sage);border-color:var(--sage)}body.admin-crm .crm-quick-status[data-status="owed"],body.admin-crm .crm-quick-status[data-status="teacher"]{color:var(--amber);border-color:var(--amber)}body.admin-crm .crm-quick-status[data-status="absent"]{color:var(--danger);border-color:var(--danger)}body.admin-crm .crm-quick-status:disabled{opacity:.8}body.admin-crm .crm-agenda-feedback{margin:12px 0 0}
@@ -158,9 +157,11 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .cc-unavailable-label{font-weight:600}
 .admin-crm .cc-unavailable-note{background:#e5e7eb;color:#303640;padding:8px 12px;border-radius:6px}
 
-/* Home: today's agenda and a compact, read-only monthly calendar. */
-.admin-crm .crm-agenda-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:16px;align-items:start}
-.admin-crm .crm-agenda-layout>.crm-panel{margin-bottom:0;padding:14px;min-width:0}
+/* Home: independent stacks avoid empty space below the shorter top card. */
+.admin-crm .crm-home-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-bottom:16px;align-items:start}
+.admin-crm .crm-home-column{display:flex;flex-direction:column;gap:16px;min-width:0}
+.admin-crm .crm-home-column>.crm-panel{margin-bottom:0;min-width:0}
+.admin-crm .crm-home-column>.crm-today-panel,.admin-crm .crm-home-column>.crm-month-panel{padding:14px}
 .admin-crm .crm-today-panel .crm-panel-head{flex-wrap:wrap}
 .admin-crm .crm-today-panel .crm-table td,.admin-crm .crm-today-panel .crm-table th{padding:8px 5px}
 .admin-crm .crm-today-panel .crm-row-actions{gap:2px}
@@ -181,7 +182,7 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .crm-month-class time{font-weight:600;color:var(--crm-blue);white-space:nowrap;flex:0 0 auto;font-variant-numeric:tabular-nums}
 .admin-crm .crm-month-class span{min-width:0;overflow-wrap:anywhere}
 .admin-crm .crm-month-feedback{margin:5px 0 0}
-@media(min-width:1180px){.admin-crm .crm-agenda-layout{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}}
+@media(min-width:1180px){.admin-crm .crm-home-layout{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}}
 @media(max-width:860px){.admin-crm .crm-month-nav{margin-left:0}}
 
 /* Today's date is unmistakable, without changing any lesson status colors. */

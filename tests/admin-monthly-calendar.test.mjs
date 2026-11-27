@@ -73,13 +73,17 @@ test('monthly navigation ignores stale asynchronous responses',async()=>{
  assert.equal(elements.get('.crm-month-content').innerHTML,rendered);
 });
 
-test('home and isolated preview share the side-by-side compact calendar layout',()=>{
+test('home and isolated preview use independently stacked columns without shared card rows',()=>{
  for(const path of ['js/admin.js','admin-home-calendar-preview.html']){
   const html=readFileSync(path,'utf8');
-  assert.match(html,/class="crm-agenda-layout">\s*<section class="crm-panel crm-today-panel">[\s\S]*?<section class="crm-panel crm-month-panel"[^>]*><\/section>\s*<\/div>\s*<div class="crm-lower">/);
+  assert.match(html,/class="crm-home-layout">\s*<div class="crm-home-column">\s*<section class="crm-panel crm-today-panel">[\s\S]*?<section class="crm-panel" id="crm-pendencias">[\s\S]*?<\/section>\s*<\/div>\s*<div class="crm-home-column">\s*<section class="crm-panel crm-month-panel"[^>]*><\/section>\s*<section class="crm-panel"><div class="crm-panel-head"><h3>Atividades recentes<\/h3>/);
+  assert.doesNotMatch(html,/class="crm-lower"|class="crm-agenda-layout"/);
  }
  const css=readFileSync('admin-crm.css','utf8');
- assert.match(css,/@media\(min-width:1180px\)\{\.admin-crm \.crm-agenda-layout\{grid-template-columns:minmax\(0,1\.05fr\) minmax\(0,1fr\)/);
+ assert.match(css,/\.crm-home-layout\{display:grid;grid-template-columns:minmax\(0,1fr\);gap:16px;[^}]*align-items:start/);
+ assert.match(css,/\.crm-home-column\{display:flex;flex-direction:column;gap:16px;min-width:0/);
+ assert.match(css,/\.crm-home-column>\.crm-panel\{margin-bottom:0;min-width:0/);
+ assert.match(css,/@media\(min-width:1180px\)\{\.admin-crm \.crm-home-layout\{grid-template-columns:minmax\(0,1\.05fr\) minmax\(0,1fr\)/);
  assert.match(css,/\.crm-month-grid\{[^}]*min-width:369px/);
  assert.match(css,/\.crm-month-day\{min-height:45px/);
 });
