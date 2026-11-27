@@ -207,6 +207,7 @@ async function renderHome(){
     <section class="crm-panel crm-today-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3><button class="crm-link" onclick="ccGlobalView()">Ver agenda completa →</button></div>
     <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${crmTodayRowsHtml(classes)||(groupLoadError?'<tr><td colspan="5" class="crm-empty">Agenda indisponível.</td></tr>':'<tr><td colspan="5" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>')}</tbody></table></div><p id="crm-agenda-feedback" class="crm-muted crm-agenda-feedback" role="status">${groupLoadError?'Não foi possível carregar as turmas. Reabra a Home para tentar novamente.':agendaLoadError?'Não foi possível consultar as aulas cadastradas. O status será verificado antes de salvar.':'Altere o status diretamente na tabela. Para ajustar a frequência individual de uma turma, abra o calendário.'}</p></section>
       <section class="crm-panel" id="crm-pendencias"><div class="crm-panel-head"><h3>Central de pendências</h3><span class="crm-muted" id="report-pending-count">—</span></div><div id="crm-other-pending">${crmOtherPending()}</div><div id="report-pending-list" aria-live="polite"><p class="crm-empty">Verificando relatórios...</p></div><div id="tg-home-pending">${tgPendingHtml()}</div></section>
+      <section class="crm-panel crm-plan-panel" id="crm-weekly-planning" aria-label="Planejamento semanal"></section>
       </div>
       <div class="crm-home-column">
         <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
@@ -216,6 +217,7 @@ async function renderHome(){
   `;
   renderRecentAdminActivity();
   crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),groupsReady);
+  crmMountWeeklyPlanning(document.getElementById('crm-weekly-planning'),groupsReady);
   try {
     await groupsReady;
     const pendencies = await loadReportPendencies();

@@ -17,6 +17,7 @@
    <div class="crm-pending-row"><div class="crm-pending-text"><strong>Helena</strong><small>Material do Aluno</small></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn-ghost" onclick="previewAction()">Abrir</button><button class="resource-action" onclick="previewAction()">Descartar pendência</button></div></div>
    <div class="crm-pending-row"><div class="crm-pending-text"><strong>Laura e Rafael</strong><small>Reposição coletiva · 19/11/2026</small><div style="margin-top:8px"><button class="btn-ghost" onclick="previewAction()">Agendar ou concluir reposição</button></div></div></div>
   </section>
+  <section class="crm-panel crm-plan-panel" id="crm-weekly-planning" aria-label="Planejamento semanal"></section>
   </div>
   <div class="crm-home-column">
    <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
@@ -34,7 +35,7 @@ const escapeHtml=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 const students=[{id:'marina',full_name:'Marina',lesson_weekday:4,lesson_time:'18:00'},{id:'bruno',full_name:'Bruno',lesson_weekday:1,lesson_time:'18:00'},{id:'helena',full_name:'Helena',lesson_weekday:3,lesson_time:'19:00'},{id:'caio',full_name:'Caio',lesson_weekday:2,lesson_time:'20:00'},{id:'laura',full_name:'Laura',lesson_weekday:4,lesson_time:'21:00'},{id:'rafael',full_name:'Rafael',lesson_weekday:4,lesson_time:'21:00'}];
 const adminToday=()=>({date:'2026-11-26'});
 </script>
-<script src="js/admin-calendar-test.js"></script><script src="js/admin-turmas-preview.js"></script><script src="js/admin-monthly-calendar.js"></script><script src="js/admin-vocabulary.js"></script>
+<script src="js/admin-calendar-test.js"></script><script src="js/admin-turmas-preview.js"></script><script src="js/admin-monthly-calendar.js"></script><script src="js/admin-calendar-lessons.js"></script><script src="js/admin-weekly-planning.js"></script><script src="js/admin-vocabulary.js"></script>
 <script>
 ccCloudReady=true;
 tgGroups=[{id:'demo-group',members:['laura','rafael'],start:'2026-11-01',days:'4',time:'21:00',calendar_events:{},calendarLessons:[]}];
@@ -50,11 +51,24 @@ const demoWords=[
  {answer:'uso',updated_at:'2026-11-24T15:00:00Z',word_of_day:{term:'confidence',definition:'Belief in your ability to succeed.',example:'Practice builds confidence.'}}
 ];
 const sb={from(){return {select(){return this},eq(_,id){this.id=id;return this},async order(){return {data:this.id==='rafael'?[]:this.id==='laura'?demoWords.slice(1):demoWords}}}}};
+const previewPlans=new Map(),previewFiles=new Map();
+const previewPlan={subject_type:'student',subject_id:'marina',lesson_date:'2026-11-26',topic:'Managing different personalities',notes:'Debate e vocabulário sobre liderança.',ready:true,files:[],revision:1};
+previewPlans.set(crmPlanKey(previewPlan),previewPlan);
+const previewPlanRepo={
+ async list(start){return [...previewPlans.values()].filter(p=>p.lesson_date>=start&&p.lesson_date<=crmPlanShift(start,6));},
+ async get(p){return previewPlans.get(crmPlanKey(p))||null;},
+ async save(p,previous){const saved={...p,revision:(previous?.revision||0)+1};previewPlans.set(crmPlanKey(p),saved);return saved;},
+ async remove(p){previewPlans.delete(crmPlanKey(p));},
+ async upload(path,file){previewFiles.set(path,file);},
+ async download(path){const file=previewFiles.get(path);if(!file)throw Error('Arquivo indisponível');return file;},
+ async deleteFiles(paths){for(const path of paths)previewFiles.delete(path);}
+};
 function previewRefreshHome(){
  const rows=crmGroupDailyAgenda(ccAgenda(adminToday(),null,true));
  document.getElementById('preview-today-count').textContent=rows.length;
  document.getElementById('preview-today-rows').innerHTML=crmTodayRowsHtml(rows);
  crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),Promise.resolve(),async()=>[],adminToday().date);
+ crmMountWeeklyPlanning(document.getElementById('crm-weekly-planning'),Promise.resolve(),previewPlanRepo,async()=>[],adminToday().date,()=>{alert('No portal, este botão abre a data correspondente no calendário individual ou da turma.');});
 }
 function previewHome(){
  currentView='home';currentStudent=null;document.getElementById('main-content').innerHTML=previewHomeMarkup;previewRefreshHome();
