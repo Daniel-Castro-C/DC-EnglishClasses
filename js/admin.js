@@ -202,14 +202,16 @@ async function renderHome(){
      ${crmKpi('Reposições pendentes',students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+ccPending(ccData(s)),0),'refresh','crm-replacement-stat')}
      ${crmKpi('Pendências de aulas e relatórios','—','file','report-pending-stat')}
     </section>
-    <div class="crm-agenda-layout">
+    <div class="crm-home-layout">
+      <div class="crm-home-column">
     <section class="crm-panel crm-today-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3><button class="crm-link" onclick="ccGlobalView()">Ver agenda completa →</button></div>
     <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${crmTodayRowsHtml(classes)||(groupLoadError?'<tr><td colspan="5" class="crm-empty">Agenda indisponível.</td></tr>':'<tr><td colspan="5" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>')}</tbody></table></div><p id="crm-agenda-feedback" class="crm-muted crm-agenda-feedback" role="status">${groupLoadError?'Não foi possível carregar as turmas. Reabra a Home para tentar novamente.':agendaLoadError?'Não foi possível consultar as aulas cadastradas. O status será verificado antes de salvar.':'Altere o status diretamente na tabela. Para ajustar a frequência individual de uma turma, abra o calendário.'}</p></section>
-    <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
-    </div>
-    <div class="crm-lower">
       <section class="crm-panel" id="crm-pendencias"><div class="crm-panel-head"><h3>Central de pendências</h3><span class="crm-muted" id="report-pending-count">—</span></div><div id="crm-other-pending">${crmOtherPending()}</div><div id="report-pending-list" aria-live="polite"><p class="crm-empty">Verificando relatórios...</p></div><div id="tg-home-pending">${tgPendingHtml()}</div></section>
+      </div>
+      <div class="crm-home-column">
+        <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
       <section class="crm-panel"><div class="crm-panel-head"><h3>Atividades recentes</h3></div><div id="admin-recent-activity-list" aria-live="polite"><p class="crm-empty">Carregando atividades...</p></div></section>
+      </div>
     </div>
   `;
   renderRecentAdminActivity();
