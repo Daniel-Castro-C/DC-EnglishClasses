@@ -34,3 +34,11 @@ body,input,select,textarea,button{font-family:'Manrope',system-ui,sans-serif}
 .visitor-tour-progress i.on{background:#B69A69}
 .visitor-tour-actions button{border-color:#BFD1C4;color:#1E3D2F}
 .visitor-readonly-alert{background:#1E3D2F}
+
+/* Dark-mode contrast for soft tiles, input hints and action surfaces. */
+body.dark-mode .student-page{--sp-soft:#263D30;--sp-accent-soft:#345440;--sp-accent:#C1DAC8;--sp-hero:#F0F5F1}
+body.dark-mode .student-material-tile{background:#263D30;border-color:#425D4B}
+body.dark-mode .student-material-tile:hover,body.dark-mode .student-material-dropdown[open] .student-material-tile{background:#345440}
+body.dark-mode .student-material-text strong{color:#F0F5F1}
+body.dark-mode .student-material-text small,body.dark-mode .student-material-caret{color:#BCCFC1}
+body.dark-mode ::placeholder{color:#9EB5A5;opacity:1}
