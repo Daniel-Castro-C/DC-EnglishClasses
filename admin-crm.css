@@ -237,3 +237,24 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .crm-plan-file small{color:var(--text-soft)}
 .admin-crm .crm-plan-file select{width:auto;max-width:100%;margin:0;min-height:30px;font-size:11px}
 .admin-crm .crm-plan-actions,.admin-crm .cc-plan-import{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+/* Overview: gentle blue emphasis and consistent action columns. */
+body.admin-crm .crm-today-panel{background:color-mix(in srgb,var(--paper-card) 62%,var(--sky-soft));border-color:color-mix(in srgb,var(--line) 65%,var(--crm-blue));border-top:3px solid var(--crm-blue)}
+body.admin-crm.dark-mode .crm-today-panel{background:color-mix(in srgb,var(--paper-card) 91%,var(--crm-blue))}
+.admin-crm #crm-pendencias{container-type:inline-size}
+body.admin-crm #crm-pendencias .crm-pending-row{align-items:flex-start;gap:10px}
+.admin-crm #crm-pendencias .crm-pending-row>.crm-icon{margin-top:3px}
+.admin-crm .crm-pending-label{min-width:0;overflow-wrap:anywhere}
+.admin-crm .crm-pending-header,.admin-crm .crm-pending-member{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.admin-crm .crm-pending-member{margin-top:8px;font-size:13px}
+.admin-crm .crm-pending-member-name{min-width:0;overflow-wrap:anywhere}
+.admin-crm .crm-pending-actions{display:grid;grid-template-columns:126px 142px;gap:6px;align-items:stretch;justify-content:end}
+.admin-crm .crm-pending-actions button,.admin-crm .crm-pending-group-action button{font-size:12px;line-height:1.3;padding:6px 8px;margin:0;min-height:32px;white-space:normal;background:var(--paper-card)}
+.admin-crm .crm-pending-group-action{display:flex;justify-content:flex-end;margin-top:8px}
+.admin-crm .crm-pending-group-action button{width:274px;max-width:100%}
+@container (max-width:430px){
+ .admin-crm .crm-pending-header,.admin-crm .crm-pending-member{grid-template-columns:minmax(0,1fr)}
+ .admin-crm .crm-pending-actions{grid-template-columns:minmax(0,126px) minmax(0,142px)}
+}
+.admin-crm .crm-activity-panel{max-width:960px}
+.admin-crm .crm-activity-panel>.crm-muted{margin:0 0 16px}

@@ -2,7 +2,7 @@
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portal DC — Visão geral (prévia)</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="admin-crm.css"><link rel="icon" href="logo.png"></head>
 <body class="admin-crm">
 <div class="app-shell">
- <aside class="sidebar"><div class="side-brand"><img class="logo" src="logo.png" alt="Logo"><div><span>D.C English Classes</span><small>Painel do professor</small></div></div><div class="nav-label">Prévia da Home</div><div style="padding:12px;color:var(--text-soft);font-size:12px">Visão geral</div></aside>
+ <aside class="sidebar"><div class="side-brand"><img class="logo" src="logo.png" alt="Logo"><div><span>D.C English Classes</span><small>Painel do professor</small></div></div><div class="nav-label">GESTÃO</div><div id="preview-nav"></div></aside>
  <main class="main" id="main-content">
   <header class="crm-heading"><div><h1>Visão geral</h1><p>Painel de gestão acadêmica</p></div><span class="crm-avatar crm-avatar-small">DC</span></header>
   <p class="crm-muted">Prévia isolada · Dados fictícios, sem conexão com o banco de produção.</p>
@@ -12,36 +12,30 @@
   <div class="crm-home-layout">
   <div class="crm-home-column">
   <section class="crm-panel crm-today-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody id="preview-today-rows"></tbody></table></div><p class="crm-muted crm-agenda-feedback">Altere o status diretamente na tabela. Para ajustar a frequência individual de uma turma, abra o calendário.</p></section>
-  <section class="crm-panel" id="crm-pendencias"><div class="crm-panel-head"><h3>Central de pendências</h3><span class="crm-muted">3</span></div>
-   <div class="crm-pending-row"><div class="crm-pending-text"><strong>Bruno</strong><small>Reposição pendente · 23/11/2026</small></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn-ghost" onclick="previewAction()">Abrir</button><button class="resource-action" onclick="previewAction()">Descartar pendência</button></div></div>
-   <div class="crm-pending-row"><div class="crm-pending-text"><strong>Helena</strong><small>Material do Aluno</small></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn-ghost" onclick="previewAction()">Abrir</button><button class="resource-action" onclick="previewAction()">Descartar pendência</button></div></div>
-   <div class="crm-pending-row"><div class="crm-pending-text"><strong>Laura e Rafael</strong><small>Reposição coletiva · 19/11/2026</small><div style="margin-top:8px"><button class="btn-ghost" onclick="previewAction()">Agendar ou concluir reposição</button></div></div></div>
-  </section>
-  <section class="crm-panel crm-plan-panel" id="crm-weekly-planning" aria-label="Planejamento semanal"></section>
+  <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
   </div>
   <div class="crm-home-column">
-   <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
-   <section class="crm-panel"><div class="crm-panel-head"><h3>Atividades recentes</h3></div>
-    <div class="admin-activity-row"><span class="admin-activity-marker"></span><div><strong>Laura</strong><small>Visualizou material</small></div><time>26/11/2026, 20:37</time></div>
-    <div class="admin-activity-row"><span class="admin-activity-marker"></span><div><strong>Rafael</strong><small>Acessou o portal</small></div><time>26/11/2026, 20:30</time></div>
-    <div class="admin-activity-row"><span class="admin-activity-marker"></span><div><strong>Marina</strong><small>Acessou o portal</small></div><time>26/11/2026, 19:58</time></div>
-   </section>
+   <section class="crm-panel" id="crm-pendencias"><div class="crm-panel-head"><h3>Central de pendências</h3><span class="crm-muted">3</span></div><div id="preview-pendencies"></div></section>
+   <section class="crm-panel crm-plan-panel" id="crm-weekly-planning" aria-label="Planejamento semanal"></section>
   </div>
   </div>
  </main>
 </div>
 <script>
 const escapeHtml=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const students=[{id:'marina',full_name:'Marina',lesson_weekday:4,lesson_time:'18:00'},{id:'bruno',full_name:'Bruno',lesson_weekday:1,lesson_time:'18:00'},{id:'helena',full_name:'Helena',lesson_weekday:3,lesson_time:'19:00'},{id:'caio',full_name:'Caio',lesson_weekday:2,lesson_time:'20:00'},{id:'laura',full_name:'Laura',lesson_weekday:4,lesson_time:'21:00'},{id:'rafael',full_name:'Rafael',lesson_weekday:4,lesson_time:'21:00'}];
+const students=[{id:'marina',full_name:'Marina Santos',lesson_weekday:4,lesson_time:'18:00'},{id:'bruno',full_name:'Bruno Mendes',lesson_weekday:1,lesson_time:'18:00'},{id:'helena',full_name:'Helena Costa',lesson_weekday:3,lesson_time:'19:00'},{id:'caio',full_name:'Caio Ribeiro',lesson_weekday:2,lesson_time:'20:00'},{id:'laura',full_name:'Laura Ferreira',lesson_weekday:4,lesson_time:'21:00'},{id:'rafael',full_name:'Rafael Almeida',lesson_weekday:4,lesson_time:'21:00'}];
 const adminToday=()=>({date:'2026-11-27'});
+const formatDate=date=>date.split('-').reverse().join('/');
 </script>
-<script src="js/admin-calendar-test.js"></script><script src="js/admin-turmas-preview.js"></script><script src="js/admin-monthly-calendar.js"></script><script src="js/admin-calendar-lessons.js"></script><script src="js/admin-weekly-planning.js"></script><script src="js/admin-vocabulary.js"></script>
+<script src="js/admin-calendar-test.js"></script><script src="js/admin-turmas-preview.js"></script><script src="js/admin-monthly-calendar.js"></script><script src="js/admin-calendar-lessons.js"></script><script src="js/admin-weekly-planning.js"></script><script src="js/admin-vocabulary.js"></script><script src="js/admin-home-ui.js"></script>
 <script>
 ccCloudReady=true;
-tgGroups=[{id:'demo-group',members:['laura','rafael'],start:'2026-11-01',days:'4',time:'21:00',calendar_events:{},calendarLessons:[]}];
+tgGroups=[{id:'demo-group',name:'Laura e Rafael',members:['laura','rafael'],start:'2026-11-01',days:'4',time:'21:00',calendar_events:{},calendarLessons:[]}];
 ccCloud.set('global',{payload:[{start:'2026-12-18',end:'2027-01-03',status:'break'}]});
 ccCloud.set('caio',{payload:{start:'2026-11-01',weekdays:'2',time:'20:00',events:{'2026-11-26':{status:'done',time:'19:00'}}}});
 ccCloud.set('bruno',{payload:{start:'2026-11-01',weekdays:'1',time:'18:00',events:{'2026-11-16':{status:'rescheduled',rescheduled_to:'2026-11-17'},'2026-11-17':{status:'planned',time:'18:30',rescheduled_from:'2026-11-16'}}}});
+ccCloud.set('helena',{payload:{start:'2026-11-01',weekdays:'3',time:'19:00',events:{'2026-11-27':{status:'planned',time:'20:00',original:'2026-11-23'}}}});
+tgGroups[0].calendar_events['2026-11-27']={status:'planned',time:'21:00'};
 const previewHomeMarkup=document.getElementById('main-content').innerHTML;
 let currentStudent=null,currentView='home',currentTab='resumo',currentLessons=[];
 const crmInboxError=false,crmInboxFor=()=>({questions:[],materials:[],texts:[]}),crmCountBadge=()=>'';
@@ -63,7 +57,32 @@ const previewPlanRepo={
  async download(path){const file=previewFiles.get(path);if(!file)throw Error('Arquivo indisponível');return file;},
  async deleteFiles(paths){for(const path of paths)previewFiles.delete(path);}
 };
+function previewNav(){
+ document.getElementById('preview-nav').innerHTML=[['home','Visão geral','dashboard','previewHome()'],['alunos','Alunos','users','previewAction()'],['turmas','Turmas','users','previewAction()'],['agenda','Agenda','calendar','previewAction()'],['atividades','Atividades recentes','activity','previewActivity()']].map(([key,label,icon,action])=>'<button class="nav-item crm-nav'+(currentView===key?' active':'')+'" onclick="'+action+'">'+crmIcon(icon)+'<span class="nav-item-label">'+label+'</span></button>').join('');
+}
+const previewLogs=[
+ {student_id:'laura',action:'preview_material',created_at:'2026-11-26T23:37:00Z'},
+ {student_id:'rafael',action:'login',created_at:'2026-11-26T23:30:00Z'},
+ {student_id:'marina',action:'preview_material',created_at:'2026-11-26T22:58:00Z'},
+ {student_id:'helena',action:'download_material',created_at:'2026-11-26T22:01:00Z'}
+];
+function previewActivity(){
+ currentView='atividades';currentStudent=null;previewNav();
+ document.getElementById('main-content').innerHTML=crmActivityPageHtml('previewActivity()');
+ document.getElementById('admin-recent-activity-list').innerHTML=crmActivityRows(previewLogs,students);
+}
+function previewPendingButton(label){return '<button class="btn-ghost" onclick="previewAction()">'+label+'</button>';}
 function previewRefreshHome(){
+ const discard=()=>'<button class="resource-action" onclick="previewAction()">Descartar pendência</button>';
+ const row=(icon,title,detail)=>crmPendingRow(icon,title,detail,crmPendingActions(previewPendingButton('Abrir'),discard()));
+ document.getElementById('preview-pendencies').innerHTML=
+  row('refresh','Bruno Mendes','Reposição pendente · 23/11/2026')+
+  row('message','Helena Costa','Material do Aluno')+
+  crmPendingRow('refresh','Laura e Rafael','Reposição coletiva · 19/11/2026','',
+    crmPendingMember('Laura Ferreira','',discard())+crmPendingMember('Rafael Almeida','',discard())+
+    '<div class="crm-pending-group-action">'+previewPendingButton('Agendar ou concluir reposição')+'</div>')+
+  crmGroupedLessons(['laura','rafael','caio'].map((id,i)=>({studentName:students.find(s=>s.id===id).full_name,lesson:{id:i+1,student_id:id,group_id:i<2?'demo-group':null,lesson_date:'2026-11-26'},missingLesson:false})));
+
  const rows=crmGroupDailyAgenda(ccAgenda(adminToday(),null,true));
  document.getElementById('preview-today-count').textContent=rows.length;
  document.getElementById('preview-today-rows').innerHTML=crmTodayRowsHtml(rows);
@@ -71,11 +90,11 @@ function previewRefreshHome(){
  crmMountWeeklyPlanning(document.getElementById('crm-weekly-planning'),Promise.resolve(),previewPlanRepo,async()=>[],adminToday().date,()=>{alert('No portal, este botão abre a data correspondente no calendário individual ou da turma.');});
 }
 function previewHome(){
- currentView='home';currentStudent=null;document.getElementById('main-content').innerHTML=previewHomeMarkup;previewRefreshHome();
+ currentView='home';currentStudent=null;previewNav();document.getElementById('main-content').innerHTML=previewHomeMarkup;previewRefreshHome();
 }
 function openStudent(id){
  currentStudent=students.find(s=>s.id===id);if(!currentStudent)return;
- currentView='student';currentTab='resumo';
+ currentView='student';currentTab='resumo';previewNav();
  currentLessons=Array.from({length:6},(_,i)=>({lesson_date: ['2026-10-22','2026-10-29','2026-11-05','2026-11-12','2026-11-19','2026-11-26'][i],title:'Class #'+(i+1)}));
  previewProfile();
 }
@@ -89,6 +108,7 @@ function switchTab(tab){
  if(tab!=='resumo'&&tab!=='vocab'){previewAction();return;}
  currentTab=tab;previewProfile();
 }
+const openPendingReport=()=>previewAction(),dismissReportPending=()=>previewAction();
 function previewAction(){alert('Ação disponível no portal real. Esta é uma prévia com dados fictícios.');}
 ccQuickSave=(select)=>{select.dataset.status=select.value;};
 ccQuickGroupSave=(select,id,date)=>{

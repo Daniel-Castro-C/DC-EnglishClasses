@@ -39,12 +39,13 @@ function crmMonthlyEntries(month,registeredLessons){
    // One line per collective appointment, listing each participating student once.
    const key=group?'group:'+group.id+'|'+time:'student:'+student.id+'|'+time;
    if(!entries.has(key))entries.set(key,{time,names:[]});
-   entries.get(key).names.push(student.full_name||student.email||'Aluno sem nome');
+   entries.get(key).names.push(student.full_name?.trim()||'Aluno sem nome');
   }
   result.set(date,[...entries.values()].sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99')||a.names[0].localeCompare(b.names[0],'pt-BR')));
  }
  return result;
 }
+function crmMonthlyFirstName(name){return String(name||'').trim().split(/\s+/)[0]||'Aluno';}
 function crmMonthlyGrid(month,entries,today){
  const {days,offset}=crmMonthBounds(month);
  const weekdays=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -55,7 +56,7 @@ function crmMonthlyGrid(month,entries,today){
   if(day<1||day>days)return '<div class="crm-month-day is-outside" aria-hidden="true"></div>';
   const date=month+'-'+String(day).padStart(2,'0');
   return '<div class="crm-month-day'+(date===today?' is-today':'')+'"'+(date===today?' aria-current="date"':'')+'><div class="crm-month-day-number">'+day+'</div>'+
-   (entries.get(date)||[]).map(e=>'<div class="crm-month-class"><time'+(e.time?' datetime="'+e.time+'"':'')+'>'+escapeHtml(e.time||'—')+'</time><span>'+e.names.map(escapeHtml).join(' · ')+'</span></div>').join('')+'</div>';
+   (entries.get(date)||[]).map(e=>'<div class="crm-month-class"><time'+(e.time?' datetime="'+e.time+'"':'')+'>'+escapeHtml(e.time||'—')+'</time><span>'+e.names.map(name=>escapeHtml(crmMonthlyFirstName(name))).join(' · ')+'</span></div>').join('')+'</div>';
  }).join('')+'</div></div>';
 }
 async function crmFetchMonthlyLessons(month){

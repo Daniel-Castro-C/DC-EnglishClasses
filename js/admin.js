@@ -100,7 +100,7 @@ async function crmRefreshIndicators(){
   if(nav)nav.innerHTML=crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas');
 }
 function renderNav(){
- const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['turmas','Turmas','users','tgOpen()'],['agenda','Agenda','calendar','ccGlobalView()'],['controle','Controle de aulas','chart','ccOverview()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['materiais-busca','Buscador de materiais','file','crmMaterialSearch()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
+ const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['turmas','Turmas','users','tgOpen()'],['agenda','Agenda','calendar','ccGlobalView()'],['atividades','Atividades recentes','activity','openRecentAdminActivity()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['materiais-busca','Buscador de materiais','file','crmMaterialSearch()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
  document.getElementById('nav-container').innerHTML=groups.map(([label,items])=>'<div class="nav-label">'+label+'</div>'+items.map(([key,name,icon,action])=>{const active=currentView===key||(key==='alunos'&&currentView==='student');return '<button type="button" class="nav-item crm-nav'+(active?' active':'')+'" onclick="'+escapeHtml(action)+'">'+crmIcon(icon)+'<span class="nav-item-label">'+name+'</span>'+(key==='daniel'&&danielPendingTotal?'<span class="pill">'+danielPendingTotal+'</span>':'')+(key==='alunos'?'<span data-crm-nav-inbox>'+crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas')+'</span>':'')+'</button>'}).join('')).join('');
 }
 function filterAdminStudentNav(query){
@@ -206,16 +206,14 @@ async function renderHome(){
       <div class="crm-home-column">
     <section class="crm-panel crm-today-panel"><div class="crm-panel-head"><h3>Agenda de hoje</h3><button class="crm-link" onclick="ccGlobalView()">Ver agenda completa →</button></div>
     <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Horário</th><th>Aluno</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${crmTodayRowsHtml(classes)||(groupLoadError?'<tr><td colspan="5" class="crm-empty">Agenda indisponível.</td></tr>':'<tr><td colspan="5" class="crm-empty">Nenhuma aula prevista para hoje.</td></tr>')}</tbody></table></div><p id="crm-agenda-feedback" class="crm-muted crm-agenda-feedback" role="status">${groupLoadError?'Não foi possível carregar as turmas. Reabra a Home para tentar novamente.':agendaLoadError?'Não foi possível consultar as aulas cadastradas. O status será verificado antes de salvar.':'Altere o status diretamente na tabela. Para ajustar a frequência individual de uma turma, abra o calendário.'}</p></section>
+      <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
+      </div>
+      <div class="crm-home-column">
       <section class="crm-panel" id="crm-pendencias"><div class="crm-panel-head"><h3>Central de pendências</h3><span class="crm-muted" id="report-pending-count">—</span></div><div id="crm-other-pending">${crmOtherPending()}</div><div id="report-pending-list" aria-live="polite"><p class="crm-empty">Verificando relatórios...</p></div><div id="tg-home-pending">${tgPendingHtml()}</div></section>
       <section class="crm-panel crm-plan-panel" id="crm-weekly-planning" aria-label="Planejamento semanal"></section>
       </div>
-      <div class="crm-home-column">
-        <section class="crm-panel crm-month-panel" id="crm-month-calendar" aria-label="Calendário mensal"></section>
-      <section class="crm-panel"><div class="crm-panel-head"><h3>Atividades recentes</h3></div><div id="admin-recent-activity-list" aria-live="polite"><p class="crm-empty">Carregando atividades...</p></div></section>
-      </div>
     </div>
   `;
-  renderRecentAdminActivity();
   crmMountMonthlyCalendar(document.getElementById('crm-month-calendar'),groupsReady);
   crmMountWeeklyPlanning(document.getElementById('crm-weekly-planning'),groupsReady);
   try {
@@ -241,6 +239,14 @@ async function renderHome(){
 }
 
 
+function openRecentAdminActivity(){
+  currentStudent = null;
+  currentView = 'atividades';
+  renderNav();
+  document.getElementById('main-content').innerHTML = crmActivityPageHtml('openRecentAdminActivity()');
+  return renderRecentAdminActivity();
+}
+
 async function renderRecentAdminActivity(){
   const target = document.getElementById('admin-recent-activity-list');
   if (!target) return;
@@ -248,27 +254,15 @@ async function renderRecentAdminActivity(){
     let query = sb.from('activity_log')
       .select('student_id, action, created_at')
       .order('created_at', { ascending: false })
-      .limit(6);
+      .limit(50);
     if (teacherTestProfile) query = query.neq('student_id', teacherTestProfile.id);
     const { data, error } = await query;
     if (error) throw error;
-    if (currentView !== 'home' || !target.isConnected) return;
-    if (!data || !data.length) {
-      target.innerHTML = '<p class="dashboard-muted">Ainda não há atividades registradas.</p>';
-      return;
-    }
-    const names = new Map(students.map(s => [s.id, s.full_name || s.email]));
-    target.innerHTML = data.map(log => {
-      const date = new Date(log.created_at);
-      const when = Number.isNaN(date.getTime()) ? '' : date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
-      const action = ACTIVITY_LABELS[log.action] || log.action;
-      return '<div class="admin-activity-row"><span class="admin-activity-marker" aria-hidden="true"></span>' +
-        '<div><strong>' + escapeHtml(names.get(log.student_id) || 'Aluno') + '</strong>' +
-        '<small>' + escapeHtml(action) + '</small></div><time>' + escapeHtml(when) + '</time></div>';
-    }).join('');
+    if (currentView !== 'atividades' || !target.isConnected) return;
+    target.innerHTML = crmActivityRows(data || [], students);
   } catch (error) {
     console.error('Erro ao carregar atividades recentes:', error);
-    if (target.isConnected) target.innerHTML = '<p class="dashboard-muted">Não foi possível carregar as atividades.</p>';
+    if (target.isConnected) target.innerHTML = '<p class="dashboard-muted">Não foi possível carregar as atividades. Clique em Atualizar para tentar novamente.</p>';
   }
 }
 
@@ -1069,14 +1063,6 @@ async function deleteQuestionByAdmin(questionId){
   renderNav();
 }
 
-const ACTIVITY_LABELS = {
-  login: 'Acessou o portal',
-  download_material: 'Baixou um material de aula',
-  download_grammar: 'Baixou um material de gramática',
-  material_request: 'Enviou um pedido de material',
-  daniel_question: 'Fez uma pergunta ao Daniel'
-};
-
 async function renderAtividadeTab(){
   document.getElementById('tab-content').innerHTML = `<div class="empty-state">Carregando atividades...</div>`;
 
@@ -1837,10 +1823,4 @@ function crmEditLesson(id){
 function crmCompletedLocalCount(){
  const dates=new Set(currentLessons.map(l=>l.lesson_date).filter(Boolean));
  return currentLessons.filter(l=>!l.calendar_status||l.calendar_status==='done').length+ccManualDoneDates(ccData(currentStudent)).filter(d=>!dates.has(d)).length;
-}
-
-function crmGroupedLessons(pendencies){
- const groups=new Map();
- for(const p of pendencies){const l=p.lesson,g=tgGroups.find(x=>x.id===l.group_id);const key=g&&l.lesson_date?g.id+'|'+l.lesson_date+'|'+(p.missingLesson?'missing':'report'):'single|'+(l.id||l.student_id+'|'+l.lesson_date);if(!groups.has(key))groups.set(key,{g,rows:[]});groups.get(key).rows.push(p);}
- return [...groups.values()].map(({g,rows})=>{const first=rows[0],l=first.lesson;return '<div class="crm-pending-row">'+crmIcon('file')+'<div class="crm-pending-text"><strong>'+escapeHtml(g?.name||first.studentName)+'</strong><small>'+ (first.missingLesson?'Cadastro da aula e relatório pendentes':'Relatório pendente')+' · '+escapeHtml(l.lesson_date?formatDate(l.lesson_date):l.title)+(g?' · '+rows.length+' de '+g.members.length+' alunos':'')+'</small>'+rows.map(({lesson,studentName,missingLesson})=>'<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px">'+(g?'<span>'+escapeHtml(studentName)+'</span>':'')+(missingLesson?'<button class="btn-ghost" onclick="'+escapeAttr(g?"tgOpenMissing('"+g.id+"','"+lesson.lesson_date+"')":"openMissingLesson('"+lesson.student_id+"','"+lesson.lesson_date+"')")+'">Cadastrar aula</button>'+crmDismissButton(lesson.student_id,'missing:'+lesson.lesson_date):'<button class="btn-ghost" onclick="openPendingReport(&quot;'+lesson.student_id+'&quot;,&quot;'+lesson.id+'&quot;)">Adicionar relatório</button><button class="resource-action" onclick="dismissReportPending(&quot;'+lesson.id+'&quot;)">Descartar pendência</button>')+'</div>').join('')+'</div></div>';}).join('')||'<div class="small-note">Nenhuma aula realizada aguarda cadastro ou relatório.</div>';
 }

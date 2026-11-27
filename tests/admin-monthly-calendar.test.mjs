@@ -76,7 +76,9 @@ test('monthly navigation ignores stale asynchronous responses',async()=>{
 test('home and isolated preview use independently stacked columns without shared card rows',()=>{
  for(const path of ['js/admin.js','admin-home-calendar-preview.html']){
   const html=readFileSync(path,'utf8');
-  assert.match(html,/class="crm-home-layout">\s*<div class="crm-home-column">\s*<section class="crm-panel crm-today-panel">[\s\S]*?<section class="crm-panel" id="crm-pendencias">[\s\S]*?<\/section>\s*<\/div>\s*<div class="crm-home-column">\s*<section class="crm-panel crm-month-panel"[^>]*><\/section>\s*<section class="crm-panel"><div class="crm-panel-head"><h3>Atividades recentes<\/h3>/);
+  assert.match(html,/class="crm-home-layout">\s*<div class="crm-home-column">\s*<section class="crm-panel crm-today-panel">[\s\S]*?<section class="crm-panel crm-month-panel"[^>]*><\/section>\s*<\/div>\s*<div class="crm-home-column">\s*<section class="crm-panel" id="crm-pendencias">[\s\S]*?<section class="crm-panel crm-plan-panel"[^>]*><\/section>/);
+  const layout=html.slice(html.indexOf('class="crm-home-layout"'),html.indexOf('class="crm-panel crm-plan-panel"'));
+  assert.doesNotMatch(layout,/Atividades recentes/);
   assert.doesNotMatch(html,/class="crm-lower"|class="crm-agenda-layout"/);
  }
  const css=readFileSync('admin-crm.css','utf8');
@@ -201,4 +203,15 @@ test('home group quick status accepts no-replacement absence and persists the ex
  const {p_schedule,p_changes}=calls[0].args;
  assert.equal(p_schedule.calendar_events['2026-11-12'].status,'absent');
  assert.deepEqual(p_changes.map(p=>p.payload.events['2026-11-12'].status),['absent','absent']);
+});
+
+test('monthly grid displays only the first names, including both group members, without changing daily agenda names',()=>{
+ const {run}=setup();
+ run("students[0].full_name=' Carlos Frederico Marques ';students[1].full_name='Laura Ferreira';students[2].full_name='Rafael Almeida';entries=crmMonthlyEntries('2026-11',lessonRows)");
+ const html=run("crmMonthlyGrid('2026-11',entries,'2026-11-26')");
+ assert.match(html,/<span>Carlos<\/span>/);
+ assert.match(html,/<span>Laura · Rafael<\/span>/);
+ assert.doesNotMatch(html,/Frederico|Marques|Ferreira|Almeida/);
+ assert.equal(run("crmGroupDailyAgenda(ccAgenda({date:'2026-11-12'},null,true))[0].full_name"),'Laura Ferreira · Rafael Almeida');
+ assert.equal(run("crmMonthlyFirstName('  ')"),'Aluno');
 });
