@@ -21,7 +21,7 @@
     {page:'home.html',target:'.achievements-wall',title:'Mural de conquistas',text:'O mural mostra a quantidade de aulas que você já realizou.'},
     {page:'home.html',target:'.dashboard-hero',title:'Continue aprendendo',text:'Os conteúdos das aulas ficam organizados para você revisar quando quiser.'},
     {page:'aluno.html',target:'.student-lesson-item',title:'Materiais das aulas',text:'Aqui ficam todos os materiais das aulas realizadas.'},
-    {page:'aluno.html',target:'.student-material-dropdown',title:'Materiais para experimentar',text:'Disponibilizamos slides e relatórios de desempenho de demonstração. Abra um material e use “Visualizar” ou “Baixar” para conhecer como são os arquivos.'},
+    {page:'aluno.html',target:'.student-material-dropdown, .student-no-materials',title:'Materiais para experimentar',text:'Disponibilizamos slides e relatórios de desempenho de demonstração. Abra um material e use “Visualizar” ou “Baixar” para conhecer como são os arquivos.'},
     {page:'recursos.html?s=texto',target:'.student-writing-page .student-howto',title:'Aprimorando a Escrita',text:'Escreva em inglês e envie seu texto para o professor. Ele aponta os trechos que precisam de revisão e devolve uma correção para você aprender com seus próprios erros.'},
     {page:'recursos.html?s=texto',target:'#visitor-writing-example',title:'Exemplo de texto corrigido',text:'Este exemplo demonstra como você recebe a correção. Clique em “Visualizar exemplo” para abrir o PDF e conhecer as marcações e orientações.',showExample:true},
     {page:'recursos.html?s=texto',target:'#nav-container',title:'Explore o portal',text:'Use os mesmos menus do portal do aluno. Quando terminar, indique os horários compatíveis com sua rotina.'}
@@ -70,7 +70,10 @@
         return;
       }
       // Expand the real lesson resource dropdown to reveal actual preview/download actions.
-      if(i===4 && target.tagName==='DETAILS')target.open=true;
+      if(i===4){
+        if(target.tagName==='DETAILS')target.open=true;
+        else tip.querySelector('p').textContent='Os slides e o relatório de desempenho serão disponibilizados aqui assim que forem publicados.';
+      }
       focused=target;target.classList.add('visitor-tour-focus');
       target.scrollIntoView({block:'nearest',behavior:'instant'});
       position(target);
@@ -158,10 +161,8 @@
   if(window.__dcGuestDemo){
     window.downloadResource=async function(filePath){
       const safeFiles={
-        'demo/Productivity - Modo Demonstração.pdf':'Productivity - Modo Demonstração.pdf',
-        'demo/Giving and Receiving Feedback - Modo Demonstração.pdf':'Giving and Receiving Feedback - Modo Demonstração.pdf',
-        'demo/Productivity - Relatório de desempenho - Modo Demonstração.pdf':'Productivity - Relatório de desempenho - Modo Demonstração.pdf',
-        'demo/Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf':'Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf'
+        'demo/Music and Concert - Modo Demonstração.pdf':'Music and Concert - Modo Demonstração.pdf',
+        'demo/Music and Concert - Relatório de desempenho - Modo Demonstração.pdf':'Music and Concert - Relatório de desempenho - Modo Demonstração.pdf'
       };
       const name=safeFiles[filePath];
       if(!name){window.__dcDemoReadOnlyNotice?.();return}
