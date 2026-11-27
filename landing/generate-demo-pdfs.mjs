@@ -4,10 +4,11 @@
 // inaccessible embedded third-party audiovisual content.
 import fs from 'node:fs';
 import path from 'node:path';
+import {brandColors} from './visitor-brand.mjs';
 const out=path.join(process.cwd(),'landing','dist','visit','demo');
 fs.mkdirSync(out,{recursive:true});
 const fstr=s=>String(s??'').replace(/[^\x20-\x7E\xA0-\xFF]/g,c=>({"’":"'","‘":"'","“":'"',"”":'"',"—":"-","–":"-","•":"-","✓":"OK","…":"..."}[c]||'?')).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
-const color=(hex)=>{const h=hex.replace('#','');return [0,2,4].map(i=>(parseInt(h.slice(i,i+2),16)/255).toFixed(3)).join(' ')};
+const color=(hex)=>{const h=brandColors(hex).replace('#','');return [0,2,4].map(i=>(parseInt(h.slice(i,i+2),16)/255).toFixed(3)).join(' ')};
 class PDF{
  constructor(w,h){this.w=w;this.h=h;this.pages=[];this.ops=[]}
  cmd(x){this.ops.push(x)}

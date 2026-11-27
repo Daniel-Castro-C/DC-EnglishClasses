@@ -10,7 +10,7 @@
   tip.innerHTML='<div class="visitor-tour-counter"></div><h3></h3><p></p><div class="visitor-tour-progress"></div><div class="visitor-tour-actions"><button type="button" data-tour="skip">Pular</button><button type="button" data-tour="back">Anterior</button><button type="button" class="primary" data-tour="next">Próximo →</button></div>';
   document.body.append(overlay,tip);
   const banner=document.createElement('div');banner.className='visitor-ribbon';
-  banner.innerHTML='<span><b>MODO VISITANTE</b> · Ambiente demonstrativo, com dados de exemplo e sem acesso às contas dos alunos</span><span class="visitor-ribbon-actions"><button type="button" id="visitor-restart">↻ Rever tour</button><a href="../#horarios">Consultar horários →</a></span>';
+  banner.innerHTML='<span><b>MODO VISITANTE</b> · Ambiente demonstrativo, com dados de exemplo e sem acesso às contas dos alunos</span><span class="visitor-ribbon-actions"><button type="button" id="visitor-restart">↻ Rever tour</button><a href="../#horarios">Indicar disponibilidade →</a></span>';
   document.body.insertBefore(banner,document.body.firstChild);
   const notification=document.createElement('div');notification.id='visitor-readonly-alert';notification.className='visitor-readonly-alert';notification.hidden=true;notification.textContent='Esta ação está disponível somente para alunos matriculados. Nenhuma informação foi enviada.';
   document.body.appendChild(notification);
@@ -24,7 +24,7 @@
     {page:'aluno.html',target:'.student-material-dropdown',title:'Materiais para experimentar',text:'Disponibilizamos slides e relatórios de desempenho de demonstração. Abra um material e use “Visualizar” ou “Baixar” para conhecer como são os arquivos.'},
     {page:'recursos.html?s=texto',target:'.student-writing-page .student-howto',title:'Aprimorando a Escrita',text:'Escreva em inglês e envie seu texto para o professor. Ele aponta os trechos que precisam de revisão e devolve uma correção para você aprender com seus próprios erros.'},
     {page:'recursos.html?s=texto',target:'#visitor-writing-example',title:'Exemplo de texto corrigido',text:'Este exemplo demonstra como você recebe a correção. Clique em “Visualizar exemplo” para abrir o PDF e conhecer as marcações e orientações.',showExample:true},
-    {page:'recursos.html?s=texto',target:'#nav-container',title:'Explore o portal',text:'Use os mesmos menus do portal do aluno. Quando terminar, consulte nossos horários disponíveis.'}
+    {page:'recursos.html?s=texto',target:'#nav-container',title:'Explore o portal',text:'Use os mesmos menus do portal do aluno. Quando terminar, indique os horários compatíveis com sua rotina.'}
   ];
   const currentPage=location.pathname.split('/').pop();
   function isOnStepPage(page){

@@ -2,6 +2,7 @@
 // Runs at every Vercel deploy, so code/layout changes propagate automatically.
 import fs from 'node:fs';
 import path from 'node:path';
+import {brandStyles} from './visitor-brand.mjs';
 const root=process.cwd(),out=path.join(root,'landing','dist');
 fs.rmSync(out,{recursive:true,force:true});fs.mkdirSync(out,{recursive:true});
 const cp=(from,to)=>{
@@ -10,11 +11,16 @@ const cp=(from,to)=>{
  fs.mkdirSync(path.dirname(dest),{recursive:true});
  fs.cpSync(src,dest,{recursive:true,force:true});return true;
 };
-for(const name of ['index.html','admin.html','depoimento.html','disponibilidade.html','availability.js'])cp('landing/'+name,name);
+for(const name of ['index.html','admin.html','depoimento.html','disponibilidade.html','availability.js','availability-embedded.css'])cp('landing/'+name,name);
 // Signature 2027: shared visual assets (no changes to student data or workflows).
 cp('landing/signature-2027.css','signature-2027.css');
 cp('landing/signature-mark.svg','signature-mark.svg');
 for(const f of ['logo-principal.svg','logo-reversa.svg','favicon.svg'])cp('landing/'+f,f);
+const availability=fs.readFileSync(path.join(root,'landing','disponibilidade.html'),'utf8');
+const sharedForm=availability.match(/<form id="availability-form">[\s\S]*?<\/form>\s*<div id="success"[\s\S]*?<\/div>/)?.[0];
+if(!sharedForm)throw Error('Shared availability form not found');
+const landingPage=path.join(out,'index.html');
+fs.writeFileSync(landingPage,fs.readFileSync(landingPage,'utf8').replace(/<!-- SHARED_AVAILABILITY_FORM -->[\s\S]*?<!-- END_SHARED_AVAILABILITY_FORM -->/,sharedForm.replace('id="availability-form"','id="availability-form" data-source="landing"')),'utf8');
 const pages=['home.html','aluno.html','perfil.html','enviar-material.html','pergunte-ao-daniel.html','guias-gramatica.html','recursos.html'];
 // Discover dependencies from the actual student pages and shared modules,
 // including scripts loaded dynamically with document.write().
@@ -34,9 +40,17 @@ for(const name of pages){
  const source=path.join(root,name);
  if(fs.existsSync(source))scan(fs.readFileSync(source,'utf8'));
 }
-for(const f of scripts)cp('js/'+f,'visit/js/'+f);
+for(const f of scripts){
+ cp('js/'+f,'visit/js/'+f);
+ // These modules contain inline UI colors, but no flag icon or student fixture colors.
+ if(['recursos.js','recursos-module.js'].includes(f)){
+  const file=path.join(out,'visit','js',f);
+  fs.writeFileSync(file,brandStyles(fs.readFileSync(file,'utf8')),'utf8');
+ }
+}
 cp('landing/visitor-demo-client.js','visit/js/supabaseClient.js');
 cp('landing/visitor-tour.js','visit/visitor-tour.js');
+for(const f of ['logo-principal.svg','logo-reversa.svg','signature-mark.svg','favicon.svg'])cp('landing/'+f,'visit/'+f);
 for(const f of ['logo.png','guia-portal-do-aluno.pdf','icon-192.png','icon-512.png','manifest.json'])cp(f,'visit/'+f);
 cp('badges','visit/badges');
 const styles=[
@@ -62,11 +76,19 @@ const styles=[
 '@media(max-width:860px){.visitor-ribbon{padding:10px 14px}.visitor-tour-tooltip{left:16px!important;top:auto!important;bottom:16px!important}.visitor-ribbon-actions a{padding:8px 10px}}'
 ].join('\n');
 fs.mkdirSync(path.join(out,'visit','js'),{recursive:true});
-fs.writeFileSync(path.join(out,'visit','style.css'),fs.readFileSync(path.join(root,'style.css'),'utf8')+'\n'+styles,'utf8');
+const fonts="@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&family=Poppins:wght@500&display=swap');\n";
+const originalCss=fs.readFileSync(path.join(root,'style.css'),'utf8');
+const signatureCss=fs.readFileSync(path.join(root,'landing','visitor-signature.css'),'utf8');
+fs.writeFileSync(path.join(out,'visit','style.css'),fonts+brandStyles(originalCss+'\n'+styles)+'\n'+signatureCss,'utf8');
 fs.writeFileSync(path.join(out,'visit','js','emailConfig.js'),'async function sendLessonNotification(){return {ok:false,visitor:true}}','utf8');
 for(const name of pages){
  const file=path.join(root,name);if(!fs.existsSync(file))continue;
  let html=fs.readFileSync(file,'utf8');
+ html=brandStyles(html);
+ html=html.replace(/<html lang="([^"]+)">/,'<html lang="$1" data-brand-surface="visitor">');
+ html=html.replace(/(<img class="logo" src=")logo.png(")/g,'$1logo-reversa.svg$2');
+ html=html.replace(/src="logo.png"/g,'src="signature-mark.svg"');
+ html=html.replace(/<\/head>/i,'<link rel="icon" type="image/svg+xml" href="favicon.svg"><meta name="robots" content="noindex,nofollow"></head>');
  html=html.replace(/<script[^>]+src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"[^>]*><\/script>/g,'');
  html=html.replace(/<script[^>]+src="https:\/\/cdn\.jsdelivr\.net\/npm\/@emailjs\/browser[^"]*"[^>]*><\/script>/g,'');
  html=html.replace(/<\/body>/i,'<script src="visitor-tour.js"></script></body>');
@@ -75,4 +97,4 @@ for(const name of pages){
 fs.writeFileSync(path.join(out,'visit','index.html'),'<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=home.html"><a href="home.html">Abrir demonstração</a>','utf8');
 fs.writeFileSync(path.join(out,'visitor.html'),'<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=visit/home.html"><a href="visit/home.html">Explorar o portal do aluno</a>','utf8');
 await import('./generate-demo-pdfs.mjs');
-console.log('Built guest portal from',pages.length,'original HTML pages and',scripts.length,'original JS modules.');
+console.log('Built guest portal from',pages.length,'original HTML pages and',scripts.size,'original JS modules.');

@@ -1,5 +1,6 @@
 (() => {
   const $ = id => document.getElementById(id);
+  if(!$('availability-form'))return;
   const days = ['Segunda','Terça','Quarta','Quinta','Sexta'];
   const schedule = $('schedule');
   const add = (tag, cls, text) => {
@@ -37,10 +38,10 @@
     btn.disabled=true;btn.textContent='Enviando…';
     try{
       const db=window.supabase.createClient('https://dgwbjgngewymzgedlzix.supabase.co','sb_publishable_Zlgeqn4PhdY11rZPD6i8-w_T42hrmgN',{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-      const {error:dbError}=await db.from('landing_leads').insert({full_name:name,phone,available_days:availableDays,period:periods.size===1?[...periods][0]:'Flexível',goal:$('notes').value.trim(),consent:true,source:'availability',frequency:Number(frequency),availability_slots:slots});
+      const {error:dbError}=await db.from('landing_leads').insert({full_name:name,phone,available_days:availableDays,period:periods.size===1?[...periods][0]:'Flexível',goal:$('notes').value.trim(),consent:true,source:form.dataset?.source==='landing'?'landing':'availability',frequency:Number(frequency),availability_slots:slots});
       if(dbError)throw dbError;
       form.hidden=true;$('success').hidden=false;$('success').focus();
-    }catch(e){error.textContent='Não foi possível enviar sua disponibilidade. Tente novamente ou fale comigo pelo WhatsApp.'}
+    }catch(e){error.textContent='Não foi possível enviar sua disponibilidade. Tente novamente ou fale conosco pelo WhatsApp.'}
     finally{btn.disabled=false;btn.textContent='Enviar minha disponibilidade →'}
   });
 })();
