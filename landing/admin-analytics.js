@@ -82,6 +82,7 @@ window.createLandingAnalytics = function(db,isAdmin){
       $('analytics-rate').textContent=totals.visits?(totals.forms/totals.visits*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':'—';
       $('analytics-message').textContent=rows.length?'Histórico iniciado em '+new Date(rows[0].tracking_start).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})+' · '+date(rows[0].day)+' a '+date(rows.at(-1).day)+' (horário de Brasília).':'Ainda não há histórico de visitas.';
       chart(rows);
+      return true;
     }catch(e){if(current===request&&isAdmin()){$('analytics-message').textContent='Não foi possível carregar os indicadores. Tente atualizar.';$('analytics-chart').replaceChildren();['analytics-visits','analytics-portal','analytics-forms','analytics-rate'].forEach(id=>$(id).textContent='—')}}
     finally{if(current===request)$('analytics-refresh').disabled=false}
   }

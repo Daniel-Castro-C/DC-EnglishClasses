@@ -17,7 +17,7 @@
     const route=Object.hasOwn(aliases,key)?aliases[key]:key;
     return Object.hasOwn(titles,route)?route:'inicio';
   }
-  function bind(isAdmin){
+  function bind(isAdmin,onNavigate=()=>{}){
     const pages=[...document.querySelectorAll('[data-admin-page]')];
     const bar=document.getElementById('admin-page-bar');
     const title=document.getElementById('admin-page-title');
@@ -35,11 +35,12 @@
       if(change){
         window.scrollTo(0,0);
         (route==='inicio'?homeHeading:title).focus({preventScroll:true});
+        onNavigate(route);
       }
     }
     window.addEventListener('hashchange',show);
     clear();
-    return {show,clear};
+    return {show,clear,current:()=>current};
   }
   window.LandingAdminNavigation={bind,resolve};
 })();
