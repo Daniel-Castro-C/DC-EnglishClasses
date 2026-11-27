@@ -1,11 +1,8 @@
 // ==========================================================
 // Módulo "Termo do dia interativo" + "Recursos"
 // Carregado automaticamente pelo final do js/common.js (document.write).
-// Faz 4 coisas:
-//   1) Traduções (PT/EN) das novas telas
-//   2) Adiciona "Recursos" ao menu lateral do aluno
-//   3) Mostra o Termo do dia como card flutuante fixo (com "Já uso"/"Ainda não uso")
-//   4) No painel do professor, mostra no Perfil do aluno as palavras "ainda não uso"
+// Traduções, Termo do dia interativo e card de Recursos da Home.
+// O menu lateral de Recursos é renderizado exclusivamente por js/common.js.
 // ==========================================================
 (function () {
   'use strict';
@@ -27,14 +24,6 @@
     word_dock_collapse: 'Minimize',
     word_dock_expand: 'Expand',
   });
-
-  // ---------- 2) Menu lateral: item "Recursos" ----------
-  const origNav = window.buildStudentTopNav;
-  window.buildStudentTopNav = function (activeKey, showGrammar, notifCounts) {
-    const html = origNav(activeKey, showGrammar, notifCounts);
-    const active = activeKey === 'recursos' ? 'active' : '';
-    return html + `<div class="nav-item ${active}" onclick="window.location.href='recursos.html'"><span>${t('nav_recursos')}</span></div>`;
-  };
 
   // O card antigo (estático, no fim da home) é substituído pelo card flutuante
   window.buildWordOfDayCard = function () { return ''; };

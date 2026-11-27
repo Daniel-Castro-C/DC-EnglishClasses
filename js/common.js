@@ -852,14 +852,14 @@ function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts, options){
 // ==========================================================
 // ---------- Notificações dentro do portal ----------
 // ==========================================================
-// Retorna um objeto tipo {aulas: 2, daniel: 1} com a quantidade de notificações
+// Retorna um objeto tipo {aulas: 2, daniel: 1, recursos: 1} com a quantidade de notificações
 // não lidas por módulo (chaves batem com as usadas em buildStudentTopNav)
 async function getNotificationCounts(studentId){
   const counts = {};
   try {
     const { data } = await sb.from('notifications').select('type').eq('student_id', studentId).eq('read', false);
     (data || []).forEach(n => {
-      const key = n.type === 'new_lesson' ? 'aulas' : (n.type === 'daniel_answered' ? 'daniel' : null);
+      const key = n.type === 'new_lesson' ? 'aulas' : n.type === 'daniel_answered' ? 'daniel' : n.type === 'text_corrected' ? 'recursos' : null;
       if (key) counts[key] = (counts[key] || 0) + 1;
     });
   } catch (e) { console.error('Erro ao buscar notificações:', e); }
