@@ -39,7 +39,7 @@
 
 <section class="card" id="demo-files-panel">
  <h2>Materiais do portal visitante</h2>
- <p class="muted">Substitua os documentos demonstrativos pelos PDFs originais. Para relatórios e correções, use apenas arquivos fictícios e sem nome ou data do aluno. A alteração aparece na demonstração sem novo deploy.</p>
+ <p class="muted">Publique os PDFs da aula Music and Concert e o exemplo de texto corrigido. Os materiais da aula só aparecem após o envio. Para relatórios e correções, use apenas arquivos fictícios e sem nome ou data do aluno. A alteração aparece na demonstração sem novo deploy.</p>
  <div id="demo-file-slots">Carregando materiais...</div>
 </section>
 <section class="card"><h2>Horários semanais</h2><div id="weekly-items" class="muted">Carregando...</div></section><section class="card"><h2>Bloqueios e vagas extras</h2><div id="exception-items" class="muted">Carregando...</div></section>
@@ -143,26 +143,24 @@ $('landing-photo-remove').onclick=async()=>{
 
 const DEMO_BUCKET='landing-demo-materials';
 const DEMO_SLOTS=[
- ['feedback_slides','Giving and Receiving Feedback · Slides'],
- ['productivity_slides','Productivity · Slides'],
- ['feedback_report','Giving and Receiving Feedback · Relatório de desempenho'],
- ['productivity_report','Productivity · Relatório de desempenho'],
+ ['music_slides','Music and Concert · Slides'],
+ ['music_report','Music and Concert · Relatório de desempenho'],
  ['teamwork_correction','Teamwork · Exemplo de texto corrigido']
 ];
 let demoPaths={};
 async function refreshDemoFiles(){
  if(!admin)return;
- const {data,error}=await db.from('landing_demo_assets').select('asset_key,file_path,updated_at');
+ const {data,error}=await db.from('landing_demo_assets').select('asset_key,file_path,updated_at').in('asset_key',DEMO_SLOTS.map(([key])=>key));
  if(error){$('demo-file-slots').textContent='Não foi possível consultar os materiais.';return}
  demoPaths=Object.fromEntries((data||[]).map(x=>[x.asset_key,x.file_path]));
  $('demo-file-slots').innerHTML=DEMO_SLOTS.map(([key,label])=>{
    const filePath=demoPaths[key];
    const url=filePath?db.storage.from(DEMO_BUCKET).getPublicUrl(filePath).data.publicUrl:'';
-   return '<div class="entry" data-demo-key="'+key+'"><div class="row"><div><b>'+label+'</b><small>'+(filePath?'Arquivo personalizado publicado':'Exemplo gerado automaticamente')+'</small></div>'+
+   return '<div class="entry" data-demo-key="'+key+'"><div class="row"><div><b>'+label+'</b><small>'+(filePath?'Arquivo personalizado publicado':key==='teamwork_correction'?'Exemplo gerado automaticamente':'Aguardando envio do PDF')+'</small></div>'+
      (url?'<a href="'+url+'" target="_blank" rel="noopener noreferrer">Visualizar PDF ↗</a>':'')+'</div>'+
      '<div class="controls" style="margin-top:12px"><input type="file" accept=".pdf,application/pdf" data-demo-file="'+key+'" style="max-width:350px;width:100%">'+
      '<button data-demo-upload="'+key+'">Salvar PDF</button>'+
-     (filePath?'<button class="del" data-demo-remove="'+key+'">Restaurar exemplo</button>':'')+'</div></div>';
+     (filePath?'<button class="del" data-demo-remove="'+key+'">'+(key==='teamwork_correction'?'Restaurar exemplo':'Remover PDF')+'</button>':'')+'</div></div>';
  }).join('');
 }
 document.addEventListener('click',async event=>{
@@ -170,6 +168,7 @@ document.addEventListener('click',async event=>{
  const remove=event.target.closest('[data-demo-remove]');
  if(!admin||(!upload&&!remove))return;
  const key=(upload||remove).dataset.demoUpload||(upload||remove).dataset.demoRemove;
+ if(!DEMO_SLOTS.some(([allowed])=>allowed===key))return;
  const old=demoPaths[key];
  if(upload){
    const file=document.querySelector('[data-demo-file="'+key+'"]')?.files?.[0];
@@ -188,12 +187,12 @@ document.addEventListener('click',async event=>{
    }catch(error){notice('Falha ao publicar PDF: '+(error?.message||'tente novamente'))}
    finally{upload.disabled=false}
  }else{
-   if(!confirm('Restaurar o PDF demonstrativo neste item?'))return;
+   if(!confirm(key==='teamwork_correction'?'Restaurar o PDF demonstrativo neste item?':'Remover este PDF da aula demonstrativa?'))return;
    remove.disabled=true;
    const deleted=await db.from('landing_demo_assets').delete().eq('asset_key',key);
-   if(deleted.error){notice('Não foi possível restaurar o PDF.');remove.disabled=false;return}
+   if(deleted.error){notice('Não foi possível remover o PDF.');remove.disabled=false;return}
    if(old)await db.storage.from(DEMO_BUCKET).remove([old]);
-   notice('Arquivo de demonstração restaurado.');
+   notice(key==='teamwork_correction'?'Arquivo de demonstração restaurado.':'PDF removido da demonstração.');
    await refreshDemoFiles();
  }
 });

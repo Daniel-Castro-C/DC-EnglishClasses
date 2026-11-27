@@ -56,7 +56,7 @@ test('all public and teacher report labels use the adopted term',()=>{
     const content=source(file);
     assert.doesNotMatch(content,/relatórios? de performance/i,file);
   }
-  for(const file of ['landing/generate-demo-pdfs.mjs','landing/visitor-demo-client.js','landing/visitor-tour.js']){
+  for(const file of ['landing/visitor-demo-client.js','landing/visitor-tour.js']){
     assert.match(source(file),/Relatório de desempenho - Modo Demonstração\.pdf/,file);
   }
 });

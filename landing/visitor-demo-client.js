@@ -5,24 +5,16 @@
   'use strict';
   const visitorId='visitor-demo-local';
   const profile={id:visitorId,email:'visitante@demo.invalid',full_name:'Visitante',role:'student',avatar_url:null,preferred_language:null,preferred_theme:null,permanent_lesson_link:null,lesson_weekday:null,lesson_time:null,has_seen_onboarding:true};
-  // Exactly two fictional classes, rendered by the authentic student portal.
-  const lessons=[
-    {id:'demo-productivity',student_id:visitorId,title:'Class #1',topic:'Productivity',lesson_date:null,created_at:'2026-01-01T12:00:00Z'},
-    {id:'demo-feedback',student_id:visitorId,title:'Class #2',topic:'Giving and Receiving Feedback',lesson_date:null,created_at:'2026-01-02T12:00:00Z'}
+  // Exactly one fictional class, independent of actual student accounts.
+  const lesson={id:'demo-music',student_id:visitorId,title:'Class #1',topic:'Music and Concert',lesson_date:null,created_at:'2026-01-01T12:00:00Z'};
+  const resourceSlots=[
+    {id:'demo-music-slides',lesson_id:lesson.id,name:'Music and Concert — Modo Demonstração',type:'ppt',file_path:'demo/Music and Concert - Modo Demonstração.pdf',created_at:'2026-01-01T12:01:00Z'},
+    {id:'demo-music-report',lesson_id:lesson.id,name:'Relatório de desempenho — Music and Concert',type:'rep',file_path:'demo/Music and Concert - Relatório de desempenho - Modo Demonstração.pdf',created_at:'2026-01-01T12:02:00Z'}
   ];
-  const resources=[
-    {id:'demo-productivity-slides',lesson_id:'demo-productivity',name:'Productivity — Modo Demonstração',type:'ppt',file_path:'demo/Productivity - Modo Demonstração.pdf',created_at:'2026-01-01T12:01:00Z'},
-    {id:'demo-productivity-report',lesson_id:'demo-productivity',name:'Relatório de desempenho — Productivity',type:'rep',file_path:'demo/Productivity - Relatório de desempenho - Modo Demonstração.pdf',created_at:'2026-01-01T12:02:00Z'},
-    {id:'demo-feedback-slides',lesson_id:'demo-feedback',name:'Giving and Receiving Feedback — Modo Demonstração',type:'ppt',file_path:'demo/Giving and Receiving Feedback - Modo Demonstração.pdf',created_at:'2026-01-02T12:01:00Z'},
-    {id:'demo-feedback-report',lesson_id:'demo-feedback',name:'Relatório de desempenho — Giving and Receiving Feedback',type:'rep',file_path:'demo/Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf',created_at:'2026-01-02T12:02:00Z'}
-  ];
-  lessons.forEach(lesson=>{lesson.resources=resources.filter(r=>r.lesson_id===lesson.id)});
   const word={term:'confidence',definition:'The feeling that you can do something successfully.',example:'I feel more confident when I practice English.'};
   const demoAssetKeys={
-    'demo/Giving and Receiving Feedback - Modo Demonstração.pdf':'feedback_slides',
-    'demo/Productivity - Modo Demonstração.pdf':'productivity_slides',
-    'demo/Giving and Receiving Feedback - Relatório de desempenho - Modo Demonstração.pdf':'feedback_report',
-    'demo/Productivity - Relatório de desempenho - Modo Demonstração.pdf':'productivity_report',
+    'demo/Music and Concert - Modo Demonstração.pdf':'music_slides',
+    'demo/Music and Concert - Relatório de desempenho - Modo Demonstração.pdf':'music_report',
     'demo/Teamwork - Text Correction - Modo Demonstração.pdf':'teamwork_correction'
   };
   const demoPrefix='https://dgwbjgngewymzgedlzix.supabase.co';
@@ -30,7 +22,7 @@
   async function demoAssets(){
     if(!demoAssetsPromise){
       // Only the public landing_demo_assets table is read. Never connect to student tables.
-      demoAssetsPromise=fetch(demoPrefix+'/rest/v1/landing_demo_assets?select=asset_key,file_path',{
+      demoAssetsPromise=fetch(demoPrefix+'/rest/v1/landing_demo_assets?select=asset_key,file_path&asset_key=in.(music_slides,music_report,teamwork_correction)',{
         headers:{apikey:'sb_publishable_Zlgeqn4PhdY11rZPD6i8-w_T42hrmgN'}
       }).then(r=>{if(!r.ok)throw new Error('Asset listing unavailable');return r.json()})
         .then(rows=>Object.fromEntries(rows.map(r=>[r.asset_key,r.file_path])))
@@ -42,16 +34,21 @@
     const key=demoAssetKeys[file];
     const map=await demoAssets();
     if(key&&map[key])return demoPrefix+'/storage/v1/object/public/landing-demo-materials/'+map[key].split('/').map(encodeURIComponent).join('/');
-    if(file==='guia-portal-do-aluno.pdf'||key)return '/visit/'+file.split('/').map(encodeURIComponent).join('/');
+    if(file==='guia-portal-do-aluno.pdf'||key==='teamwork_correction')return '/visit/'+file.split('/').map(encodeURIComponent).join('/');
     return null;
   }
   window.__dcDemoPdfUrl=demoPdfUrl;
   const deny=()=>({data:null,error:{message:'Ação indisponível no modo visitante. Nenhum dado foi enviado.'}});
-  const resolveQuery=(table,params,head,single)=>{
+  const resolveQuery=async(table,params,head,single)=>{
     let data=[];
+    let resources=[];
+    if((table==='lessons'&&!head)||table==='resources'){
+      const map=await demoAssets();
+      resources=resourceSlots.filter(r=>!!map[demoAssetKeys[r.file_path]]);
+    }
     switch(table){
       case 'profiles':data=[profile];break;
-      case 'lessons':data=lessons;break;
+      case 'lessons':data=[{...lesson,resources}];break;
       case 'resources':data=resources;break;
       case 'word_of_day':data=[word];break;
       case 'app_settings':data=[{key:'grammar_guides_locked',value:'true'}];break;
