@@ -75,6 +75,16 @@ function demoSelect(group,studentId='demo-1'){
  document.getElementById('tab-content').hidden=false;document.getElementById('tg-body').hidden=false;
  document.getElementById('tab-content').innerHTML='';document.getElementById('tg-body').innerHTML='';demoRefresh();ccRender();return true;
 }
+async function demoLegacyConflict(){
+ if(!demoSelect(true))return;
+ demoGroup.start='2026-02-05';
+ for(const id of demoGroup.members){const payload=demoStates.get(id).payload;payload.start='2026-02-05';delete payload.events['2026-03-05'];}
+ demoStates.get('demo-3').payload.events['2026-03-05']={skip:true};
+ if(demoGroup.calendar_events)delete demoGroup.calendar_events['2026-03-05'];
+ await ccLoadCloud();ccDrafts.clear();ccActiveKey='';ccSelected='';ccDate=new Date(2026,2,1);ccRender();ccJump('2026-03-05');
+}
+function demoLegacyMember(id){if(demoSelect(false,id))ccJump('2026-03-05');}
+tgOpenDate=async(id,date)=>{if(id===demoGroup.id&&demoSelect(true))ccJump(date);};
 function demoOpenMaterials(){
  const root=document.getElementById('demo-materials');
  document.getElementById('tab-content').hidden=true;document.getElementById('tg-body').hidden=true;root.hidden=false;

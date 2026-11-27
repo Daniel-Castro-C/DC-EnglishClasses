@@ -63,10 +63,18 @@ function ccEffectiveEvents(id,events){
  }
  return result;
 }
+// Older individual deletions stored only {skip:true}, even on an otherwise
+// habitual group date. They contain no separate appointment or attendance.
+// Never reinterpret a linked reschedule/replacement, another group or a registered lesson.
+function ccLegacyGroupSkip(event,schedule,date,events,lessons,id){
+ return !!event?.skip&&event.skip===true&&Object.keys(event).every(k=>k==='skip')&&ccIsHabitual(schedule,date)&&
+  !lessons.some(l=>l.student_id===id&&l.lesson_date===date)&&
+  !Object.entries(events).some(([day,row])=>day!==date&&row&&(row.original===date||row.rescheduled_from===date||row.rescheduled_to===date));
+}
 function ccGroupForDate(id,date){
- const event=ccRead(id).events?.[date];
+ const events=ccRead(id).events||{},event=events[date];
  return tgGroups.find(g=>g.members.includes(id)&&(event?.group_id===g.id||(!event?.group_id&&(
-  Object.hasOwn(g.calendar_events||{},date)||g.calendarLessons?.some(l=>l.student_id===id&&l.lesson_date===date&&l.group_id===g.id)||g.start&&ccHabitual(ccGroupSchedule(g),date)&&(!event||!event.skip&&!event.original&&!event.rescheduled_from&&!event.rescheduled_to&&(!event.time||event.time===ccSchedule(ccGroupSchedule(g),date).time))
+  Object.hasOwn(g.calendar_events||{},date)||g.calendarLessons?.some(l=>l.student_id===id&&l.lesson_date===date&&l.group_id===g.id)||g.start&&ccHabitual(ccGroupSchedule(g),date)&&(!event||ccLegacyGroupSkip(event,ccGroupSchedule(g),date,events,g.calendarLessons||[],id)||!event.skip&&!event.original&&!event.rescheduled_from&&!event.rescheduled_to&&(!event.time||event.time===ccSchedule(ccGroupSchedule(g),date).time))
  ))))||null;
 }
 function ccGroupBase(ctx,d,date){
@@ -83,9 +91,14 @@ function ccGroupBase(ctx,d,date){
 function ccLegacyGroupRow(ctx,d,id,date){
  const e=d.payloads[id].events[date];
  if(!e||e.group_id===ctx.group.id)return e;
+ if(ccLegacyGroupSkip(e,d.schedule,date,d.payloads[id].events,ctx.lessons,id))return e;
  // Only adopt an earlier attendance entry at the habitual group time, never a separate linked appointment.
  if(!e.group_id&&!e.skip&&!e.original&&!e.rescheduled_from&&!e.rescheduled_to&&ccIsHabitual(d.schedule,date)&&(!e.time||e.time===ccSchedule(d.schedule,date).time))return e;
  return null;
+}
+function ccLegacySkipMembers(ctx,d,date){
+ if(!ctx.group)return [];
+ return ctx.members.filter(s=>ccLegacyGroupSkip(d.payloads[s.id].events[date],d.schedule,date,d.payloads[s.id].events,ctx.lessons,s.id));
 }
 function ccGroupOverride(row,base){
  if(row?.attendance_override)return row.attendance_override;
@@ -372,9 +385,10 @@ function ccEditor(){
  if(typeof ccPendingLessonDeletion==='function'&&ccPendingLessonDeletion(ctx,date)){el.innerHTML=header+ccLessonForm(ctx,d,date,state);return;}
  if(group){
   const base=group.calendar_events?.[date],own=d.payloads[ctx.members[0].id].events[date]||{};
+  const legacySkip=ccLegacyGroupSkip(own,ccGroupSchedule(group),date,d.payloads[ctx.members[0].id].events,group.calendarLessons||[],ctx.members[0].id);
   const permitted=!base?.skip&&!own.skip&&['planned','done','absent','owed'].includes(base?.status||own.status||state.status);
   const ownForm=state.real&&typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';
-  el.innerHTML=header+(ownForm?'':state.real&&typeof ccLessonConsultation==='function'?ccLessonConsultation(ctx,date,ctx.lessons.filter(l=>l.lesson_date===date),false):ccPublishedDetails(ctx,date))+'<p>Esta aula pertence à turma '+ccEsc(group.name)+'. Alterações coletivas são feitas no calendário da turma.</p>'+(permitted?'<label>Frequência deste aluno <select id="cc-own-attendance" onchange="ccChangeIndividualAttendance()"><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option></select></label><p class="small-note">A falta não altera os demais alunos. Só há reposição quando todos faltarem.</p>':'')+'<button class="btn-dark-sm" onclick="tgOpenDate(&quot;'+ccEsc(group.id)+'&quot;,&quot;'+date+'&quot;)">Abrir calendário da turma</button>';
+  el.innerHTML=header+(ownForm?'':state.real&&typeof ccLessonConsultation==='function'?ccLessonConsultation(ctx,date,ctx.lessons.filter(l=>l.lesson_date===date),false):ccPublishedDetails(ctx,date))+'<p>Esta aula pertence à turma '+ccEsc(group.name)+'. Alterações coletivas são feitas no calendário da turma.</p>'+(legacySkip?'<p class="cc-unavailable-note">Há uma exclusão individual antiga nesta data. Abra o calendário da turma para restaurar ou excluir a aula para todos os integrantes.</p>':'')+(permitted?'<label>Frequência deste aluno <select id="cc-own-attendance" onchange="ccChangeIndividualAttendance()"><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option></select></label><p class="small-note">A falta não altera os demais alunos. Só há reposição quando todos faltarem.</p>':'')+'<button class="btn-dark-sm" onclick="tgOpenDate(&quot;'+ccEsc(group.id)+'&quot;,&quot;'+date+'&quot;)">Abrir calendário da turma</button>';
   if(ownForm)el.insertAdjacentHTML('beforeend',ownForm);
   if(permitted)document.getElementById('cc-own-attendance').value=ccGroupOverride(own,base||{status:own.group_status||'planned'})||'inherit';
   return;
@@ -383,6 +397,8 @@ function ccEditor(){
  try{if(!ctx.group||!state.real)ccCanEditDate(ctx,d,date);}catch(error){el.innerHTML=header+'<p role="alert">'+ccEsc(error.message)+'</p>';return;}
  if(state.status==='rescheduled'){
   el.innerHTML=header+'<p><strong>Reagendado</strong> para '+ccEsc(formatDate(e.rescheduled_to))+'</p><div class="row"><button class="btn-ghost" onclick="ccJump(&quot;'+ccEsc(e.rescheduled_to)+'&quot;)">Ir para nova data</button><button class="btn-ghost" onclick="ccRemove()">Excluir registro e cancelar reagendamento</button></div>';return;}
+ const legacySkips=ccLegacySkipMembers(ctx,d,date);
+ const legacyNotice=legacySkips.length?'<div class="box"><h4>Registro individual antigo</h4><p>'+ccEsc(legacySkips.map(s=>s.full_name||s.email||'Aluno').join(', '))+' possui uma exclusão individual nesta data. Altere ou exclua a aula pela turma para sincronizar os calendários. Nada será alterado até salvar.</p>'+(!state.real&&['planned','done','owed','absent','teacher','holiday','break','vacation'].includes(state.base?.status)?'<button type="button" class="btn-ghost" onclick="ccRepairLegacySkip()">Sincronizar com a turma</button>':'')+'</div>':'';
  const statuses=Object.entries(ccStatus).filter(([k])=>k!=='rescheduled');
  const selected=(ctx.group?state.base.status:state.status)||'';
  const options=statuses.map(([k,v])=>'<option value="'+k+'">'+ccEsc(v)+'</option>').join('');
@@ -391,11 +407,21 @@ function ccEditor(){
   return ctx.group?ctx.members.every(m=>['absent','owed'].includes(d.payloads[m.id].events[from]?.status)&&d.payloads[m.id].events[from]?.group_id===ctx.group.id)&&ccReplacementAvailable(row,from,date,ls,true):ccReplacementAvailable(row,from,date,ls);
  }));
  const lesson=typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';
- el.innerHTML=header+(ctx.group&&state.real?(lesson||ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas; a frequência dos integrantes sem cadastro ainda pode ser ajustada.</p>'):'')+ccQuickDayActions(ctx,state)+(e.rescheduled_from?'<p class="small-note">Reagendado de '+ccEsc(formatDate(e.rescheduled_from))+'</p>':'')+'<details id="cc-day-options" class="cc-day-options"><summary>'+(ctx.group&&state.real?'Ajustar frequência individual':'Mais opções da aula')+'</summary><label>Status da aula <select id="cc-status" onchange="ccStatusChange()" '+(ctx.group&&state.real?'disabled':'')+'>'+(state.status?'':'<option value="">Selecione o status</option>')+options+'<option value="move">Reagendar para...</option></select></label><div id="cc-reschedule" hidden><label>Nova data <input id="cc-reschedule-date" type="date" min="1900-01-01" max="9999-12-31" required onkeydown="if(event.key===&quot;Enter&quot;){event.preventDefault();ccApplyReschedule();}"></label><p class="small-note">Digite a data completa ou selecione-a no calendário. A data original será mantida como Reagendado.</p><div class="row"><button type="button" class="btn-dark-sm" onclick="ccApplyReschedule()">Confirmar reagendamento</button><button type="button" class="btn-ghost" onclick="ccEditor()">Cancelar reagendamento</button></div></div>'+(ctx.group?'<div id="cc-attendance"><h4>Frequência individual</h4>'+state.rows.map(r=>'<label>'+ccEsc(ctx.members.find(s=>s.id===r.id).full_name||r.id)+' · '+ccEsc(ccDateLabel(r.status)||'Sem aula')+'<select data-cc-member="'+ccEsc(r.id)+'" onchange="ccApplyDay(true)" '+(r.real||!['planned','done','absent','owed'].includes(state.base.status)?'disabled':'')+'><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option>'+'</select></label>').join('')+'</div>':'')+'<label>Reposição referente a <select id="cc-original" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+'><option value="">Não é reposição</option>'+candidates.map(([from])=>'<option value="'+from+'">'+ccEsc(formatDate(from))+'</option>').join('')+'</select></label><label>Horário <input id="cc-time" type="time" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+' value="'+ccEsc(e.time||ccSchedule(x,date).time||'')+'"></label><label>Observações <textarea id="cc-notes" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+'>'+ccEsc(e.notes||'')+'</textarea></label><div class="row"><button class="btn-ghost" onclick="ccRemove()" '+(ctx.group&&state.real?'disabled':'')+'>Excluir registro de aula</button></div><p class="small-note">Alterações nesta data ficam no rascunho. '+(ctx.group?'A reposição só é concedida quando todos os integrantes faltam.':'Uma aula habitual excluída não reaparece automaticamente.')+'</p></details>';
+ el.innerHTML=header+legacyNotice+(ctx.group&&state.real?(lesson||ccPublishedDetails(ctx,date)+'<p class="small-note">Aulas cadastradas são protegidas; a frequência dos integrantes sem cadastro ainda pode ser ajustada.</p>'):'')+ccQuickDayActions(ctx,state)+(e.rescheduled_from?'<p class="small-note">Reagendado de '+ccEsc(formatDate(e.rescheduled_from))+'</p>':'')+'<details id="cc-day-options" class="cc-day-options"><summary>'+(ctx.group&&state.real?'Ajustar frequência individual':'Mais opções da aula')+'</summary><label>Status da aula <select id="cc-status" onchange="ccStatusChange()" '+(ctx.group&&state.real?'disabled':'')+'>'+(state.status?'':'<option value="">Selecione o status</option>')+options+'<option value="move">Reagendar para...</option></select></label><div id="cc-reschedule" hidden><label>Nova data <input id="cc-reschedule-date" type="date" min="1900-01-01" max="9999-12-31" required onkeydown="if(event.key===&quot;Enter&quot;){event.preventDefault();ccApplyReschedule();}"></label><p class="small-note">Digite a data completa ou selecione-a no calendário. A data original será mantida como Reagendado.</p><div class="row"><button type="button" class="btn-dark-sm" onclick="ccApplyReschedule()">Confirmar reagendamento</button><button type="button" class="btn-ghost" onclick="ccEditor()">Cancelar reagendamento</button></div></div>'+(ctx.group?'<div id="cc-attendance"><h4>Frequência individual</h4>'+state.rows.map(r=>'<label>'+ccEsc(ctx.members.find(s=>s.id===r.id).full_name||r.id)+' · '+ccEsc(ccDateLabel(r.status)||'Sem aula')+'<select data-cc-member="'+ccEsc(r.id)+'" onchange="ccApplyDay(true)" '+(r.real||!['planned','done','absent','owed'].includes(state.base.status)?'disabled':'')+'><option value="inherit">Herdar status da turma</option><option value="done">Presente / Realizada</option><option value="absent">Falta</option>'+'</select></label>').join('')+'</div>':'')+'<label>Reposição referente a <select id="cc-original" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+'><option value="">Não é reposição</option>'+candidates.map(([from])=>'<option value="'+from+'">'+ccEsc(formatDate(from))+'</option>').join('')+'</select></label><label>Horário <input id="cc-time" type="time" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+' value="'+ccEsc(e.time||ccSchedule(x,date).time||'')+'"></label><label>Observações <textarea id="cc-notes" onchange="ccApplyDay()" '+(ctx.group&&state.real?'disabled':'')+'>'+ccEsc(e.notes||'')+'</textarea></label><div class="row"><button class="btn-ghost" onclick="ccRemove()" '+(ctx.group&&state.real?'disabled':'')+'>Excluir registro de aula</button></div><p class="small-note">Alterações nesta data ficam no rascunho. '+(ctx.group?'A reposição só é concedida quando todos os integrantes faltam.':'Uma aula habitual excluída não reaparece automaticamente.')+'</p></details>';
  document.getElementById('cc-status').value=selected;
  document.getElementById('cc-original').value=e.original||'';
  if(ctx.group)document.querySelectorAll('[data-cc-member]').forEach(input=>input.value=state.rows.find(r=>r.id===input.dataset.ccMember)?.override||'inherit');
  if(lesson&&!(ctx.group&&state.real))el.insertAdjacentHTML('beforeend',lesson);
+}
+function ccRepairLegacySkip(){
+ const ctx=ccContext(),d=ccDraft(ctx),date=ccSelected;
+ if(!ctx?.group||!d||ccSaving||!ccLegacySkipMembers(ctx,d,date).length)return;
+ const base=ccGroupBase(ctx,d,date);
+ if(!Object.hasOwn(ccStatus,base.status)||base.status==='rescheduled'||base.skip)return;
+ try{
+  ccStageGroupDate(ctx,d,date,base.status,{},base.time||ccSchedule(d.schedule,date).time,base.notes||'',base.original||'');
+  ccMarkDirty(ctx,d);ccRefreshGrid();ccEditor();
+ }catch(error){alert(error.message);}
 }
 function ccStatusChange(){
  const status=document.getElementById('cc-status').value,move=document.getElementById('cc-reschedule');
