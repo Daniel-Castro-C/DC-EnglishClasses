@@ -220,10 +220,10 @@
     el.innerHTML = `
       <div class="icon">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" fill="#16213E"/>
-          <rect x="13" y="3.5" width="7.5" height="7.5" rx="2" fill="#5B93C4"/>
-          <rect x="3.5" y="13" width="7.5" height="7.5" rx="2" fill="#5B93C4"/>
-          <rect x="13" y="13" width="7.5" height="7.5" rx="2" fill="#16213E"/>
+          <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" class="resource-card-icon-primary" fill="#16213E"/>
+          <rect x="13" y="3.5" width="7.5" height="7.5" rx="2" class="resource-card-icon-secondary" fill="#5B93C4"/>
+          <rect x="3.5" y="13" width="7.5" height="7.5" rx="2" class="resource-card-icon-secondary" fill="#5B93C4"/>
+          <rect x="13" y="13" width="7.5" height="7.5" rx="2" class="resource-card-icon-primary" fill="#16213E"/>
         </svg>
       </div>
       <h3>${t('nav_recursos')}</h3>

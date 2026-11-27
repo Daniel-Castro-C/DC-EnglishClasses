@@ -41,7 +41,7 @@
     el.className = 'nav-item crm-nav' + (active ? ' active' : '');
     if (active) el.setAttribute('aria-current','page'); else el.removeAttribute('aria-current');
     el.innerHTML = (typeof crmIcon === 'function' ? crmIcon('file') : '') + '<span class="nav-item-label">Textos para correção</span>' +
-      (pendingTotal > 0 ? '<span class="pill" style="background:var(--amber);color:#fff;font-size:11px;padding:2px 8px;">' + pendingTotal + '</span>' : '');
+      (pendingTotal > 0 ? '<span class="pill pending-count" style="font-size:11px;padding:2px 8px;">' + pendingTotal + '</span>' : '');
   }
 
   async function refreshPending() {

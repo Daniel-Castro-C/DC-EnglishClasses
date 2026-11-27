@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
+<script>(function(){try{if(localStorage.getItem('portal_theme')==='dark')document.body.classList.add('dark-mode');}catch(e){}})();</script>
 
 <div id="login-screen">
   <div class="login-brand">
@@ -40,7 +41,7 @@
         <button id="save-btn" class="btn-primary" onclick="savePassword()">Salvar nova senha</button>
       </div>
 
-      <div class="small-note"><a href="index.html" style="color:var(--ink);">← Voltar para o login</a></div>
+      <div class="small-note"><a href="index.html" style="color:var(--link);">← Voltar para o login</a></div>
     </div>
   </div>
 </div>
@@ -51,8 +52,7 @@
 function showMsg(msg, ok){
   const el = document.getElementById('msg-box');
   el.textContent = msg;
-  el.style.background = ok ? '#E7F0E8' : '#FBEAE6';
-  el.style.color = ok ? 'var(--sage)' : 'var(--danger)';
+  el.classList.toggle('is-success',ok);
   el.classList.add('show');
 }
 

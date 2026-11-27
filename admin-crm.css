@@ -258,3 +258,21 @@ body.admin-crm #crm-pendencias .crm-pending-row{align-items:flex-start;gap:10px}
 }
 .admin-crm .crm-activity-panel{max-width:960px}
 .admin-crm .crm-activity-panel>.crm-muted{margin:0 0 16px}
+
+
+/* Dark calendar dates, lesson chips and state controls remain legible across all views. */
+body.admin-crm.dark-mode .crm-month-class{background:var(--sky-soft);color:var(--text)}
+body.admin-crm.dark-mode .crm-month-class time{color:var(--sky)}
+body.admin-crm.dark-mode .crm-month-day.is-today{background:#20334D;border-color:var(--crm-blue)}
+body.admin-crm.dark-mode .crm-month-day.is-today .crm-month-day-number{background:var(--sky);color:var(--ink)}
+body.admin-crm.dark-mode .cc-month-grid .cc-day.cc-unavailable,body.admin-crm.dark-mode .cc-unavailable-note{background:var(--neutral-soft);border-color:var(--control-line);color:var(--text)}
+body.admin-crm.dark-mode .cc-month-grid .cc-day.cc-unavailable.cc-selected{background:#40516A;outline-color:var(--sky)}
+body.admin-crm.dark-mode .cc-day.cc-selected,body.admin-crm.dark-mode .cc-weekday-chip:has(input:checked){background:var(--sky-soft);color:var(--text)}
+body.admin-crm.dark-mode .cc-weekday-chip,body.admin-crm.dark-mode .crm-month-nav button,body.admin-crm.dark-mode .crm-vocab-switch button,body.admin-crm.dark-mode .crm-quick button{border-color:var(--control-line)}
+body.admin-crm.dark-mode .cc-day-status[data-status="done"]{background:var(--sage-soft);color:var(--sage)}
+body.admin-crm.dark-mode .cc-day-status[data-status="owed"],body.admin-crm.dark-mode .cc-day-status[data-status="teacher"]{background:var(--amber-soft);color:var(--amber)}
+body.admin-crm.dark-mode .cc-day-status[data-status="absent"]{background:var(--error-message-bg);color:var(--danger)}
+body.admin-crm.dark-mode .crm-quick-status[data-status="done"]{color:var(--sage);border-color:var(--sage)}
+body.admin-crm.dark-mode .crm-quick-status[data-status="owed"],body.admin-crm.dark-mode .crm-quick-status[data-status="teacher"]{color:var(--amber);border-color:var(--amber)}
+body.admin-crm.dark-mode .crm-quick-status[data-status="absent"]{color:var(--danger);border-color:var(--danger)}
+body.admin-crm.dark-mode .crm-avatar-small{background:var(--sky-soft);color:var(--sky)}
