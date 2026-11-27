@@ -1,4 +1,4 @@
-.availability-form-shell{max-width:760px;margin:24px auto 0;padding:clamp(20px,4vw,32px);background:#fff;border:1px solid #D2E0D6;border-radius:16px;box-shadow:0 12px 32px #1E3D2F0B}
+.availability-form-shell{max-width:760px;margin:24px 0 0;padding:clamp(20px,4vw,32px);background:#fff;border:1px solid #D2E0D6;border-radius:16px;box-shadow:0 12px 32px #1E3D2F0B}
 .availability-form-shell h2{font:400 25px 'DM Serif Display',Georgia,serif;color:#1E3D2F;margin:22px 0 8px}
 .availability-form-shell .field{display:flex;flex-direction:column;gap:6px;margin:18px 0}
 .availability-form-shell label, .availability-form-shell legend{font-size:14px;font-weight:700}

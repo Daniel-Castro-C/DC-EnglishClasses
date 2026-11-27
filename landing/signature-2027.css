@@ -320,6 +320,8 @@ html[data-brand-surface="admin"] .testimonial-status.approved { background: #E1F
 html[data-brand-surface="admin"] .notice { background: #FAF1DF; color: #74542B; }
 html[data-brand-surface="admin"] .testimonial-admin-card blockquote { color: #395346; }
 html[data-brand-surface="admin"] a { color: #245B40; }
+html[data-brand-surface="admin"] header .controls a { color: #FFFFFF; text-underline-offset: 3px; font-weight: 600; }
+html[data-brand-surface="admin"] header .controls a:hover { color: #E0EBE3; }
 html[data-brand-surface="admin"] .photo-preview { border-color: #BFD1C4; background: #E4EFE7; }
 html[data-brand-surface="admin"] .photo-placeholder {
   background: linear-gradient(140deg, #DDE7E1, #B8CEBB);
