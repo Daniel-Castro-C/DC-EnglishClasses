@@ -616,3 +616,69 @@ test('status corrections are sent in one atomic request with exact IDs and uncha
  assert.equal(ctx.calls[0].args.p_changes[0].payload.events['2026-11-23'].status,'owed');
  assert.equal(run("currentLessons[0].resources[0].id"),'r');
 });
+
+function legacySkipFixture(){
+ const result=setup({group:true});
+ result.run("tgSelected.start='2026-02-05';tgSelected.days='4';tgSelected.time='21:00';for(const s of students)ccCloud.set(s.id,{revision:2,payload:{start:'2026-02-05',weekdays:'4',time:'21:00',events:s.id==='s2'?{'2026-03-05':{skip:true}}:{}}});ccDrafts.clear();ctx=ccContext();draft=ccDraft(ctx);ccSelected='2026-03-05';");
+ return result;
+}
+test('legacy individual deletion at the habitual group time is resolvable from the group calendar',()=>{
+ const {run}=legacySkipFixture();
+ assert.equal(run("ccGroupForDate('s2','2026-03-05').id"),'g1');
+ assert.equal(run("ccDateState(ctx,draft,ccSelected).status"),'planned');
+ assert.equal(run("ccLegacySkipMembers(ctx,draft,ccSelected).map(s=>s.id).join(',')"),'s2');
+ assert.doesNotThrow(()=>run("ccCanEditDate(ctx,draft,ccSelected)"));
+ run("ccStageGroupDate(ctx,draft,ccSelected,'done',{},'21:00','','')");
+ for(const id of ['s1','s2']){
+  assert.equal(run(`draft.payloads.${id}.events[ccSelected].status`),'done');
+  assert.equal(run(`draft.payloads.${id}.events[ccSelected].group_id`),'g1');
+  assert.equal(run(`draft.payloads.${id}.events[ccSelected].skip`),undefined);
+ }
+ assert.equal(run("draft.schedule.events[ccSelected].status"),'done');
+ assert.equal(run("ccRead('s2').events[ccSelected].skip"),true);
+});
+test('explicit sync of the old exclusion is drafted and saved atomically into both calendars',async()=>{
+ const {run,ctx}=legacySkipFixture();ctx.calls=[];
+ ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),async rpc(name,args){ctx.calls.push({name,args});return {data:3}}};
+ run("ccRefreshGrid=()=>{};ccEditor=()=>{};ccRender=()=>{};ccLoadCloud=async()=>{};tgLoad=async()=>{};ccRepairLegacySkip()");
+ assert.equal(run('draft.dirty'),true);
+ assert.equal(ctx.calls.length,0);
+ await run("ccSaveAll()");
+ assert.equal(ctx.calls.length,1);assert.equal(ctx.calls[0].name,'portal_group_calendar_save');
+ const args=ctx.calls[0].args;assert.equal(args.p_schedule.calendar_events['2026-03-05'].status,'planned');
+ for(const record of args.p_changes){assert.equal(record.payload.events['2026-03-05'].group_id,'g1');assert.equal(record.payload.events['2026-03-05'].status,'planned');assert.equal(record.revision,2);}
+});
+test('old independent skip can be deleted collectively without re-creating the habitual occurrence',()=>{
+ const {run}=legacySkipFixture();
+ run("ccDeleteDate(ctx,draft,ccSelected)");
+ assert.equal(run("draft.schedule.events[ccSelected].skip"),true);
+ assert.equal(run("ccDateState(ctx,draft,ccSelected).status"),'');
+ for(const id of ['s1','s2'])assert.equal(run(`draft.payloads.${id}.events[ccSelected].skip`),true);
+ assert.equal(run("ccDateState(ctx,draft,'2026-03-12').status"),'planned');
+});
+test('legacy exception rule never adopts linked appointments, different hours, other groups or registered lessons',()=>{
+ for(const event of [{skip:true,time:'19:00'},{skip:true,original:'2026-02-26'},{skip:true,group_id:'other'},{status:'done',time:'19:00'}]){
+  const {run}=legacySkipFixture();run("draft.payloads.s2.events[ccSelected]="+JSON.stringify(event));
+  assert.throws(()=>run("ccCanEditDate(ctx,draft,ccSelected)"),/registro individual/);
+ }
+ const {run}=legacySkipFixture();
+ run("draft.payloads.s2.events['2026-03-06']={status:'planned',rescheduled_from:ccSelected}");
+ assert.throws(()=>run("ccCanEditDate(ctx,draft,ccSelected)"),/registro individual/);
+ run("delete draft.payloads.s2.events['2026-03-06'];ctx.lessons.push({student_id:'s2',lesson_date:ccSelected})");
+ assert.throws(()=>run("ccCanEditDate(ctx,draft,ccSelected)"),/aula cadastrada/);
+});
+test('group editor exposes the repair and both normal actions; individual editor links back to the group',()=>{
+ const {run,ctx}=legacySkipFixture();
+ const fields=new Map();
+ ctx.document={getElementById(id){if(!fields.has(id))fields.set(id,{innerHTML:'',value:'',insertAdjacentHTML(_,html){this.innerHTML+=html}});return fields.get(id)},querySelectorAll(){return []}};
+ run("ccEditor()");
+ const html=fields.get('cc-edit').innerHTML;
+ assert.match(html,/Sincronizar com a turma/);
+ assert.match(html,/Realizar aula/);
+ assert.match(html,/Excluir registro/);
+ assert.doesNotMatch(html,/Resolva o conflito no calendário individual/);
+ run("currentView='student';currentStudent=students[1];ccDrafts.clear();ccEditor()");
+ const own=fields.get('cc-edit').innerHTML;
+ assert.match(own,/Há uma exclusão individual antiga/);
+ assert.match(own,/Abrir calendário da turma/);
+});
