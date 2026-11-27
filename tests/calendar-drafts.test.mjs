@@ -757,3 +757,78 @@ test('both administrative calendars share two independent side-by-side cards wit
  assert.match(css,/@container \(min-width:850px\)\{\s*\.admin-crm \.cc-calendar-columns\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
  assert.match(css,/\.cc-day-panel:has\(#cc-edit:not\(:empty\)\) \.cc-day-placeholder\{display:none\}/);
 });
+
+test('individual makeup marked absent without replacement retains its original link and closes debt',()=>{
+ const {run,ctx}=setupUnified();
+ run("draft.payloads.s1.events={'2026-11-23':{status:'owed'},'2026-11-24':{status:'planned',original:'2026-11-23'}};ccSelected='2026-11-24'");
+ assert.equal(run("ccPending(draft.payloads.s1)"),1);
+ ctx.document={getElementById:id=>({value:({'cc-status':'absent','cc-original':'','cc-time':'18:00','cc-notes':''})[id]})};
+ run("ccMarkDirty=()=>{};ccRefreshGrid=()=>{};ccEditor=()=>{}");
+ assert.equal(run("ccApplyDay()"),true);
+ assert.equal(run("draft.payloads.s1.events['2026-11-24'].original"),'2026-11-23');
+ assert.equal(run("draft.payloads.s1.events['2026-11-24'].status"),'absent');
+ assert.equal(run("ccPending(draft.payloads.s1)"),0);
+ assert.equal(run("ccReplacementAvailable(draft.payloads.s1,'2026-11-23','2026-11-25',[])"),false);
+ assert.equal(run("ccReplacementAvailable(draft.payloads.s1,'2026-11-24','2026-11-25',[])"),false);
+ assert.equal(run("ccReplacementAvailable(draft.payloads.s1,'2026-11-23','2026-11-24',[])"),true);
+ run("ccCloud.set('s1',{revision:3,payload:draft.payloads.s1})");
+ assert.equal(run("crmStudentMetrics(students[0],[]).pending"),0);
+ assert.equal(run("crmStudentMetrics(students[0],[]).count"),1);
+});
+test('collective missed makeup closes the debt for both members and leaves no collective pending row after saving',async()=>{
+ const {run,ctx}=setupUnified(true);ctx.calls=[];
+ ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),async rpc(name,args){ctx.calls.push({name,args});return {data:4}}};
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','owed',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-24','planned',{},'18:00','','2026-11-23')");
+ run("tgSelected.calendar_events=ccClone(draft.schedule.events);for(const s of students)ccCloud.set(s.id,{revision:3,payload:ccClone(draft.payloads[s.id])})");
+ assert.equal(run("tgGroupReplacementRows().length"),1);
+ run("draft=ccDraft(ctx);ccStageGroupDate(ctx,draft,'2026-11-24','absent',{},'18:00','','')");
+ for(const id of ['s1','s2']){
+  assert.equal(run("draft.payloads."+id+".events['2026-11-24'].original"),'2026-11-23');
+  assert.equal(run("draft.payloads."+id+".events['2026-11-24'].status"),'absent');
+  assert.equal(run("ccPending(draft.payloads."+id+")"),0);
+ }
+ assert.equal(run("draft.schedule.events['2026-11-24'].original"),'2026-11-23');
+ assert.throws(()=>run("ccStageGroupDate(ctx,draft,'2026-11-25','planned',{},'18:00','','2026-11-23')"),/reposiç[aã]o exige/);
+ const elements=new Map();
+ ctx.document={getElementById(id){if(!elements.has(id))elements.set(id,{innerHTML:'',textContent:''});return elements.get(id)}};
+ run("ccRefreshGrid()");
+ assert.match(elements.get('cc-annual').innerHTML,/0 reposições pendentes/);
+ run("ccMarkDirty(ctx,draft);ccRender=()=>{};ccLoadCloud=async()=>{};tgLoad=async()=>{};ccFinishInput=()=>true");
+ await run("ccSaveAll()");
+ assert.equal(ctx.calls.length,1);
+ assert.equal(ctx.calls[0].name,'portal_group_calendar_save');
+ const args=ctx.calls[0].args;
+ assert.equal(args.p_schedule.calendar_events['2026-11-24'].original,'2026-11-23');
+ for(const change of args.p_changes)assert.equal(change.payload.events['2026-11-24'].original,'2026-11-23');
+ run("tgSelected.calendar_events=ccClone(draft.schedule.events);for(const s of students)ccCloud.set(s.id,{revision:4,payload:ccClone(draft.payloads[s.id])})");
+ assert.equal(run("tgGroupReplacementRows().length"),0);
+ assert.equal(run("ccPending(ccData(students[0]))"),0);
+ assert.equal(run("ccPending(ccData(students[1]))"),0);
+});
+for(const group of [false,true])test((group?'group':'individual')+': already registered makeup can be forfeited without losing materials or its original date',()=>{
+ const {run}=setupUnified(group);
+ if(group)run("ccStageGroupDate(ctx,draft,'2026-11-23','owed',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-24','planned',{},'18:00','','2026-11-23')");
+ else run("draft.payloads.s1.events={'2026-11-23':{status:'owed'},'2026-11-24':{status:'planned',original:'2026-11-23'}}");
+ run("ctx.lessons.push(...ctx.members.map(s=>({id:'lesson-'+s.id,student_id:s.id,group_id:ctx.group?.id||null,lesson_date:'2026-11-24',title:'Class #1',calendar_status:'planned',resources:[{id:'resource-'+s.id}]})));ccStageRegisteredStatus(ctx,draft,'2026-11-24','absent')");
+ assert.equal(run("draft.payloads.s1.events['2026-11-24'].original"),'2026-11-23');
+ assert.equal(run("draft.payloads.s1.events['2026-11-24'].status"),'absent');
+ assert.equal(run("ctx.lessons[0].resources[0].id"),'resource-s1');
+ assert.equal(run("ccRegisteredReplacementAvailable(ctx,draft,'2026-11-25','2026-11-23')"),false);
+ assert.equal(run("ccRegisteredReplacementAvailable(ctx,draft,'2026-11-24','2026-11-23')"),true);
+ if(group)assert.equal(run("draft.payloads.s2.events['2026-11-24'].original"),'2026-11-23');
+ run("ccStageRegisteredStatus(ctx,draft,'2026-11-24','done','2026-11-23')");
+ assert.equal(run("draft.payloads.s1.events['2026-11-24'].status"),'done');
+});
+test('only a completed or missed-without-replacement makeup settles the debt; skipped and planned remain pending',()=>{
+ const {run}=setupUnified();
+ run("var sample={events:{'2026-11-23':{status:'owed'},'2026-11-24':{status:'planned',original:'2026-11-23'}}}");
+ assert.equal(run("ccPending(sample)"),1);
+ assert.equal(run("ccReplacementAvailable(sample,'2026-11-23','2026-11-25',[])"),false);
+ run("sample.events['2026-11-24'].status='absent'");
+ assert.equal(run("ccPending(sample)"),0);
+ run("sample.events['2026-11-24'].skip=true");
+ assert.equal(run("ccPending(sample)"),1);
+ assert.equal(run("ccReplacementAvailable(sample,'2026-11-23','2026-11-25',[])"),true);
+ run("delete sample.events['2026-11-24'].skip;sample.events['2026-11-24'].status='done'");
+ assert.equal(run("ccPending(sample)"),0);
+});

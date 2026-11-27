@@ -235,8 +235,8 @@ function ccRefreshGrid(){
  let completed=0,absent=0,pending=0;const groupVacations={};
  for(const date of dates){const state=ccDateState(ctx,d,date);if(state.rows.some(r=>r.status==='done'))completed++;else if(state.rows.every(r=>r.status==='absent'))absent++;
   if(ctx.group&&state.rows.every(r=>r.status==='vacation'&&r.e?.discounted!==false))groupVacations[date]={status:'vacation'};
-  const eligible=ctx.group?state.status==='owed'&&state.rows.every(r=>ccAbsent(r.status)):['owed','teacher'].includes(state.status)||state.status==='absent'&&Object.values(x.events).some(e=>e.original===date);
-  if(eligible&&!state.rows.some(r=>r.status==='done')&&!ctx.members.every(s=>Object.entries(d.payloads[s.id].events).some(([rd,e])=>e.original===date&&(e.status==='done'||ctx.lessons.some(l=>l.student_id===s.id&&l.lesson_date===rd&&(!l.calendar_status||l.calendar_status==='done'))))))pending++;
+  const eligible=ctx.group?state.status==='owed'&&state.rows.every(r=>ccAbsent(r.status)):ccReplacementDebt(x,date);
+  if(eligible&&!state.rows.some(r=>r.status==='done')&&!ctx.members.every(s=>ccReplacementSettled(d.payloads[s.id],date,rd=>ccRegisteredClosed(ccDraftReplacementLessons(ctx,d,s.id),rd))))pending++;
  }
  document.getElementById('cc-annual').innerHTML='<h3>Controle anual · '+y+'</h3><p><b>'+(completed+absent)+' / '+(ccTarget(ctx.group?{...x,events:groupVacations}:x,y)??'—')+'</b> contabilizadas · '+completed+' realizadas · '+absent+' faltas sem reposição · '+pending+' reposições pendentes</p><p class="small-note">Aulas cadastradas são consideradas realizadas automaticamente.</p>';
 }
@@ -250,11 +250,30 @@ function ccMove(direction){
  ccRefreshGrid();
 }
 function ccSelect(date){if(ccSaving||!ccFinishInput())return;const d=ccDraft();if(ccSelected!==date)d.editLessonDate='';ccSelected=date;d.selected=date;ccRefreshGrid();ccEditor();}
+// A linked make-up that was completed OR missed without another make-up
+// consumes the original entitlement. Keep the link for historical accuracy.
+function ccReplacementLinks(x,original,except=''){
+ return Object.entries(x.events||{}).filter(([date,event])=>date!==except&&event?.original===original&&!event.skip);
+}
+function ccReplacementSettled(x,original,registeredClosed=()=>false){
+ return ccReplacementLinks(x,original).some(([date,event])=>['done','absent'].includes(event.status)||registeredClosed(date));
+}
+function ccReplacementDebt(x,date){
+ const event=x.events[date];
+ return !!event&&!event.skip&&(['owed','teacher'].includes(event.status)||event.status==='absent'&&ccReplacementLinks(x,date).length>0);
+}
+function ccRegisteredClosed(lessons,date){
+ return lessons.some(l=>l.lesson_date===date&&['done','absent'].includes(l.calendar_status||'done'));
+}
+function ccDraftReplacementLessons(ctx,d,id){
+ return ctx.lessons.filter(l=>l.student_id===id).map(l=>d.registeredStatuses?.[l.lesson_date]?{...l,calendar_status:d.payloads[id].events[l.lesson_date]?.status}:l);
+}
 function ccReplacementAvailable(x,original,date,lessons,collective=false){
  if(x.events[original]?.group_id&&(!collective||x.events[original].group_status==='absent'))return false;
- if(!original||original>=date||!['owed','absent','teacher'].includes(x.events[original]?.status))return false;
+ if(!original||original>=date||!ccReplacementDebt(x,original))return false;
  if(lessons.some(l=>l.lesson_date===original&&!['owed','absent','teacher'].includes(l.calendar_status)))return false;
- return !Object.entries(x.events).some(([rd,r])=>rd!==date&&r.original===original&&!r.skip&&(r.status==='done'||r.status==='planned'||lessons.some(l=>l.lesson_date===rd&&(!l.calendar_status||['done','planned'].includes(l.calendar_status)))));
+ // Exclude the same date so a mistaken absence can be corrected in place.
+ return !ccReplacementLinks(x,original,date).some(([rd,r])=>['done','planned','absent'].includes(r.status)||lessons.some(l=>l.lesson_date===rd&&['done','planned','absent'].includes(l.calendar_status||'done')));
 }
 function ccCanEditDate(ctx,d,date){
  if(ctx.members.some(s=>ccRegistered(ctx,s.id,date)))throw Error('Esta data tem aula cadastrada com materiais. Use Aulas e materiais para editar o cadastro; o calendário não exclui esse conteúdo.');
@@ -358,7 +377,7 @@ function ccPublishedDetails(ctx,date){
 }
 function ccDayHeading(date,state,time){
  const label=ccDateLabel(state.status,state.event)||'Sem aula',unavailable=ccUnavailable(date,state.status);
- return '<div class="cc-day-heading"><div><h3>'+ccEsc(formatDate(date))+(state.status&&!['holiday','break'].includes(state.status)&&time?' · '+ccEsc(time):'')+'</h3></div><span class="cc-day-status" data-status="'+ccEsc(state.status||'empty')+'">'+ccEsc(label)+(state.mixed?' · frequência mista':'')+'</span></div>'+(state.event?.original?'<p class="small-note">Reposição referente a '+ccEsc(formatDate(state.event.original))+'</p>':'')+(unavailable?'<p class="cc-unavailable-note">'+ccEsc(unavailable)+' · Dia normalmente indisponível. É possível registrar uma aula excepcional.</p>':'');
+ return '<div class="cc-day-heading"><div><h3>'+ccEsc(formatDate(date))+(state.status&&!['holiday','break'].includes(state.status)&&time?' · '+ccEsc(time):'')+'</h3></div><span class="cc-day-status" data-status="'+ccEsc(state.status||'empty')+'">'+ccEsc(label)+(state.mixed?' · frequência mista':'')+'</span></div>'+(state.event?.original?'<p class="small-note">Reposição referente a '+ccEsc(formatDate(state.event.original))+'</p>':'')+(state.event?.original&&state.status==='absent'?'<p class="small-note">A falta sem reposição nesta aula encerra o direito à reposição da aula original.</p>':'')+(unavailable?'<p class="cc-unavailable-note">'+ccEsc(unavailable)+' · Dia normalmente indisponível. É possível registrar uma aula excepcional.</p>':'');
 }
 function ccQuickDayActions(ctx,state){
  const status=state.status;
@@ -405,7 +424,7 @@ function ccEditor(){
  const selected=(ctx.group?state.base.status:state.status)||'';
  const options=statuses.map(([k,v])=>'<option value="'+k+'">'+ccEsc(v)+'</option>').join('');
  const candidates=Object.entries(d.payloads[ctx.members[0].id].events).filter(([from])=>ctx.members.every(s=>{
-  const row=d.payloads[s.id],ls=ctx.lessons.filter(l=>l.student_id===s.id);
+  const row=d.payloads[s.id],ls=ccDraftReplacementLessons(ctx,d,s.id);
   return ctx.group?ccGroupBase(ctx,d,from).status!=='absent'&&ctx.members.every(m=>['absent','owed'].includes(d.payloads[m.id].events[from]?.status)&&d.payloads[m.id].events[from]?.group_id===ctx.group.id)&&ccReplacementAvailable(row,from,date,ls,true):ccReplacementAvailable(row,from,date,ls);
  }));
  const lesson=typeof ccLessonForm==='function'?ccLessonForm(ctx,d,date,state):'';
@@ -445,9 +464,10 @@ function ccStageGroupDate(ctx,d,date,status,attendance,time,notes,original,indiv
  else if(ctx.members.some(s=>!ccRegistered(ctx,s.id,date)&&d.payloads[s.id].events[date]&&!ccLegacyGroupRow(ctx,d,s.id,date)))throw Error('Há um registro individual independente nesta data.');
  if(!Object.hasOwn(ccStatus,status)||status==='rescheduled')throw Error('Status coletivo inválido.');
  if(individual&&!['planned','done','absent','owed'].includes(previous.status))throw Error('Altere primeiro o status coletivo da aula.');
+ if(status==='absent'&&previous.original)original=previous.original;
  const base=individual?{...previous}:{...previous,status,time,notes,original};delete base.skip;
  if(original){
-  if(ccGroupBase(ctx,d,original).status==='absent'||!ctx.members.every(s=>d.payloads[s.id].events[original]?.group_id===ctx.group.id&&ccAbsent(d.payloads[s.id].events[original]?.status)&&ccReplacementAvailable(d.payloads[s.id],original,date,ctx.lessons.filter(l=>l.student_id===s.id),true)))throw Error('A reposição exige falta de todos os integrantes e uma data disponível.');
+  if(ccGroupBase(ctx,d,original).status==='absent'||!ctx.members.every(s=>d.payloads[s.id].events[original]?.group_id===ctx.group.id&&ccAbsent(d.payloads[s.id].events[original]?.status)&&ccReplacementAvailable(d.payloads[s.id],original,date,ccDraftReplacementLessons(ctx,d,s.id),true)))throw Error('A reposição exige falta de todos os integrantes e uma data disponível.');
   if(!ctx.members.every(s=>d.payloads[s.id].events[date]?.original===original)&&ccIsHabitual(d.schedule,date)&&!ctx.members.every(s=>d.payloads[s.id].events[date]?.skip))throw Error('Escolha uma data sem aula habitual para a reposição.');
  }
  const overrides={},effective={};
@@ -468,7 +488,8 @@ function ccStageGroupDate(ctx,d,date,status,attendance,time,notes,original,indiv
 }
 function ccApplyDay(individual=false){
  const ctx=ccContext(),d=ccDraft(ctx),status=document.getElementById('cc-status')?.value;if(!d||(!status&&!individual)||status==='move'||ccSaving)return false;
- const date=ccSelected,original=document.getElementById('cc-original').value,time=document.getElementById('cc-time').value,notes=document.getElementById('cc-notes').value;
+ const date=ccSelected,time=document.getElementById('cc-time').value,notes=document.getElementById('cc-notes').value;
+ let original=document.getElementById('cc-original').value;
  try{
   if(ctx.group){
    const attendance=Object.fromEntries([...document.querySelectorAll('[data-cc-member]')].map(input=>[input.dataset.ccMember,input.value]));
@@ -477,9 +498,10 @@ function ccApplyDay(individual=false){
   }
   ccCanEditDate(ctx,d,date);
   const id=ctx.members[0].id,x=d.payloads[id],old=x.events[date]||{};
+  if(status==='absent'&&old.original)original=old.original;
   if(original){
    if(old.original!==original&&ccIsHabitual(x,date)&&!old.skip)throw Error('Escolha uma data sem aula habitual para a reposição.');
-   if(!ccReplacementAvailable(x,original,date,ctx.lessons))throw Error('Esta reposição não está disponível.');
+   if(!ccReplacementAvailable(x,original,date,ccDraftReplacementLessons(ctx,d,id)))throw Error('Esta reposição não está disponível.');
    if(old.rescheduled_from)throw Error('Uma aula reagendada não pode ser vinculada como reposição.');
   }
   if(Object.entries(x.events).some(([rd,v])=>rd!==date&&v.original===date&&!v.skip)&&!['owed','absent','teacher'].includes(status))throw Error('Exclua a reposição vinculada antes de alterar a frequência original.');
@@ -573,7 +595,10 @@ window.addEventListener('beforeunload',event=>{if([...ccDrafts.values()].some(d=
 async function ccOpen(id){await openStudent(id);ccActiveKey='';ccSelected='';switchTab('calendario')}
 
 function ccTarget(x,y){if(!x.plan||!x.start)return null;let total=0;for(let m=0;m<12;m++){let first=ccISO(y,m,1),last=ccISO(y,m,new Date(y,m+1,0).getDate());if(x.start>last||(x.end&&x.end<first))continue;let days=new Date(y,m+1,0).getDate(),a=x.start>first?Number(x.start.slice(-2)):1,b=x.end&&x.end<last?Number(x.end.slice(-2)):days;total+=Math.round(Number(x.plan)/12*(b-a+1)/days)}return Math.max(0,total-Object.entries(x.events).filter(([d,e])=>d.startsWith(y+'-')&&d>=x.start&&(!x.end||d<=x.end)&&e.status==='vacation'&&e.discounted!==false).length)}
-function ccPending(x,byDate={}){const entries=Object.entries(x.events);return entries.filter(([d,e])=>(!e.group_id||tgGroupReplacementEligible(e.group_id,d))&&(['owed','teacher'].includes(e.status)||e.status==='absent'&&entries.some(([rd,r])=>r.original===d))&&!byDate[d]?.some(l=>!l.calendar_status||l.calendar_status==='done')&&!entries.some(([rd,r])=>r.original===d&&(r.status==='done'||byDate[rd]?.some(l=>!l.calendar_status||l.calendar_status==='done')))).length}
+function ccPending(x,byDate={}){return Object.entries(x.events).filter(([date,event])=>
+ (!event.group_id||tgGroupReplacementEligible(event.group_id,date))&&ccReplacementDebt(x,date)&&
+ !byDate[date]?.some(l=>!l.calendar_status||l.calendar_status==='done')&&
+ !ccReplacementSettled(x,date,rd=>ccRegisteredClosed(byDate[rd]||[],rd))).length}
 // Previsão nacional de 2027. Carnaval e Corpus Christi não são feriados nacionais.
 const ccNationalHolidays2027=Object.freeze([
  ['2027-01-01','Confraternização Universal'],['2027-03-26','Sexta-feira Santa'],
@@ -683,7 +708,7 @@ async function ccRosterRows(){let el=document.getElementById('crm-roster');if(!e
 function crmIcon(name){const paths={dashboard:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-4M16 3a4 4 0 0 1 0 8"/><circle cx="9" cy="7" r="4"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',activity:'<path d="M3 12h4l3-7 4 14 3-7h4"/>',chart:'<path d="M3 3v18h18M8 16v-4m5 4V8m5 8V5"/>',book:'<path d="M12 7c-3-3-7-3-10-2v15c4-1 7 0 10 2 3-2 6-3 10-2V5c-3-1-7-1-10 2v15"/>',message:'<path d="M21 11a9 9 0 0 1-9 9H3l2-5a9 9 0 1 1 16-4Z"/>',megaphone:'<path d="M3 10v4h4l4 7h3l-3-7 10 4V6l-14 4Z"/>',graduation:'<path d="m2 9 10-5 10 5-10 5-10-5Zm4 2v6c4 3 8 3 12 0v-6"/>',external:'<path d="M13 5h6v6m0-6-9 9M19 13v6H5V5h6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="m12 2 2 4 4-1 1 4 3 3-3 3-1 4-4-1-2 4-2-4-4 1-1-4-3-3 3-3 1-4 4 1Z"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',refresh:'<path d="M20 7a9 9 0 0 0-15-2L2 8m0-5v5h5m-3 9a9 9 0 0 0 15 2l3-3m0 5v-5h-5"/>',file:'<path d="M6 2h8l4 4v16H6ZM14 2v5h4M9 12h6m-6 4h6"/>',video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-4v12l-6-4"/>',plus:'<path d="M12 5v14M5 12h14"/>',chevron:'<path d="m9 6 6 6-6 6"/>'};return '<svg class="crm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[name]||paths.calendar)+'</svg>'}
 function crmKpi(label,value,icon,id){return '<div class="crm-kpi"><div><span>'+ccEsc(label)+'</span>'+crmIcon(icon)+'</div><strong '+(id?'id="'+id+'"':'')+'>'+ccEsc(value)+'</strong></div>'}
 function crmPlan(x){return x.plan==='48'?'Essencial':x.plan==='96'?'Intensivo':'Plano não definido'}
-function crmStudentMetrics(s,lessons){const x=ccData(s),y=Number(adminToday().date.slice(0,4)),prefix=y+'-',by={};lessons.filter(l=>l.lesson_date).forEach(l=>(by[l.lesson_date]??=[]).push(l));const rows=Object.entries(x.events),used=new Set(rows.filter(([d,e])=>e.original&&(e.status==='done'||by[d]?.length)).map(([d,e])=>e.original));const real=lessons.filter(l=>l.lesson_date?.startsWith(prefix)&&(!l.calendar_status||l.calendar_status==='done')).length+rows.filter(([d,e])=>d.startsWith(prefix)&&e.status==='done'&&!by[d]).length;const absent=rows.filter(([d,e])=>d.startsWith(prefix)&&e.status==='absent'&&!by[d]?.some(l=>!l.calendar_status||l.calendar_status==='done')&&!used.has(d)).length;const missed=rows.filter(([d,e])=>d.startsWith(prefix)&&['owed','absent'].includes(e.status)&&!by[d]?.some(l=>!l.calendar_status||l.calendar_status==='done')).length;return {count:real+absent,target:ccTarget(x,y),pending:ccPending(x,by),frequency:real+missed?Math.round(real/(real+missed)*100)+'%':'—'}}
+function crmStudentMetrics(s,lessons){const x=ccData(s),y=Number(adminToday().date.slice(0,4)),prefix=y+'-',by={};lessons.filter(l=>l.lesson_date).forEach(l=>(by[l.lesson_date]??=[]).push(l));const rows=Object.entries(x.events),used=new Set(rows.filter(([d,e])=>e.original&&!e.skip&&(['done','absent'].includes(e.status)||ccRegisteredClosed(by[d]||[],d))).map(([d,e])=>e.original));const real=lessons.filter(l=>l.lesson_date?.startsWith(prefix)&&(!l.calendar_status||l.calendar_status==='done')).length+rows.filter(([d,e])=>d.startsWith(prefix)&&e.status==='done'&&!by[d]).length;const absent=rows.filter(([d,e])=>d.startsWith(prefix)&&e.status==='absent'&&!by[d]?.some(l=>!l.calendar_status||l.calendar_status==='done')&&!used.has(d)).length;const missed=rows.filter(([d,e])=>d.startsWith(prefix)&&['owed','absent'].includes(e.status)&&!by[d]?.some(l=>!l.calendar_status||l.calendar_status==='done')).length;return {count:real+absent,target:ccTarget(x,y),pending:ccPending(x,by),frequency:real+missed?Math.round(real/(real+missed)*100)+'%':'—'}}
 function crmDismissed(id,key){return !!ccRead(id).dismissedAlerts?.[key];}
 async function crmDismissAlert(id,key){
  if(!confirm('Descartar somente este aviso? O registro original será preservado.'))return;
@@ -707,7 +732,7 @@ function crmOtherPending(){
  const tabs={questions:'duvidas',materials:'pedidos',texts:'textos-aluno'};
  const row=(icon,label,key,action)=>crmPendingRow(icon,s.full_name||s.email,label,crmPendingActions('<button class="btn-ghost" onclick="'+ccEsc(action)+'">Abrir</button>',crmDismissButton(s.id,key)));
  const messages=Object.entries(labels).flatMap(([kind,label])=>(inbox[kind]||[]).filter(id=>!crmDismissed(s.id,kind+':'+id)).map(id=>row('message',label,kind+':'+id,"crmOpenInbox('"+s.id+"','"+tabs[kind]+"')")));
- const replacements=entries.filter(([d,e])=>!e.group_id&&!crmRegisteredDates.has(s.id+'|'+d)&&(['owed','teacher'].includes(e.status)||e.status==='absent'&&entries.some(([rd,r])=>r.original===d))&&!entries.some(([rd,r])=>r.original===d&&(r.status==='done'||crmRegisteredDates.has(s.id+'|'+rd)))&&!crmDismissed(s.id,'replacement:'+d)).map(([d])=>row('refresh','Reposição pendente · '+formatDate(d),'replacement:'+d,"ccOpenDate('"+s.id+"','"+d+"')"));
+ const replacements=entries.filter(([d,e])=>!e.group_id&&!crmRegisteredDates.has(s.id+'|'+d)&&ccReplacementDebt(x,d)&&!ccReplacementSettled(x,d,rd=>crmRegisteredDates.has(s.id+'|'+rd))&&!crmDismissed(s.id,'replacement:'+d)).map(([d])=>row('refresh','Reposição pendente · '+formatDate(d),'replacement:'+d,"ccOpenDate('"+s.id+"','"+d+"')"));
  return [...messages,...replacements].join('');
  }).join('');
  return singles+tgGroupReplacementRows().filter(r=>r.visible.length).map(({g,date,visible})=>crmPendingRow('refresh',g.name,'Reposição coletiva · '+formatDate(date),'',visible.map(id=>crmPendingMember(students.find(s=>s.id===id)?.full_name||'Aluno','',crmDismissButton(id,'replacement:'+date))).join('')+'<div class="crm-pending-group-action"><button class="btn-ghost" onclick="tgOpenReplacement(&quot;'+ccEsc(g.id)+'&quot;,&quot;'+ccEsc(date)+'&quot;)">Agendar ou concluir reposição</button></div>')).join('');

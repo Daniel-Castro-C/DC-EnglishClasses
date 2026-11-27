@@ -225,7 +225,7 @@ async function renderHome(){
     document.getElementById('report-pending-stat').textContent = String(pendencies.length);
     document.getElementById('report-pending-list').innerHTML = crmGroupedLessons(pendencies);
     document.getElementById('crm-other-pending').innerHTML=crmOtherPending();
-    document.getElementById('crm-replacement-stat').textContent=String(students.filter(s=>!s.is_test_profile).reduce((n,s)=>n+Object.entries(ccData(s).events).filter(([date,e])=>!e.group_id&&['owed','teacher'].includes(e.status)&&!crmRegisteredDates.has(s.id+'|'+date)&&!Object.entries(ccData(s).events).some(([d,v])=>v.original===date&&(v.status==='done'||crmRegisteredDates.has(s.id+'|'+d)))).length,0)+tgGroupReplacementRows().length);
+    document.getElementById('crm-replacement-stat').textContent=String(students.filter(s=>!s.is_test_profile).reduce((n,s)=>{const x=ccData(s);return n+Object.entries(x.events).filter(([date,e])=>!e.group_id&&ccReplacementDebt(x,date)&&!crmRegisteredDates.has(s.id+'|'+date)&&!ccReplacementSettled(x,date,rd=>crmRegisteredDates.has(s.id+'|'+rd))).length;},0)+tgGroupReplacementRows().length);
   } catch(error) {
     console.error('Falha ao consultar pendências de relatórios:', error);
     if (currentView !== 'home') return;
