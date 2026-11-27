@@ -22,11 +22,15 @@ function setup(){
  `,c);
  return {run:s=>vm.runInContext(s,c),c,alerts};
 }
-test('weeks start on Monday and handle month/year rollover without timezone shifts',()=>{
+test('rolling seven-day window starts on Friday and spans months and years',()=>{
  const {run}=setup();
- assert.equal(run("crmPlanMonday('2026-11-29')"),'2026-11-23');
- assert.equal(run("crmPlanMonday('2027-01-01')"),'2026-12-28');
- assert.equal(run("crmPlanShift('2026-12-28',6)"),'2027-01-03');
+ assert.equal(run("crmPlanWindow('2026-11-27').start"),'2026-11-27');
+ assert.equal(run("crmPlanWindow('2026-11-27').end"),'2026-12-03');
+ assert.equal(run("crmPlanWindow('2026-12-31').end"),'2027-01-06');
+ const src=readFileSync('js/admin-weekly-planning.js','utf8');
+ assert.doesNotMatch(src,/data-week|crmPlanMonday/);
+ assert.match(src,/data-plan-refresh/);
+ assert.equal(run("crmPlanEntries('2026-11-27',[],[plan]).some(e=>e.lesson_date<'2026-11-27'||e.lesson_date>'2026-12-03')"),false);
 });
 test('weekly agenda includes moved and replacement classes, excludes absent, groups once, retains orphan plans',()=>{
  const {run}=setup();

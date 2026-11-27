@@ -33,7 +33,7 @@
 <script>
 const escapeHtml=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const students=[{id:'marina',full_name:'Marina',lesson_weekday:4,lesson_time:'18:00'},{id:'bruno',full_name:'Bruno',lesson_weekday:1,lesson_time:'18:00'},{id:'helena',full_name:'Helena',lesson_weekday:3,lesson_time:'19:00'},{id:'caio',full_name:'Caio',lesson_weekday:2,lesson_time:'20:00'},{id:'laura',full_name:'Laura',lesson_weekday:4,lesson_time:'21:00'},{id:'rafael',full_name:'Rafael',lesson_weekday:4,lesson_time:'21:00'}];
-const adminToday=()=>({date:'2026-11-26'});
+const adminToday=()=>({date:'2026-11-27'});
 </script>
 <script src="js/admin-calendar-test.js"></script><script src="js/admin-turmas-preview.js"></script><script src="js/admin-monthly-calendar.js"></script><script src="js/admin-calendar-lessons.js"></script><script src="js/admin-weekly-planning.js"></script><script src="js/admin-vocabulary.js"></script>
 <script>
@@ -52,7 +52,7 @@ const demoWords=[
 ];
 const sb={from(){return {select(){return this},eq(_,id){this.id=id;return this},async order(){return {data:this.id==='rafael'?[]:this.id==='laura'?demoWords.slice(1):demoWords}}}}};
 const previewPlans=new Map(),previewFiles=new Map();
-const previewPlan={subject_type:'student',subject_id:'marina',lesson_date:'2026-11-26',topic:'Managing different personalities',notes:'Debate e vocabulário sobre liderança.',ready:true,files:[],revision:1};
+const previewPlan={subject_type:'student',subject_id:'marina',lesson_date:'2026-12-03',topic:'Managing different personalities',notes:'Debate e vocabulário sobre liderança.',ready:true,files:[],revision:1};
 previewPlans.set(crmPlanKey(previewPlan),previewPlan);
 const previewPlanRepo={
  async list(start){return [...previewPlans.values()].filter(p=>p.lesson_date>=start&&p.lesson_date<=crmPlanShift(start,6));},

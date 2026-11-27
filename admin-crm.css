@@ -77,7 +77,7 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .cc-month-navigation{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:12px}
 .admin-crm .cc-month-navigation h3{margin:0;text-align:center;min-width:0}
 .admin-crm .cc-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:auto repeat(6,minmax(83px,1fr));gap:5px;margin:10px 0;overflow-anchor:none}
-.admin-crm .cc-month-panel #cc-edit,.admin-crm #cc-annual{overflow-anchor:none}
+.admin-crm .cc-calendar-workspace,.admin-crm #cc-annual{overflow-anchor:none}
 .admin-crm .cc-month-grid>small{text-align:center;color:var(--text-soft)}
 .admin-crm .cc-month-grid .cc-day{display:flex;flex-direction:column;align-items:flex-start;min-height:83px;min-width:0;white-space:normal;padding:7px;text-align:left;overflow-wrap:anywhere}
 .admin-crm .cc-day small{font-size:11px;line-height:1.25}
@@ -119,7 +119,19 @@ body.admin-crm .crm-quick-status{width:auto;min-width:145px;max-width:210px;marg
 .admin-crm .cc-settings-count{font-size:12px;color:var(--text-soft)}
 .admin-crm .cc-schedule-settings>summary::after,.admin-crm .cc-day-options>summary::after{content:'▾';color:var(--crm-blue);font-size:14px;flex:none}
 .admin-crm .cc-schedule-settings[open]>summary::after,.admin-crm .cc-day-options[open]>summary::after{transform:rotate(180deg)}
-.admin-crm #cc-edit:not(:empty){border-top:1px solid var(--line);margin-top:14px;padding-top:16px}
+.admin-crm .cc-calendar-workspace{container-type:inline-size;min-width:0}
+.admin-crm .cc-calendar-columns{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+.admin-crm .cc-calendar-columns>.box{min-width:0;margin:0}
+.admin-crm .cc-day-panel{min-height:120px;overflow-wrap:anywhere}
+.admin-crm .cc-day-panel-label{margin:0 0 12px}
+.admin-crm .cc-day-panel:has(#cc-edit:not(:empty)) .cc-day-placeholder{display:none}
+.admin-crm .cc-day-panel #cc-edit{overflow-anchor:none}
+@container (min-width:850px){
+ .admin-crm .cc-calendar-columns{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .admin-crm .cc-calendar-columns .cc-month-grid{gap:3px;grid-template-rows:auto repeat(6,minmax(72px,1fr))}
+ .admin-crm .cc-calendar-columns .cc-day{padding:4px;min-height:72px}
+ .admin-crm .cc-calendar-columns .cc-day small{font-size:10px}
+}
 .admin-crm .cc-day-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .admin-crm .cc-day-heading h3{margin:0}
 .admin-crm .cc-day-status{font-size:12px;font-weight:600;border-radius:20px;padding:5px 10px;background:var(--sky-soft);color:var(--text)}

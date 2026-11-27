@@ -327,8 +327,8 @@ function previewBadgeCelebration(){
   pendingBadgeCelebration = completedError ? null : getBadgeToCelebrate(profile.id, completedCount);
   const achievementsHtml = buildAchievementsSection(completedCount);
   const isEnglish = getLang() === 'en';
-  let lessonToday = await homeHasLessonToday(profile);
-  const lessonCallHtml = renderHomeLessonCall({url:profile.permanent_lesson_link,demo:isTestStudentProfile(profile),today:lessonToday,lang:getLang()});
+  let lessonDays = await homeNextLessonDays(profile);
+  const lessonCallHtml = renderHomeLessonCall({url:profile.permanent_lesson_link,demo:isTestStudentProfile(profile),days:lessonDays,lang:getLang()});
 
 
   document.getElementById('main-content').innerHTML = `
@@ -363,12 +363,6 @@ function previewBadgeCelebration(){
       </div>
 
       <div class="home-cards">
-        <a class="home-card" href="aluno.html">
-          ${portalNavIcon('aulas')}
-          <h3>${t('nav_aulas')}</h3>
-          <p>${t('card_aulas_desc')}</p>
-          <span class="home-card-link">${t('dashboard_explore')} <span aria-hidden="true">→</span></span>
-        </a>
         ${grammarUnlocked ? `
           <a class="home-card" href="guias-gramatica.html">
             ${portalNavIcon('gramatica')}
@@ -409,8 +403,8 @@ function previewBadgeCelebration(){
       if (document.hidden || refreshingLessonDay) return;
       refreshingLessonDay = true;
       try {
-        const next = await homeHasLessonToday(profile);
-        if (next !== lessonToday) { lessonToday = next; updateHomeLessonCall(profile,next); }
+        const next = await homeNextLessonDays(profile);
+        if (next !== lessonDays) { lessonDays = next; updateHomeLessonCall(profile,next); }
       } finally { refreshingLessonDay = false; }
     };
     document.addEventListener('visibilitychange', refreshLessonDay);
@@ -463,7 +457,7 @@ async function claimWelcome(studentId){
 const welcomeSteps=[
  ['.dashboard-heading','Visão geral','Este é o seu espaço de aprendizagem.'],
  ['.achievements-wall','Mural de conquistas','Acompanhe seu progresso e suas conquistas a cada marco de aulas.'],
- ['.home-card[href="aluno.html"]','Minhas aulas','Acesse os slides, relatórios e exercícios das nossas aulas.'],
+ ['.dashboard-hero-action[href="aluno.html"]','Minhas aulas','Acesse os slides, relatórios e exercícios das nossas aulas.'],
  ['.nav-item[href="perfil.html"]','Perfil','Gerencie seus dados e preferências.'],
  ['.nav-item[href="pergunte-ao-daniel.html"]','Pergunte ao Daniel','Envie suas dúvidas diretamente ao professor.'],
  ['.nav-item[href="enviar-material.html"]','Enviar material','Compartilhe materiais para nossas aulas.'],

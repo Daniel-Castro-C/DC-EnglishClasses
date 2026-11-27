@@ -4,9 +4,7 @@ const crmPlanTable='portal_lesson_plans';
 function crmPlanShift(date,days){
  const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10);
 }
-function crmPlanMonday(date){
- const day=new Date(date+'T12:00:00Z').getUTCDay();return crmPlanShift(date,-((day+6)%7));
-}
+function crmPlanWindow(today){return {start:today,end:crmPlanShift(today,6)};}
 function crmPlanKey(p){return [p.subject_type,p.subject_id,p.lesson_date].join('|');}
 function crmPlanDate(date){return date.split('-').reverse().join('/');}
 function crmPlanSubject(p){
@@ -32,6 +30,7 @@ function crmPlanEntries(start,lessons,plans){
  }
  // Do not lose the draft if the corresponding class is cancelled or moved.
  for(const plan of plans){
+  if(plan.lesson_date<start||plan.lesson_date>crmPlanShift(start,6))continue;
   const key=crmPlanKey(plan);
   if(!all.has(key))all.set(key,{subject_type:plan.subject_type,subject_id:plan.subject_id,lesson_date:plan.lesson_date,name:crmPlanSubject(plan),time:'',scheduled:false,registered:false,plan});
  }
@@ -89,8 +88,8 @@ function crmPlanDownload(blob,name){
 }
 function crmMountWeeklyPlanning(panel,groupsReady=Promise.resolve(),repo=crmPlanDatabase(),fetchLessons=crmPlanFetchLessons,today=adminToday().date,openCalendar=(p)=>p.subject_type==='group'?tgOpenDate(p.subject_id,p.lesson_date):ccOpenDate(p.subject_id,p.lesson_date)){
  if(!panel)return;
- let start=crmPlanMonday(today),request=0,entries=[],edit=null,busy=false,dirty=false,loading=false;
- panel.innerHTML='<div class="crm-panel-head"><h3>Planejamento semanal</h3><span class="crm-plan-private">Privado</span></div><p class="crm-muted crm-plan-description">Prepare temas e materiais antes das aulas. Nada é publicado para os alunos aqui.</p><div class="crm-plan-nav"><button type="button" class="crm-icon-btn" data-week="-1" aria-label="Semana anterior">←</button><strong class="crm-plan-range" aria-live="polite"></strong><button type="button" class="crm-icon-btn" data-week="1" aria-label="Próxima semana">→</button><button type="button" class="crm-link" data-week="0">Esta semana</button></div><div class="crm-plan-progress"></div><div class="crm-plan-feedback crm-muted" role="status"></div><div class="crm-plan-list"></div><div class="crm-plan-editor"></div>';
+ let start=crmPlanWindow(today).start,request=0,entries=[],edit=null,busy=false,dirty=false,loading=false;
+ panel.innerHTML='<div class="crm-panel-head"><h3>Planejamento semanal</h3><span class="crm-plan-private">Privado</span></div><p class="crm-muted crm-plan-description">Hoje e os próximos 6 dias. Prepare temas e materiais sem publicar para os alunos.</p><div class="crm-plan-nav"><strong class="crm-plan-range" aria-live="polite"></strong><button type="button" class="crm-link" data-plan-refresh>Atualizar</button></div><div class="crm-plan-progress"></div><div class="crm-plan-feedback crm-muted" role="status"></div><div class="crm-plan-list"></div><div class="crm-plan-editor"></div>';
  const find=s=>panel.querySelector(s),list=find('.crm-plan-list'),editor=find('.crm-plan-editor'),feedback=find('.crm-plan-feedback');
  function notice(message){feedback.textContent=message;}
  function controls(){panel.querySelectorAll('button,input,textarea,select').forEach(el=>{el.disabled=busy;});if(loading)panel.querySelectorAll('[data-plan-edit]').forEach(el=>el.disabled=true);}
@@ -177,7 +176,7 @@ function crmMountWeeklyPlanning(panel,groupsReady=Promise.resolve(),repo=crmPlan
   }catch(error){notice('Não foi possível excluir: '+(error.message||'verifique sua conexão'));}
   finally{busy=false;controls();}
  }
- panel.querySelectorAll('[data-week]').forEach(b=>b.addEventListener('click',()=>{if(!canLeave())return;const delta=Number(b.dataset.week);start=delta?crmPlanShift(start,delta*7):crmPlanMonday(today);load();}));
+ panel.querySelector('[data-plan-refresh]').addEventListener('click',()=>{if(canLeave()){start=crmPlanWindow(adminToday().date).start;load();}});
  return load();
 }
 
