@@ -47,12 +47,14 @@ async function tgLoad(){
 }
 function tgOpenMissing(groupId,date){return tgOpenDate(groupId,date);}
 
-function tgNormalizeAttendance(members,attendance){
- const allAbsent=members.every(id=>['absent','owed'].includes(attendance[id]));
+function tgNormalizeAttendance(members,attendance,allowReplacement=true){
+ const allAbsent=allowReplacement&&members.every(id=>['absent','owed'].includes(attendance[id]));
  return Object.fromEntries(members.map(id=>[id,['absent','owed'].includes(attendance[id])?(allAbsent?'owed':'absent'):attendance[id]]));
 }
 function tgGroupReplacementEligible(groupId,date){
  const g=tgGroups.find(v=>v.id===groupId);if(!g)return false;
+ const base=g.calendar_events?.[date]?.status;
+ if(base==='absent'||!base&&g.members.some(id=>ccRead(id).events?.[date]?.group_status==='absent'))return false;
  return g.members.every(id=>{const e=ccRead(id).events?.[date];return !g.calendarLessons?.some(l=>l.student_id===id&&l.lesson_date===date&&l.group_id===groupId&&!ccAbsent(l.calendar_status))&&e?.group_id===groupId&&['absent','owed'].includes(ccAttendanceStatus(g.calendar_events?.[date]?.status||e.status,e.attendance_override));});
 }
 function tgGroupReplacementRows(){
@@ -76,7 +78,7 @@ function tgStageReplacement(original,done){
  if(!ctx?.group||!date||date<=original||!time||ccSaving)return alert('Selecione uma data posterior à falta coletiva e um horário.');
  try{
   ccDestinationFree(ctx,d,date);
-  if(!ctx.members.every(s=>{const x=d.payloads[s.id];return x.events[original]?.group_id===ctx.group.id&&['absent','owed'].includes(x.events[original]?.status)&&ccReplacementAvailable(x,original,date,ctx.lessons.filter(l=>l.student_id===s.id),true);}))throw Error('Reposição coletiva indisponível.');
+  if(ccGroupBase(ctx,d,original).status==='absent'||!ctx.members.every(s=>{const x=d.payloads[s.id];return x.events[original]?.group_id===ctx.group.id&&['absent','owed'].includes(x.events[original]?.status)&&ccReplacementAvailable(x,original,date,ctx.lessons.filter(l=>l.student_id===s.id),true);}))throw Error('Reposição coletiva indisponível.');
   d.schedule.events[date]={status:done?'done':'planned',original,time};
   for(const s of ctx.members)d.payloads[s.id].events[date]={...d.schedule.events[date],group_id:ctx.group.id,group_status:d.schedule.events[date].status};
   ccMarkDirty(ctx,d);ccJump(date);

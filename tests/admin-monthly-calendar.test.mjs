@@ -127,7 +127,7 @@ test('individual and group daily status use the same select, with safe group att
  assert.match(group,/ccQuickGroupSave/);
  assert.match(group,/value="mixed" selected disabled/);
  assert.match(group,/Falta de todos \(com reposição\)/);
- assert.doesNotMatch(group,/value="absent"/);
+ assert.match(group,/<option value="absent"\s*>Falta sem reposição<\/option>/);
  const individual=run("ccQuickStatus({id:'one',ccStatus:'planned',ccDate:'2026-11-12'})");
  assert.match(individual,/<select class="crm-quick-status"/);
  assert.match(individual,/ccQuickSave/);
@@ -188,4 +188,13 @@ test('student recent history contains only the four newest entries (not all six)
  assert.equal(run('latest.length'),4);
  assert.equal(run('latest.map(r=>r.title).join(",")'),'Class #6,Class #5,Class #4,Class #3');
  assert.equal(run('latest[0].status'),'Falta com reposição');
+});
+
+test('home group quick status accepts no-replacement absence and persists the exact status atomically',async()=>{
+ const {run,c,calls}=quickGroupFixture();c.select.value='absent';
+ await run("ccQuickGroupSave(select,'g','2026-11-12')");
+ assert.equal(calls.length,1);
+ const {p_schedule,p_changes}=calls[0].args;
+ assert.equal(p_schedule.calendar_events['2026-11-12'].status,'absent');
+ assert.deepEqual(p_changes.map(p=>p.payload.events['2026-11-12'].status),['absent','absent']);
 });

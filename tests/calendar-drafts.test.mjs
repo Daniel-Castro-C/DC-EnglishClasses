@@ -574,7 +574,7 @@ for(const group of [false,true]){
   run("ctx.lessons.push(...ctx.members.map(s=>({id:'lesson-'+s.id,student_id:s.id,group_id:ctx.group?.id||null,lesson_date:'2026-11-23',title:'Class #1',topic:'Test',resources:[{id:'resource-'+s.id}]})))");
   for(const status of ['planned','done','absent','owed','teacher','holiday','break','vacation']){
    run("ccStageRegisteredStatus(ctx,draft,'2026-11-23',"+JSON.stringify(status)+")");
-   const expected=group&&status==='absent'?'owed':status;
+   const expected=status;
    assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),expected);
    assert.equal(run("ctx.lessons[0].resources[0].id"),'resource-s1');
    assert.equal(run("draft.registeredStatuses['2026-11-23'].ids[0]"),'lesson-s1');
@@ -681,4 +681,70 @@ test('group editor exposes the repair and both normal actions; individual editor
  const own=fields.get('cc-edit').innerHTML;
  assert.match(own,/Há uma exclusão individual antiga/);
  assert.match(own,/Abrir calendário da turma/);
+});
+
+test('explicit group absence without replacement persists across group and individual calendars and never creates a pending replacement',async()=>{
+ const {run,ctx}=setupUnified(true);ctx.calls=[];
+ ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),async rpc(name,args){ctx.calls.push({name,args});return {data:3}}};
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','absent',{},'18:00','','');ccSelected='2026-11-23';");
+ assert.equal(run("ccDateState(ctx,draft,ccSelected).status"),'absent');
+ assert.equal(run("ccDateState(ctx,draft,ccSelected).rows.map(r=>r.status).join(',')"),'absent,absent');
+ assert.equal(run("ccRegisteredReplacementAvailable(ctx,draft,'2026-11-24',ccSelected)"),false);
+ assert.throws(()=>run("ccStageGroupDate(ctx,draft,'2026-11-24','planned',{},'18:00','',ccSelected)"),/reposição exige/);
+ const elements=new Map();
+ ctx.document={getElementById(id){if(!elements.has(id))elements.set(id,{innerHTML:'',textContent:''});return elements.get(id)}};
+ run("ccDate=new Date(2026,10,23);ccRefreshGrid()");
+ assert.match(elements.get('cc-annual').innerHTML,/1 faltas sem reposição · 0 reposições pendentes/);
+ run("ccMarkDirty(ctx,draft);ccRender=()=>{};ccLoadCloud=async()=>{};tgLoad=async()=>{};ccFinishInput=()=>true;");
+ await run("ccSaveAll()");
+ assert.equal(ctx.calls.length,1);
+ assert.equal(ctx.calls[0].name,'portal_group_calendar_save');
+ assert.equal(ctx.calls[0].args.p_schedule.calendar_events['2026-11-23'].status,'absent');
+ for(const change of ctx.calls[0].args.p_changes)assert.equal(change.payload.events['2026-11-23'].status,'absent');
+ run("tgSelected.calendar_events=draft.schedule.events;for(const s of students)ccCloud.set(s.id,{revision:3,payload:draft.payloads[s.id]});ccDrafts.clear()");
+ assert.equal(run("tgGroupReplacementEligible('g1','2026-11-23')"),false);
+ assert.equal(run("tgGroupReplacementRows().length"),0);
+ for(let i=0;i<2;i++){
+  run("currentView='student';currentStudent=students["+i+"];ctx=ccContext();draft=ccDraft(ctx)");
+  assert.equal(run("ccData(currentStudent).events['2026-11-23'].status"),'absent');
+  assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'absent');
+  assert.equal(run("ccPending(ccData(currentStudent))"),0);
+ }
+});
+test('registered group absence without replacement keeps lesson IDs and materials and saves absent for every student',async()=>{
+ const {run,ctx}=setupUnified(true);ctx.calls=[];
+ ctx.sb={from:()=>({select(){return this},in(){return this},async limit(){return {data:[]}}}),async rpc(name,args){ctx.calls.push({name,args});return {data:3}}};
+ run("ctx.lessons.push(...ctx.members.map(s=>({id:'lesson-'+s.id,student_id:s.id,group_id:'g1',lesson_date:'2026-11-23',title:'Class #1',resources:[{id:'resource-'+s.id}]})));ccStageRegisteredStatus(ctx,draft,'2026-11-23','absent');ccMarkDirty(ctx,draft);ccRender=()=>{};ccLoadCloud=async()=>{};tgLoad=async()=>{};");
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'absent');
+ await run("ccSaveAll()");
+ assert.equal(ctx.calls.length,1);assert.equal(ctx.calls[0].name,'portal_calendar_save_registered_statuses');
+ const args=ctx.calls[0].args;
+ assert.equal(args.p_schedule.calendar_events['2026-11-23'].status,'absent');
+ assert.deepEqual(Array.from(args.p_metadata[0].ids),['lesson-s1','lesson-s2']);
+ for(const change of args.p_changes)assert.equal(change.payload.events['2026-11-23'].status,'absent');
+ assert.equal(args.p_deletions.length,0);
+ assert.equal(run("ctx.lessons[0].resources[0].id"),'resource-s1');
+});
+test('changing a collective debt to no replacement refuses to orphan a linked makeup; both absences still support an explicit debt',()=>{
+ const {run}=setupUnified(true);
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','owed',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-24','planned',{},'18:00','','2026-11-23')");
+ assert.throws(()=>run("ccStageGroupDate(ctx,draft,'2026-11-23','absent',{},'18:00','','')"),/reposiç[aã]o vinculada/);
+ assert.equal(run("draft.schedule.events['2026-11-23'].status"),'owed');
+ assert.equal(run("draft.schedule.events['2026-11-24'].original"),'2026-11-23');
+ run("ccDeleteDate(ctx,draft,'2026-11-24');ccStageGroupDate(ctx,draft,'2026-11-23','absent',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','owed',{},'18:00','','')");
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'owed');
+});
+test('legacy group records explicitly marked absent do not infer debt from raw owed statuses',()=>{
+ const {run}=setup({group:true});
+ run("tgSelected.calendar_events={'2026-11-23':{status:'absent',time:'18:00'}};for(const id of tgSelected.members)ccCloud.set(id,{revision:3,payload:{events:{'2026-11-23':{status:'owed',group_id:'g1',group_status:'absent'}}}});ccDrafts.clear();draft=ccDraft(ctx)");
+ assert.equal(run("ccDateState(ctx,draft,'2026-11-23').status"),'absent');
+ assert.equal(run("ccData(students[0]).events['2026-11-23'].status"),'absent');
+ assert.equal(run("tgGroupReplacementEligible('g1','2026-11-23')"),false);
+});
+test('registered absence with an existing makeup cannot be reclassified as non-replaceable until its link is removed',()=>{
+ const {run}=setupUnified(true);
+ run("ctx.lessons.push(...ctx.members.map(s=>({id:'lesson-'+s.id,student_id:s.id,group_id:'g1',lesson_date:'2026-11-23',title:'Class #1'})));ccStageRegisteredStatus(ctx,draft,'2026-11-23','owed');for(const id of ['s1','s2'])draft.payloads[id].events['2026-11-24']={status:'planned',original:'2026-11-23',group_id:'g1'};draft.schedule.events['2026-11-24']={status:'planned',original:'2026-11-23'}");
+ assert.throws(()=>run("ccStageRegisteredStatus(ctx,draft,'2026-11-23','absent')"),/reposiç[aã]o vinculada/);
+ assert.equal(run("draft.schedule.events['2026-11-23'].status"),'owed');
+ assert.equal(run("draft.payloads.s1.events['2026-11-24'].original"),'2026-11-23');
 });
