@@ -34,3 +34,12 @@ test('form rejects missing availability and keeps input on storage failure',asyn
  els.schedule.children.flatMap(x=>x.children).find(x=>x.value==='1|07:00').checked=true;
  await submit();assert.ok(els.error.textContent);assert.equal(els['availability-form'].hidden,false);assert.equal(btn.disabled,false);
 });
+test('embedded form identifies landing origin and keeps detailed availability',async()=>{
+ const {els,payload,submit}=setup();
+ els['availability-form'].dataset={source:'landing'};
+ els.name.value='Teste';els.phone.value='(27) 99999-0000';els.consent.checked=true;
+ els.schedule.children.flatMap(x=>x.children).find(x=>x.value==='1|07:00').checked=true;
+ await submit();
+ assert.equal(payload().source,'landing');
+ assert.equal(payload().availability_slots[0],'1|07:00');
+});

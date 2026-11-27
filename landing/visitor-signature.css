@@ -1,0 +1,36 @@
+/* Refined Signature 2027 details layered over the original student layout. */
+:root{--ink:#1E3D2F;--ink-dark:#102D21;--paper:#F8F9F9;--paper-card:#FFFFFF;--text:#303936;--text-soft:#5D6F66;--sky:#557B64;--sky-soft:#DDE7E1;--line:#D2E0D6;--canvas-elevated:#F8F9F9}
+body.dark-mode{--paper:#101F19;--paper-card:#1C3027;--text:#F0F5F1;--text-soft:#BCCFC1;--line:#365044;--canvas-elevated:#12271D;--sky:#9BC4A9;--sky-soft:#314C3B}
+body,input,select,textarea,button{font-family:'Manrope',system-ui,sans-serif}
+.dashboard-heading h1,.student-page-heading h1,.dashboard-hero h2,.student-lesson-summary h3,.word-of-day-term{font-family:'DM Serif Display',Georgia,serif;font-weight:400;letter-spacing:-.025em}
+.sidebar{background:linear-gradient(165deg,#1E3D2F,#102D21);color:#F8F9F9}
+.sidebar .side-brand{display:block;text-align:left;border-bottom:1px solid #FFFFFF20;padding:0 8px 18px;margin-bottom:20px}
+.sidebar .side-brand img.logo{width:132px;height:auto;max-width:100%;object-fit:contain;border-radius:0;display:block;margin:0 0 9px}
+.sidebar .side-brand span{display:none}
+.sidebar .side-brand small{color:#DDE7E1;font-size:11px}
+.sidebar .nav-item.active{background:#365A46;box-shadow:inset 3px 0 #B69A69;color:#fff}
+.sidebar .nav-item .nav-icon{color:#DDE7E1}
+.sidebar .theme-toggle-btn{background:#284B38;border-color:#64816A;color:#F8F9F9}
+.sidebar .nav-label,.sidebar .lang-switcher-label{color:#B8CFC0}
+.dashboard-hero{background:linear-gradient(125deg,#1E3D2F,#41654A);box-shadow:0 12px 25px #1E3D2F18}
+.dashboard-hero-kicker{color:#CFB989}
+.dashboard-hero p{color:#DDE7E1}
+.dashboard-hero-action{color:#1E3D2F}
+.word-of-day-card{background:linear-gradient(150deg,#1E3D2F,#102D21)}
+.word-of-day-label{color:#CDB78C}
+.word-of-day-term{color:#F8F9F9}
+.word-of-day-example{color:#DDE7E1}
+:focus-visible{outline-color:#8EBAA3}
+.visitor-ribbon{background:#DDE7E1;color:#1E3D2F;border-bottom-color:#BFD1C4}
+.visitor-ribbon-actions button{color:#1E3D2F;border-color:#BFD1C4}
+.visitor-ribbon-actions a,.visitor-tour-actions button.primary{background:#1E3D2F;color:#fff;border-color:#1E3D2F}
+.visitor-tour-overlay{background:#102D21B0}
+.visitor-tour-focus{outline-color:#B69A69!important}
+.visitor-tour-tooltip{background:#F8F9F9;color:#1E3D2F;border:1px solid #D2E0D6}
+.visitor-tour-tooltip h3{font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400}
+.visitor-tour-tooltip p{color:#5D6F66}
+.visitor-tour-counter{color:#6C5734}
+.visitor-tour-progress i{background:#DDE7E1}
+.visitor-tour-progress i.on{background:#B69A69}
+.visitor-tour-actions button{border-color:#BFD1C4;color:#1E3D2F}
+.visitor-readonly-alert{background:#1E3D2F}
