@@ -6,15 +6,15 @@
   const visitorId='visitor-demo-local';
   const profile={id:visitorId,email:'visitante@demo.invalid',full_name:'Visitante',role:'student',avatar_url:null,preferred_language:null,preferred_theme:null,permanent_lesson_link:null,lesson_weekday:null,lesson_time:null,has_seen_onboarding:true};
   // Exactly one fictional class, independent of actual student accounts.
-  const lesson={id:'demo-music',student_id:visitorId,title:'Class #1',topic:'Music and Concert',lesson_date:null,created_at:'2026-01-01T12:00:00Z'};
+  const lesson={id:'demo-music',student_id:visitorId,title:'Class #1',topic:'Music and Concerts',lesson_date:null,created_at:'2026-01-01T12:00:00Z'};
   const resourceSlots=[
-    {id:'demo-music-slides',lesson_id:lesson.id,name:'Music and Concert — Modo Demonstração',type:'ppt',file_path:'demo/Music and Concert - Modo Demonstração.pdf',created_at:'2026-01-01T12:01:00Z'},
-    {id:'demo-music-report',lesson_id:lesson.id,name:'Relatório de desempenho — Music and Concert',type:'rep',file_path:'demo/Music and Concert - Relatório de desempenho - Modo Demonstração.pdf',created_at:'2026-01-01T12:02:00Z'}
+    {id:'demo-music-slides',lesson_id:lesson.id,name:'Music and Concerts — Modo Demonstração',type:'ppt',file_path:'demo/Music and Concerts - Modo Demonstração.pdf',created_at:'2026-01-01T12:01:00Z'},
+    {id:'demo-music-report',lesson_id:lesson.id,name:'Relatório de desempenho — Music and Concerts',type:'rep',file_path:'demo/Music and Concerts - Relatório de desempenho - Modo Demonstração.pdf',created_at:'2026-01-01T12:02:00Z'}
   ];
   const word={term:'confidence',definition:'The feeling that you can do something successfully.',example:'I feel more confident when I practice English.'};
   const demoAssetKeys={
-    'demo/Music and Concert - Modo Demonstração.pdf':'music_slides',
-    'demo/Music and Concert - Relatório de desempenho - Modo Demonstração.pdf':'music_report',
+    'demo/Music and Concerts - Modo Demonstração.pdf':'music_slides',
+    'demo/Music and Concerts - Relatório de desempenho - Modo Demonstração.pdf':'music_report',
     'demo/Teamwork - Text Correction - Modo Demonstração.pdf':'teamwork_correction'
   };
   const demoPrefix='https://dgwbjgngewymzgedlzix.supabase.co';

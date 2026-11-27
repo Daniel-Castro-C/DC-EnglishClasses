@@ -161,8 +161,8 @@
   if(window.__dcGuestDemo){
     window.downloadResource=async function(filePath){
       const safeFiles={
-        'demo/Music and Concert - Modo Demonstração.pdf':'Music and Concert - Modo Demonstração.pdf',
-        'demo/Music and Concert - Relatório de desempenho - Modo Demonstração.pdf':'Music and Concert - Relatório de desempenho - Modo Demonstração.pdf'
+        'demo/Music and Concerts - Modo Demonstração.pdf':'Music and Concerts - Modo Demonstração.pdf',
+        'demo/Music and Concerts - Relatório de desempenho - Modo Demonstração.pdf':'Music and Concerts - Relatório de desempenho - Modo Demonstração.pdf'
       };
       const name=safeFiles[filePath];
       if(!name){window.__dcDemoReadOnlyNotice?.();return}

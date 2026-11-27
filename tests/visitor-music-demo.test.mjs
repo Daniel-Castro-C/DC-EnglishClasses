@@ -5,8 +5,8 @@ import vm from 'node:vm';
 const source=fs.readFileSync('landing/visitor-demo-client.js','utf8');
 const admin=fs.readFileSync('landing/admin.html','utf8');
 const tour=fs.readFileSync('landing/visitor-tour.js','utf8');
-const slides='demo/Music and Concert - Modo Demonstração.pdf';
-const report='demo/Music and Concert - Relatório de desempenho - Modo Demonstração.pdf';
+const slides='demo/Music and Concerts - Modo Demonstração.pdf';
+const report='demo/Music and Concerts - Relatório de desempenho - Modo Demonstração.pdf';
 function setup(rows=[],fail=false){
  const requests=[];
  const window={addEventListener(){}};
@@ -24,14 +24,14 @@ test('visitor has exactly one lesson, count one, and no unpublished or legacy cl
  assert.equal(requests.length,0);
  const {data}=await sb.from('lessons').select('*, resources(*)').eq('student_id','visitor-demo-local');
  assert.equal(data.length,1);
- assert.equal(data[0].topic,'Music and Concert');assert.equal(data[0].title,'Class #1');assert.equal(data[0].lesson_date,null);
+ assert.equal(data[0].topic,'Music and Concerts');assert.equal(data[0].title,'Class #1');assert.equal(data[0].lesson_date,null);
  assert.equal(data[0].resources.length,0);
  assert.equal(await window.__dcDemoPdfUrl(slides),null);
  assert.equal(await window.__dcDemoPdfUrl('demo/Productivity - Modo Demonstração.pdf'),null);
  assert.match(requests[0],/asset_key=in\.\(music_slides,music_report,teamwork_correction\)/);
  assert.equal((await sb.from('lessons').insert({topic:'extra'})).error.message.includes('indisponível'),true);
 });
-test('uploaded files only appear for the Music and Concert lesson and resolve to the public PDFs',async()=>{
+test('uploaded files only appear for the Music and Concerts lesson and resolve to the public PDFs',async()=>{
  const file='a'.repeat(32)+'.pdf';
  for(const keys of [['music_slides'],['music_slides','music_report']]){
   const {sb,window,requests}=setup(keys.map(asset_key=>({asset_key,file_path:asset_key+'/'+file})));
@@ -50,8 +50,8 @@ test('network failure still shows the single lesson and preserves the writing ex
  assert.match(await window.__dcDemoPdfUrl('demo/Teamwork - Text Correction - Modo Demonstração.pdf'),/^\/visit\/demo\//);
 });
 test('admin upload slots and guest tour agree on the new demo lesson',()=>{
- assert.match(admin,/\['music_slides','Music and Concert · Slides'\]/);
- assert.match(admin,/\['music_report','Music and Concert · Relatório de desempenho'\]/);
+ assert.match(admin,/\['music_slides','Music and Concerts · Slides'\]/);
+ assert.match(admin,/\['music_report','Music and Concerts · Relatório de desempenho'\]/);
  assert.doesNotMatch(admin,/\['(?:feedback|productivity)_(?:slides|report)'/);
  assert.match(tour,/\.student-material-dropdown, \.student-no-materials/);
  for(const path of [slides,report])assert.ok(tour.includes(path));
