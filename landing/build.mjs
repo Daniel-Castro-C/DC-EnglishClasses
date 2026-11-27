@@ -11,7 +11,7 @@ const cp=(from,to)=>{
  fs.mkdirSync(path.dirname(dest),{recursive:true});
  fs.cpSync(src,dest,{recursive:true,force:true});return true;
 };
-for(const name of ['index.html','admin.html','depoimento.html','disponibilidade.html','availability.js','availability-embedded.css'])cp('landing/'+name,name);
+for(const name of ['index.html','admin.html','depoimento.html','disponibilidade.html','availability.js','availability-embedded.css','analytics.js','admin-analytics.js'])cp('landing/'+name,name);
 // Signature 2027: shared visual assets (no changes to student data or workflows).
 cp('landing/signature-2027.css','signature-2027.css');
 cp('landing/signature-mark.svg','signature-mark.svg');
@@ -91,7 +91,7 @@ for(const name of pages){
  html=html.replace(/<\/head>/i,'<link rel="icon" type="image/svg+xml" href="favicon.svg"><meta name="robots" content="noindex,nofollow"></head>');
  html=html.replace(/<script[^>]+src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"[^>]*><\/script>/g,'');
  html=html.replace(/<script[^>]+src="https:\/\/cdn\.jsdelivr\.net\/npm\/@emailjs\/browser[^"]*"[^>]*><\/script>/g,'');
- html=html.replace(/<\/body>/i,'<script src="visitor-tour.js"></script></body>');
+ html=html.replace(/<\/body>/i,'<script src="visitor-tour.js"></script><script src="../analytics.js" defer></script></body>');
  fs.writeFileSync(path.join(out,'visit',name),html,'utf8');
 }
 fs.writeFileSync(path.join(out,'visit','index.html'),'<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=home.html"><a href="home.html">Abrir demonstração</a>','utf8');
