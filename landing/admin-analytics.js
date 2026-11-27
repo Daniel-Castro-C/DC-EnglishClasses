@@ -4,7 +4,34 @@ window.createLandingAnalytics = function(db,isAdmin){
   const format=n=>Number(n).toLocaleString('pt-BR');
   const date=d=>String(d).split('-').reverse().slice(0,2).join('/');
   let request=0;
+  const internalKey='dc-analytics-exclude-browser';
+  const exclusion=$('analytics-exclude-browser'),exclusionStatus=$('analytics-exclude-status');
+  function syncExclusion(){
+    if(!isAdmin()){exclusion.disabled=true;exclusion.checked=false;exclusionStatus.textContent='';return;}
+    try{
+      exclusion.checked=localStorage.getItem(internalKey)==='1';
+      exclusion.disabled=false;
+      exclusionStatus.textContent=exclusion.checked?'Ativo: suas visitas neste navegador não serão contabilizadas.':'Inativo: visitas neste navegador são contabilizadas normalmente.';
+    }catch(_){
+      exclusion.checked=false;exclusion.disabled=true;
+      exclusionStatus.textContent='O armazenamento local está indisponível. A contagem não será realizada neste navegador enquanto permanecer bloqueado.';
+    }
+  }
+  exclusion.addEventListener('change',()=>{
+    if(!isAdmin()){syncExclusion();return;}
+    try{
+      if(exclusion.checked)localStorage.setItem(internalKey,'1');
+      else localStorage.removeItem(internalKey);
+      syncExclusion();
+    }catch(_){
+      syncExclusion();
+      exclusionStatus.textContent='Não foi possível salvar a preferência. Verifique as configurações de armazenamento do navegador.';
+    }
+  });
+  window.addEventListener('storage',event=>{if(event.key===internalKey||event.key===null)syncExclusion()});
+  syncExclusion();
   function clear(){
+    syncExclusion();
     request++;$('analytics-refresh').disabled=false;
     ['analytics-visits','analytics-portal','analytics-forms','analytics-rate'].forEach(id=>$(id).textContent='—');
     $('analytics-chart').replaceChildren();
@@ -40,6 +67,7 @@ window.createLandingAnalytics = function(db,isAdmin){
   }
   async function refresh(){
     if(!isAdmin())return;
+    syncExclusion();
     const current=++request;const days=Number($('analytics-period').value);
     $('analytics-refresh').disabled=true;$('analytics-message').textContent='Carregando indicadores…';
     try{
