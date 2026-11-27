@@ -10,7 +10,7 @@ const cp=(from,to)=>{
  fs.mkdirSync(path.dirname(dest),{recursive:true});
  fs.cpSync(src,dest,{recursive:true,force:true});return true;
 };
-for(const name of ['index.html','admin.html','depoimento.html'])cp('landing/'+name,name);
+for(const name of ['index.html','admin.html','depoimento.html','disponibilidade.html','availability.js'])cp('landing/'+name,name);
 // Signature 2027: shared visual assets (no changes to student data or workflows).
 cp('landing/signature-2027.css','signature-2027.css');
 cp('landing/signature-mark.svg','signature-mark.svg');
