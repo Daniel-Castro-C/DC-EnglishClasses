@@ -421,7 +421,7 @@ function materialRowHtml(m){
             ${langBadge}
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span class="pill" style="background:${m.video_visible ? 'var(--sky-soft)' : '#EFEBE3'};">${m.video_visible ? 'Vídeo visível' : 'Vídeo oculto'}</span>
+            <span class="pill" style="background:${m.video_visible ? 'var(--sky-soft)' : 'var(--neutral-soft)'};">${m.video_visible ? 'Vídeo visível' : 'Vídeo oculto'}</span>
             <button class="btn-ghost" onclick="toggleVideoVisible('${m.id}', ${m.video_visible ? 'false' : 'true'})">${m.video_visible ? 'Ocultar link' : 'Exibir link'}</button>
             <button class="resource-action" onclick="deleteGrammarMaterial('${m.id}')">Excluir</button>
           </div>

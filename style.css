@@ -13,6 +13,11 @@
   --line:#D3E1EF;
   --sage:#6B8F71;
   --danger:#B5432F;
+  --link:var(--ink);
+  --control-line:var(--line);
+  --success-message-bg:#E7F0E8;
+  --error-message-bg:#FBEAE6;
+  --neutral-soft:#EFEBE3;
 }
 *{box-sizing:border-box;}
 body{
@@ -219,6 +224,7 @@ input:focus, select:focus{outline:2px solid var(--sky);outline-offset:1px;border
 }
 .lesson-card h3{margin:0 0 4px;font-size:19px;}
 .lesson-card .meta{color:var(--text-soft);font-size:13px;margin-bottom:18px;}
+.pill.pending-count{background:var(--amber);color:#fff;}
 .resource-row{display:flex;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--line);}
 .resource-row:first-of-type{border-top:none;padding-top:0;}
 .resource-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
@@ -270,15 +276,30 @@ body.dark-mode{
   --paper:#0E1524;
   --paper-card:#182238;
   --text:#E7ECF5;
-  --text-soft:#93A3C0;
-  --line:#2B3550;
+  --text-soft:#B3C3D9;
+  --line:#394C65;
+  --control-line:#8296B2;
+  --sky:#A9D2F6;
+  --sky-soft:#263D59;
+  --sage:#9BD9AF;
+  --sage-soft:#234437;
+  --amber:#F4C77C;
+  --amber-soft:#49391F;
+  --danger:#FFA99B;
+  --error-message-bg:#442B31;
+  --success-message-bg:var(--sage-soft);
+  --neutral-soft:#303C4D;
+  --link:var(--sky);
+  --dark-action:#315580;
+  --dark-action-hover:#3E6390;
+  color-scheme:dark;
 }
 body.dark-mode .btn-ghost{color:var(--text);}
 body.dark-mode .resource-action{color:var(--text);}
 body.dark-mode .home-card:hover,
 body.dark-mode .level-card:hover{border-color:var(--sky);}
 body.dark-mode .role-switch button.active{color:var(--text);border-bottom-color:var(--sky);}
-body.dark-mode ::placeholder{color:#5B6B8C;opacity:1;}
+body.dark-mode ::placeholder{color:var(--text-soft);opacity:1;}
 body.dark-mode input:focus, body.dark-mode select:focus{outline-color:var(--sky);}
 /* ---------- STATUS DE ESTUDO (Guias de Gramática: "Já estudei" / "Estudar mais") ---------- */
 .study-status-row{display:flex;gap:8px;padding:0 0 12px 44px;flex-wrap:wrap;}
@@ -1158,8 +1179,8 @@ body.dark-mode .badge-celebration-art::before{background:radial-gradient(circle,
 body.dark-mode .badge-celebration-kicker{color:#A1CAE9;}
 body.dark-mode .badge-celebration-milestone{background:#2D496A;color:#C9E6FC;}
 body.dark-mode .badge-celebration-panel h2{color:#EFF6FE;}
-body.dark-mode .badge-celebration-done{background:#517FB2;color:#fff;}
-body.dark-mode .badge-celebration-done:hover{background:#6395CC;}
+body.dark-mode .badge-celebration-done{background:var(--dark-action);color:#fff;}
+body.dark-mode .badge-celebration-done:hover{background:var(--dark-action-hover);}
 @keyframes badge-celebration-appear{
   from{opacity:0;transform:translateY(18px) scale(.95);}
   to{opacity:1;transform:translateY(0) scale(1);}
@@ -1219,3 +1240,51 @@ body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-copy h2{color:#
 body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-copy p{color:#B9D8F5;}
 body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-action{background:#315580;color:#fff;}
 body.dark-mode .home-lesson-call.is-lesson-day .home-lesson-call-action:hover{background:#3F6391;}
+
+
+/* Dark theme contrast: shared foregrounds, semantic surfaces and controls.
+   Keep the navy brand token unchanged: it is also used on permanent dark surfaces. */
+body.dark-mode .pill{color:var(--sky)}
+body.dark-mode .pill.pending-count,body.dark-mode .sidebar .nav-badge{background:var(--amber-soft);color:var(--amber)}
+body.dark-mode .form-error{background:var(--error-message-bg);color:var(--danger)}
+body.dark-mode .form-error.is-success{background:var(--success-message-bg);color:var(--sage)}
+.form-error.is-success{background:var(--success-message-bg);color:var(--sage)}
+body.dark-mode :where(a:not([class])){color:var(--link)}
+body.dark-mode :is(.btn-primary,.btn-dark-sm){background:var(--dark-action);color:#fff}
+body.dark-mode :is(.btn-primary,.btn-dark-sm):hover:not(:disabled){background:var(--dark-action-hover);color:#fff}
+body.dark-mode :is(input,select,textarea,.btn-ghost,.resource-action,.study-btn){border-color:var(--control-line)}
+body.dark-mode :is(.btn-ghost,.resource-action):hover:not(:disabled){border-color:var(--sky);background:var(--sky-soft)}
+body.dark-mode :is(input,select,textarea,button,a,summary):focus-visible{outline-color:var(--sky)}
+body.dark-mode input[type="file"]::file-selector-button{background:var(--sky-soft);color:var(--sky);border:1px solid var(--control-line);border-radius:5px;padding:5px 9px;cursor:pointer}
+body.dark-mode .study-btn.active-good,body.dark-mode .status-pill.done{background:var(--sage-soft);color:var(--sage);border-color:var(--sage)}
+body.dark-mode .study-btn.active-warn,body.dark-mode .status-pill.pending{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
+body.dark-mode .resource-icon.ic-ppt{background:#56391F;color:#FFDCAC}
+body.dark-mode .resource-icon.ic-pdf{background:#57323B;color:#FFD2CA}
+body.dark-mode .resource-icon.ic-ex{background:var(--sage-soft);color:var(--sage)}
+body.dark-mode .resource-icon.ic-rep{background:var(--sky-soft);color:var(--sky)}
+body.dark-mode .nav-label,body.dark-mode .lang-switcher-label{color:var(--text-soft);opacity:1}
+body.dark-mode .dashboard-quick-links .nav-icon{color:var(--sky)}
+body.dark-mode .home-lesson-call-icon{color:var(--sky)}
+body.dark-mode .badge-celebration-close:hover{color:var(--text)}
+body.dark-mode .whatsapp-fab{background:#146B44;color:#fff}
+body.dark-mode #app-splash{background:var(--paper)!important;color:var(--text)}
+body.dark-mode #app-splash>div{color:var(--text)!important}
+body.dark-mode #login-screen .login-form-side{background:var(--paper)}
+body.dark-mode #login-screen .login-box{background:var(--paper-card);border-color:var(--line)}
+body.dark-mode #login-screen .login-box label{color:var(--text-soft)}
+body.dark-mode #login-screen .login-input-wrap svg{color:var(--sky)}
+body.dark-mode #login-screen .login-input-wrap input{background:var(--paper);border-color:var(--control-line);color:var(--text)}
+body.dark-mode #login-screen .login-box .btn-primary{background:var(--dark-action)}
+body.dark-mode #login-screen .login-box .btn-primary:hover:not(:disabled){background:var(--dark-action-hover)}
+body.dark-mode .student-panel :is(input:not([type=file]),select,textarea),body.dark-mode .student-search-wrap input{border-color:var(--control-line)}
+body.dark-mode .student-material-tile,body.dark-mode .student-material-actions button,body.dark-mode .student-lessons-pagination button{border-color:var(--control-line)}
+body.dark-mode .student-upload-zone input[type=file]::file-selector-button{border-color:var(--control-line)}
+body.dark-mode .achievement-progress{background:#394C65}
+body.dark-mode .achievement-progress-fill{background:linear-gradient(90deg,#84B6E3,#B7D9F6)}
+body.dark-mode .resource-card-icon-primary{fill:var(--sky)}
+body.dark-mode .resource-card-icon-secondary{fill:#719BC5}
+
+body.dark-mode .dashboard-hero{background:linear-gradient(115deg,#1A2A49,#315580)}
+body.dark-mode .ec-admin-intro{background:linear-gradient(110deg,#203657,#315580)}
+body.dark-mode .student-test-badge-preview,body.dark-mode .student-test-exit{background:var(--sky-soft);color:var(--sky);border-color:var(--control-line)}
+body.dark-mode .student-test-badge-preview:hover,body.dark-mode .student-test-exit:hover{background:#354F70;color:var(--text);border-color:var(--sky)}
