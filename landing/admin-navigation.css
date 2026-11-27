@@ -1,0 +1,24 @@
+/* Landing admin: module navigation follows the Signature 2027 system. */
+#dashboard [data-admin-page][hidden],#admin-page-bar[hidden]{display:none!important}
+.admin-home-heading{margin:4px 0 26px}
+.admin-home-heading h1,.admin-page-heading h1{font-size:clamp(28px,4vw,40px);line-height:1.14;margin:8px 0}
+.admin-home-heading p{font-size:15px;max-width:640px;margin:10px 0 0}
+.admin-eyebrow{font-size:11px;letter-spacing:.14em;font-weight:800;text-transform:uppercase;color:#8A713F}
+.admin-module-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 28px}
+html[data-brand-surface="admin"] a.admin-module-link{display:flex;flex-direction:column;gap:15px;min-height:176px;background:#fff;border:1px solid #D2E0D6;border-radius:15px;padding:21px;color:#1E3D2F;text-decoration:none;box-shadow:0 7px 24px #1E3D2F0B;transition:border-color .15s,background .15s,box-shadow .15s}
+html[data-brand-surface="admin"] a.admin-module-link:hover{background:#F9FBF9;border-color:#94B29F;box-shadow:0 8px 21px #1E3D2F14}
+.admin-module-icon{background:#E7EFE8;border:1px solid #D2E0D6;width:44px;height:44px;border-radius:11px;display:grid;place-items:center;color:#1E3D2F}
+.admin-module-icon svg{width:23px;height:23px}
+.admin-module-name{font-size:17px;line-height:1.25;font-weight:800;display:block;margin-bottom:6px}
+.admin-module-description{display:block;font-size:13px;line-height:1.5;color:#5D6F66}
+.admin-module-action{display:flex;justify-content:space-between;align-items:center;color:#365B47;font-weight:700;font-size:12px;margin-top:auto}
+.admin-module-action svg{width:17px;height:17px}
+.admin-page-heading{margin:4px 0 20px}
+.admin-page-heading a.admin-back{display:inline-flex;align-items:center;gap:7px;margin-bottom:12px;padding:7px 0;font-weight:700;font-size:13px;color:#245B40;text-decoration:none}
+.admin-page-heading a.admin-back:hover{text-decoration:underline}
+.admin-page-heading .admin-back svg{width:17px;height:17px}
+.admin-page-heading h1:focus,.admin-home-heading h1:focus{outline:none}
+.admin-page-heading .muted{margin:5px 0}
+@media(max-width:850px){.admin-module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.admin-module-grid{grid-template-columns:minmax(0,1fr);gap:12px}html[data-brand-surface="admin"] a.admin-module-link{min-height:0;padding:17px;gap:12px}.admin-page-heading{margin-top:0}}
+@media(prefers-reduced-motion:reduce){.admin-module-link{transition:none!important}}
