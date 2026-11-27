@@ -748,3 +748,12 @@ test('registered absence with an existing makeup cannot be reclassified as non-r
  assert.equal(run("draft.schedule.events['2026-11-23'].status"),'owed');
  assert.equal(run("draft.payloads.s1.events['2026-11-24'].original"),'2026-11-23');
 });
+
+test('both administrative calendars share two independent side-by-side cards with a narrow-screen fallback',()=>{
+ const js=readFileSync('js/admin-calendar-test.js','utf8'),css=readFileSync('admin-crm.css','utf8');
+ assert.match(js,/<div class="cc-calendar-workspace"><div class="cc-calendar-columns"><div class="box cc-month-panel">/);
+ assert.match(js,/<div class="cc-month-grid" id="cc-grid"><\/div><\/div><section class="box cc-day-panel"[^>]*>[\s\S]*?<div id="cc-edit"><\/div><\/section>/);
+ assert.match(css,/\.cc-calendar-columns\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(css,/@container \(min-width:850px\)\{\s*\.admin-crm \.cc-calendar-columns\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/\.cc-day-panel:has\(#cc-edit:not\(:empty\)\) \.cc-day-placeholder\{display:none\}/);
+});

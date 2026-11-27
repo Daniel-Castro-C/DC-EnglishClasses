@@ -1,6 +1,6 @@
 # Planejamento semanal do professor
 
-O card da visão geral usa os mesmos calendários salvos que a Agenda de hoje. Cada aula individual ou coletiva aparece uma vez por data. A semana começa na segunda-feira; os botões navegam entre semanas. A preparação é independente da frequência e não altera a numeração, reposições ou status.
+O card da visão geral usa os mesmos calendários salvos que a Agenda de hoje. Cada aula individual ou coletiva aparece uma vez por data. O período é móvel: hoje e os próximos seis dias, inclusive. O botão Atualizar mantém a mesma janela. A preparação é independente da frequência e não altera a numeração, reposições ou status.
 
 - Clique em **Preparar** (ou **Editar**) para definir o tema, anotações e arrastar arquivos. A classificação usa a regra dos materiais existentes e pode ser corrigida manualmente.
 - **Marcar como preparada** é um controle do professor, não um registro de presença. Salve para manter os dados entre sessões.
