@@ -384,3 +384,14 @@ html[data-brand-surface] .dc-brand img, html[data-brand-surface] .dc-admin-brand
 html[data-brand-surface] .dc-brand {padding:12px 20px;flex-shrink:0;}
 html[data-brand-surface="admin"] .dc-admin-brand {display:flex;align-items:center;gap:24px;padding:8px 20px;}
 @media(max-width:480px){html[data-brand-surface] .dc-brand img,html[data-brand-surface] .dc-admin-brand img{width:120px}html[data-brand-surface] .dc-brand,html[data-brand-surface="admin"] .dc-admin-brand{padding:8px 10px;}}
+
+/* Practical lesson demonstration, retaining the Signature palette. */
+.method-example{background:var(--signature-surface);border:1px solid var(--signature-border);border-radius:18px;padding:clamp(20px,4vw,34px);margin-top:28px}
+.method-example h3{font-size:clamp(23px,3vw,30px);margin:7px 0;color:var(--signature-forest)}
+.method-example>p{max-width:70ch;color:var(--signature-muted)}
+.method-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));list-style:none;padding:0;gap:12px 25px;margin:23px 0}
+.method-steps li{display:flex;gap:13px;padding:14px 0;border-top:1px solid var(--signature-border)}
+.method-steps li>span{min-width:36px;height:36px;display:grid;place-items:center;background:var(--signature-mist);color:var(--signature-forest);border-radius:9px;font-weight:800}
+.method-steps h4{margin:0 0 5px;color:var(--signature-forest);font-size:16px}
+.method-steps p{color:var(--signature-muted);font-size:14px;margin:0}
+@media(max-width:650px){.method-steps{grid-template-columns:1fr}}

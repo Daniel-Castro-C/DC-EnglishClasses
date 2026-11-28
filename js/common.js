@@ -821,7 +821,7 @@ function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts, options){
     { key:'daniel', label:t('nav_daniel'), href:'pergunte-ao-daniel.html' },
     { key:'enviar', label:t('nav_enviar'), href:'enviar-material.html' }
   );
-  let html = '<div class="nav-label">' + t('menu_label') + '</div>';
+  let html = '<div class="nav-label">' + t('menu_label') + '</div>' + studentNotificationCenter(notifCounts.center||{});
   items.forEach(it => {
     const active = it.key === activeKey;
     html += '<a class="nav-item' + (active ? ' active' : '') + '" href="' + it.href + '"' + (active ? ' aria-current="page"' : '') + '>' + portalNavIcon(it.key) + '<span class="nav-item-label">' + escapeHtml(it.label) + '</span>' + (notifCounts[it.key] ? NOTIF_BELL_SVG : '') + '</a>';
@@ -852,15 +852,26 @@ function buildStudentTopNav(activeKey, showGrammarGuides, notifCounts, options){
 // ==========================================================
 // ---------- Notificações dentro do portal ----------
 // ==========================================================
+function studentNotificationCenter(counts){
+  const en=getLang()==='en',types=[
+    ['materials',en?'New materials':'Novos materiais','aluno.html'],
+    ['reports',en?'New performance report':'Novo relatório de desempenho','aluno.html'],
+    ['questions',en?'Answer from Daniel':'Resposta no Pergunte ao Daniel','pergunte-ao-daniel.html'],
+    ['writing',en?'Corrected text':'Texto corrigido','recursos.html?s=texto']
+  ];
+  const total=types.reduce((n,[key])=>n+(Number(counts[key])||0),0);
+  return '<details class="student-notification-center"><summary>'+NOTIF_BELL_SVG+'<span>'+(en?'Notifications':'Notificações')+'</span>'+(total?'<b class="student-notification-count">'+total+'</b>':'')+'</summary><div class="student-notification-list">'+(total?types.filter(([key])=>counts[key]).map(([key,label,url])=>'<a href="'+url+'">'+escapeHtml(label)+' <b>'+Number(counts[key])+'</b></a>').join(''):'<p>'+(en?'No new notifications.':'Nenhuma nova notificação.')+'</p>')+'</div></details>';
+}
 // Retorna um objeto tipo {aulas: 2, daniel: 1, recursos: 1} com a quantidade de notificações
 // não lidas por módulo (chaves batem com as usadas em buildStudentTopNav)
 async function getNotificationCounts(studentId){
-  const counts = {};
+  const counts = {center:{}};
   try {
     const { data } = await sb.from('notifications').select('type').eq('student_id', studentId).eq('read', false);
     (data || []).forEach(n => {
-      const key = n.type === 'new_lesson' ? 'aulas' : n.type === 'daniel_answered' ? 'daniel' : n.type === 'text_corrected' ? 'recursos' : null;
-      if (key) counts[key] = (counts[key] || 0) + 1;
+      const category={new_lesson:'materials',new_material:'materials',new_report:'reports',daniel_answered:'questions',text_corrected:'writing'}[n.type];
+      const key = ['materials','reports'].includes(category) ? 'aulas' : category === 'questions' ? 'daniel' : category === 'writing' ? 'recursos' : null;
+      if (key) {counts[key] = (counts[key] || 0) + 1;counts.center[category]=(counts.center[category]||0)+1;}
     });
   } catch (e) { console.error('Erro ao buscar notificações:', e); }
   return counts;
