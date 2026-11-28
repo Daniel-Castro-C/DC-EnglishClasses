@@ -1,0 +1,17 @@
+# Operação e qualidade — Portal DC
+## Identidade visual
+A landing e sua administração mantêm a assinatura 2027; o portal do aluno conserva a paleta atual. A folha compartilhada ui-quality.css padroniza foco, interação por toque e redução de movimento, sem substituir cores, logotipos ou tipografia. A mudança de identidade do portal é uma etapa posterior.
+## Diagnóstico técnico
+Aplicar supabase-operational-diagnostics.sql após aprovação. Em sessões autenticadas, registra até um sinal por categoria, superfície e usuário por hora; não coleta mensagens, conteúdo de erros, stack traces, URL completa ou dados de formulários. O professor consulta os agregados dos últimos sete dias em Ferramentas > Diagnóstico técnico. Limpeza de registros de mais de 30 dias ao receber novos sinais; a ausência de sinais não prova ausência de falhas. A página pública anônima ainda necessita monitor de disponibilidade e erros sem sessão.
+## Backup e recuperação (procedimento de operador)
+O projeto estava em plano gratuito na consulta de 27/11/2026. Não presumir backups gerenciados nem recuperação pontual. Backups caseiros não substituem um plano de continuidade validado. O script inclui banco e todos os objetos Storage; pg_dump sozinho não inclui arquivos. Para consistência, executar em janela sem gravações (inclui uploads, cadastros e formulários).
+1. Em máquina confiável, montar volume criptografado com acesso exclusivo; não usar repositório, pasta pública ou anexos de chat.
+2. Instalar pg_dump compatível com a versão do servidor e fornecer credenciais por variáveis protegidas (PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE=require ou verify-full, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). Nunca disponibilizar secret key ao navegador. Usar conexão direta ou pooler em modo sessão conforme orientação do provedor.
+3. Executar python3 scripts/backup-portal.py backup /volume-criptografado/portal-AAAA-MM-DD. O diretório deve ser novo. Falha não gera backup utilizável. Verificar python3 scripts/backup-portal.py verify /volume-criptografado/portal-AAAA-MM-DD e pg_restore --list .../database.dump.
+4. Guardar uma segunda cópia criptografada em local independente. Planejar frequência diária e retenção de 30 dias; configurar job no ambiente privado com controle de falhas e espaço. Este repositório não contém credenciais nem agendamento ativo.
+5. Recuperação: criar ambiente isolado compatível, conferir versões, funções, extensões, RLS, Auth, buckets e migrações. Restaurar seguindo procedimento oficial Supabase para Auth e esquemas gerenciados; não executar pg_restore indiscriminadamente contra a produção. Recriar os objetos pelos nomes originais no manifesto com credenciais administrativas. Conferir contagens e amostras, hashes e acesso por perfil (materiais privados, turmas, calendários, relatórios, contatos). Só trocar ambiente produtivo com aprovação e após simulação de restauração bem-sucedida.
+6. Guardar resultado do teste e tempo de recuperação. Se não houver teste de restauração aprovado, marcar recuperação como não validada.
+## Validação
+- Rodar testes Node e build visitor; verificar desktop, 390px e 320px em navegador, com modo claro/escuro.
+- Testar navegação, gravação do calendário, edição de aula, sessão do aluno, bloqueios e notificações; testar formulários públicos e administração.
+- Medir LCP/INP/CLS, transferência e tempo das consultas antes e depois. Paralelização das consultas independentes do professor reduz espera potencial, mas não há alegação de ganho quantificado sem medições reais.
