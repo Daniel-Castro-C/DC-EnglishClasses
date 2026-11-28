@@ -5,9 +5,9 @@ import vm from 'node:vm';
 const tracking=fs.readFileSync('landing/analytics.js','utf8');
 const adminSource=fs.readFileSync('landing/admin-analytics.js','utf8');
 const storage=map=>({getItem:k=>map.get(k),setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)});
-function simulate({local=new Map(),blocked=false,path='/',hostname='dc-englishclasses.vercel.app',session=new Map(),state='visible',now=1_800_000_000_000}={}){
- const calls=[],events={};const document={visibilityState:state,addEventListener:(name,fn)=>{events[name]=fn}};
- vm.runInNewContext(tracking,{location:{hostname,pathname:path},document,Date:{now:()=>now},
+function simulate({local=new Map(),blocked=false,path='/',hostname='dc-englishclasses.vercel.app',session=new Map(),state='visible',now=1_800_000_000_000,search='',referrer=''}={}){
+ const calls=[],events={};const document={referrer,visibilityState:state,addEventListener:(name,fn)=>{events[name]=fn}};
+ vm.runInNewContext(tracking,{location:{hostname,pathname:path,search},URL,URLSearchParams,document,Date:{now:()=>now},
  localStorage:blocked?{getItem(){throw Error('denied')}}:storage(local),
  sessionStorage:{getItem:k=>session.get(k),setItem:(k,v)=>session.set(k,v),removeItem:k=>session.delete(k)},
  fetch:async(url,init)=>{calls.push({url,init});return {ok:true}}});
@@ -16,7 +16,7 @@ function simulate({local=new Map(),blocked=false,path='/',hostname='dc-englishcl
 test('counts landing and visitor session once, with no personal identifiers',()=>{
  const a=simulate();
  assert.equal(a.calls.length,1);
- assert.deepEqual(JSON.parse(a.calls[0].init.body),{kind:'landing'});
+ assert.deepEqual(JSON.parse(a.calls[0].init.body),{kind:'landing',source:'direct'});
  assert.equal(a.calls[0].init.credentials,'omit');assert.equal(a.calls[0].init.referrerPolicy,'no-referrer');
  assert.equal(simulate({session:a.session}).calls.length,0);
  assert.deepEqual(JSON.parse(simulate({path:'/visit/home.html',session:a.session}).calls[0].init.body),{kind:'portal'});
@@ -58,4 +58,10 @@ test('internal browser preference persists across tabs and visitor pages, not ot
  assert.equal(simulate({local:new Map()}).calls.length,1);
  assert.equal(simulate({blocked:true}).calls.length,0);
  const hidden=simulate({local:new Map(),state:'hidden'});hidden.document.visibilityState='visible';hidden.events.visibilitychange();assert.equal(hidden.calls.length,1);
+});
+
+test('traffic attribution records only a fixed category, not URL, identifier or arbitrary UTM',()=>{
+ for(const [search,referrer,expected] of [['?utm_source=instagram&email=x@y.com','','instagram'],['?utm_source=unknown-person','','other'],['','https://m.youtube.com/path?secret=123','youtube'],['','https://instagram.com.evil.example/private','referral'],['?utm_source=indicacao','','referral']]){
+   assert.deepEqual(JSON.parse(simulate({search,referrer}).calls[0].init.body),{kind:'landing',source:expected});
+ }
 });

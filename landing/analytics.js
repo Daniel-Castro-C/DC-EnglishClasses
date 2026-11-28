@@ -11,6 +11,17 @@
   const endpoint='https://dgwbjgngewymzgedlzix.supabase.co/rest/v1/landing_visit_events';
   const apiKey='sb_publishable_Zlgeqn4PhdY11rZPD6i8-w_T42hrmgN';
   const internalKey='dc-analytics-exclude-browser';
+  const allowed=new Set(['instagram','youtube','whatsapp','google','facebook','linkedin','tiktok','referral','direct']);
+  function trafficSource(){
+    const raw=new URLSearchParams(location.search||'').get('utm_source')?.trim().toLowerCase()||'';
+    const aliases={ig:'instagram',yt:'youtube',indicacao:'referral',indicação:'referral',fb:'facebook'};
+    if(raw){const key=Object.hasOwn(aliases,raw)?aliases[raw]:raw;return allowed.has(key)?key:'other';}
+    let host='';try{host=new URL(document.referrer||'').hostname.toLowerCase();}catch(_){}
+    if(!host||hosts.has(host))return 'direct';
+    for(const [source,domains] of Object.entries({instagram:['instagram.com'],youtube:['youtube.com','youtu.be'],whatsapp:['whatsapp.com','wa.me'],google:['google.com','google.com.br'],facebook:['facebook.com','fb.com'],linkedin:['linkedin.com'],tiktok:['tiktok.com']}))
+      if(domains.some(d=>host===d||host.endsWith('.'+d)))return source;
+    return 'referral';
+  }
   let attempted=false;
   function record(){
     if(attempted||document.visibilityState==='hidden'||document.visibilityState==='prerender')return;
@@ -24,7 +35,7 @@
     }catch(_){/* if storage is blocked, each visible page load counts once */}
     const reset=()=>{try{if(sessionStorage.getItem(key)===stamp)sessionStorage.removeItem(key)}catch(_){}};
     try{
-      fetch(endpoint,{method:'POST',headers:{apikey:apiKey,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({kind}),credentials:'omit',keepalive:true,referrerPolicy:'no-referrer'})
+      fetch(endpoint,{method:'POST',headers:{apikey:apiKey,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(kind==='landing'?{kind,source:trafficSource()}:{kind}),credentials:'omit',keepalive:true,referrerPolicy:'no-referrer'})
         .then(r=>{if(!r.ok)reset()}).catch(reset);
     }catch(_){reset()}
   }
