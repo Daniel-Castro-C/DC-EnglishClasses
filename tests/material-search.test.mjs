@@ -17,3 +17,9 @@ test('real admin and isolated preview use the same material-search component',()
  assert.match(read('js/calendar-preview-demo.js'),/crmRenderMaterialSearch\(root,students/);
  assert.match(read('js/calendar-preview-demo.js'),/ccJump\(row.lesson_date\)/);
 });
+test('material library filters grammar independently and excludes personal reports from reuse',()=>{
+ const lessons=[{...rows[0],grammar_content:'Condicionais',resources:[{type:'rep',file_path:'private'},{type:'ppt',file_path:'slides'},{type:'ex',file_path:'exercise'}]},{...rows[1],grammar_content:'Present Perfect'}];
+ assert.deepEqual(Array.from(filter(lessons,students,'','CONDICIONAIS').map(l=>l.id)),['1']);
+ const reusable=vm.runInContext('crmReusableMaterials',context);
+ assert.deepEqual(Array.from(reusable(lessons[0]).map(r=>r.type)),['ppt','ex']);
+});

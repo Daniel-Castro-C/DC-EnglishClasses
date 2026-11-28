@@ -547,7 +547,7 @@ async function ccSaveAll(){
    const requests=[];
    for(const entry of moves){
     const rows=ccLessonRows(ctx,entry.date),targets=rows.map(l=>l.student_id);
-    requests.push({date:entry.date,to:entry.newDate,ids:rows.map(l=>l.id),title:entry.automatic?null:entry.title,topic:entry.topic,materials:await ccPrepareLessonMaterials(ctx,entry,targets)});
+    requests.push({date:entry.date,to:entry.newDate,ids:rows.map(l=>l.id),title:entry.automatic?null:entry.title,topic:entry.topic,...(Object.hasOwn(entry,'grammar')?{grammar:entry.grammar}:{}),materials:await ccPrepareLessonMaterials(ctx,entry,targets)});
    }
    const {data,error}=await sb.rpc('portal_calendar_save_registered_statuses',{p_group:ctx.group?.id||null,p_student:ctx.group?null:ctx.members[0].id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]})),p_metadata:metadata,p_moves:requests,p_deletions:deletions.map(e=>({date:e.date,ids:e.deleteIds}))});
    if(error)throw error;
@@ -559,7 +559,7 @@ async function ccSaveAll(){
    const requests=[];
    for(const entry of moves){
     const rows=ccLessonRows(ctx,entry.date),targets=rows.map(l=>l.student_id);
-    requests.push({date:entry.date,to:entry.newDate,ids:rows.map(l=>l.id),title:entry.automatic?null:entry.title,topic:entry.topic,materials:await ccPrepareLessonMaterials(ctx,entry,targets)});
+    requests.push({date:entry.date,to:entry.newDate,ids:rows.map(l=>l.id),title:entry.automatic?null:entry.title,topic:entry.topic,...(Object.hasOwn(entry,'grammar')?{grammar:entry.grammar}:{}),materials:await ccPrepareLessonMaterials(ctx,entry,targets)});
    }
    const {data,error}=await sb.rpc('portal_calendar_save_with_moves',{p_group:ctx.group?.id||null,p_student:ctx.group?null:ctx.members[0].id,p_schedule:schedule,p_changes:ctx.members.map(s=>({id:s.id,payload:d.payloads[s.id],revision:d.revisions[s.id]})),p_moves:requests,p_deletions:deletions.map(e=>({date:e.date,ids:e.deleteIds}))});
    if(error)throw error;
