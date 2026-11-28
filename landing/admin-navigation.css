@@ -28,3 +28,9 @@ html[data-brand-surface="admin"] a.admin-module-link:hover{background:#F9FBF9;bo
 .admin-notification[hidden]{display:none!important}
 .admin-notification{display:inline-flex;align-items:center;gap:5px;border-radius:999px;border:1px solid #D9C89E;background:#F8F0DB;color:#684C19;font-size:11px;font-weight:800;line-height:1.3;padding:5px 9px;max-width:100%;white-space:normal}
 .admin-notification svg{width:15px;height:15px;flex:none}
+
+.crm-lead-insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.crm-insight,.crm-source-panel{padding:18px;border:1px solid var(--signature-border);border-radius:12px;background:var(--signature-surface);min-width:0}
+.crm-insight h3,.crm-source-panel h3{margin-top:0}.crm-insight .entry{margin:6px 0}.crm-insight .entry p{margin:4px 0 10px}.crm-insight small{display:block}.crm-insight textarea{width:100%}.crm-source-panel code{overflow-wrap:anywhere}.crm-source-panel details{margin-top:16px}.crm-source-panel .entry{padding:8px 12px}
+.crm-insight[hidden]{display:none!important}
+@media(max-width:700px){.crm-lead-insights{grid-template-columns:1fr}}
