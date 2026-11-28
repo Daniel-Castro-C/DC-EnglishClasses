@@ -27,8 +27,7 @@ function levelLabel(level){
   await syncThemeFromProfile(myProfile);
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
 
-  grammarUnlocked = await isGrammarUnlocked();
-  notifCounts = await getNotificationCounts(myProfile.id);
+  [grammarUnlocked, notifCounts] = await Promise.all([isGrammarUnlocked(),getNotificationCounts(myProfile.id)]);
 
   document.getElementById('nav-container').innerHTML = buildStudentTopNav('gramatica', grammarUnlocked, notifCounts);
 

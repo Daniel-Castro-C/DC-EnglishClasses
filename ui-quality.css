@@ -12,3 +12,29 @@
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+/* Narrow screens: fix the source of overflow rather than hiding page content. */
+@media(max-width:600px){
+ .row>*{min-width:0;max-width:100%}
+ .row>label,.row>input,.row>select,.row>textarea{flex:1 1 min(160px,100%)}
+ :is(.btn-ghost,.btn-dark-sm,.resource-action,.btn-primary,.btn){white-space:normal;overflow-wrap:anywhere;max-width:100%}
+ :where(.crm-table-wrap,.crm-month-scroll,.crm-lead-table-wrap){overscroll-behavior-inline:contain;overflow-x:auto}
+ :where(.crm-table-wrap,.crm-month-scroll) button{white-space:normal}
+ :where(.student-material-actions,.student-journey-grid,.student-security-fields)>*{min-width:0}
+ :where(.student-journey-card,.resource-info,.student-lesson-summary){overflow-wrap:anywhere}
+ :where(.student-profile-hero,.cc-lesson-edit-heading,.cc-lesson-header,.cc-material-actions,.crm-heading){min-width:0;flex-wrap:wrap}
+ :where(.resource-info,.crm-dossier-identity,.cc-material-name,.cc-material-row label){min-width:0}
+ .home-lesson-call-action{min-width:0}
+ :where(.student-panel,.crm-panel,.cc-calendar-columns>.box){max-width:100%}
+}
+@media(max-width:420px){
+ html[data-brand-surface="landing"] .container{width:calc(100% - 28px)}
+ html[data-brand-surface="landing"] .availability-form-shell{padding:12px}
+ html[data-brand-surface="landing"] .nav{flex-wrap:wrap;gap:10px}
+ html[data-brand-surface="landing"] .navlinks{flex-wrap:wrap;gap:12px}
+ html[data-brand-surface="landing"] .method-example{padding:16px}
+ html[data-brand-surface="admin"] .controls{max-width:100%}
+ html[data-brand-surface="admin"] .controls button{white-space:normal}
+ .student-journey-card{padding:11px 9px}
+ .student-journey-card strong{overflow-wrap:anywhere}
+}

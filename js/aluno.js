@@ -35,12 +35,9 @@ const LESSONS_PER_PAGE = 10;
   await syncThemeFromProfile(myProfile);
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
 
-  grammarUnlocked = await isGrammarUnlocked();
-
-  // O aluno já está vendo "Minhas aulas" agora, então qualquer notificação de aula nova
-  // pode ser marcada como lida (o sininho não aparece mais nesta ou em outras páginas).
-  // Mark only after the actual materials have been successfully loaded.
-  notifCounts = await getNotificationCounts(myProfile.id);
+  // Notifications are still marked only after the materials load successfully.
+  [grammarUnlocked,notifCounts] = await Promise.all([isGrammarUnlocked(),getNotificationCounts(myProfile.id)]);
+  renderNav();
 
   await loadLessons();
 })();
@@ -59,13 +56,14 @@ async function loadLessons(){
       `<div class="empty-state">${t('load_lessons_error')}</div>`;
     return;
   }
-  await Promise.all(['new_lesson','new_material','new_report'].map(type=>markNotificationsRead(myProfile.id,type)));
-  notifCounts=await getNotificationCounts(myProfile.id);
   myLessons = sortLessonsByDate(data || [], false);
   currentResources = myLessons.flatMap(l => l.resources || []);
   lessonsPage = 0;
   renderNav();
   renderLessonsPage();
+  await Promise.all(['new_lesson','new_material','new_report'].map(type=>markNotificationsRead(myProfile.id,type)));
+  notifCounts=await getNotificationCounts(myProfile.id);
+  renderNav();
 }
 
 function renderNav(){

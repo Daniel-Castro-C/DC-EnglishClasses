@@ -654,12 +654,12 @@ function buildThemeToggle(profileId){
 // ---------- Mural de conquistas (badges por marco de aulas) ----------
 // ==========================================================
 const BADGE_MILESTONES = [
-  { threshold: 10,  file: 'badges/badge-10.png',  alt: '10 classes badge' },
-  { threshold: 30,  file: 'badges/badge-30.png',  alt: '30 classes badge' },
-  { threshold: 50,  file: 'badges/badge-50.png',  alt: '50 classes badge' },
-  { threshold: 100, file: 'badges/badge-100.png', alt: '100 classes badge' },
-  { threshold: 150, file: 'badges/badge-150.png', alt: '150 classes badge' },
-  { threshold: 200, file: 'badges/badge-200.png', alt: '200 classes badge' },
+  { threshold: 10,  file: 'badges/badge-10.webp',  alt: '10 classes badge' },
+  { threshold: 30,  file: 'badges/badge-30.webp',  alt: '30 classes badge' },
+  { threshold: 50,  file: 'badges/badge-50.webp',  alt: '50 classes badge' },
+  { threshold: 100, file: 'badges/badge-100.webp', alt: '100 classes badge' },
+  { threshold: 150, file: 'badges/badge-150.webp', alt: '150 classes badge' },
+  { threshold: 200, file: 'badges/badge-200.webp', alt: '200 classes badge' },
 ];
 
 // Monta o HTML do mural de conquistas a partir da quantidade de aulas do aluno.
