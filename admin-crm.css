@@ -278,3 +278,17 @@ body.admin-crm.dark-mode .crm-quick-status[data-status="absent"]{color:var(--dan
 body.admin-crm.dark-mode .crm-avatar-small{background:var(--sky-soft);color:var(--sky)}
 
 .cc-library-results{max-height:380px;overflow:auto}.cc-library-results .row{justify-content:space-between;align-items:center;flex-wrap:wrap}.cc-library-results .box{overflow-wrap:anywhere}
+
+/* Preserve all calendar content inside the calendar, never scroll the entire page. */
+@media(max-width:600px){
+ body.admin-crm .main{padding-inline:12px}
+ .admin-crm .cc-calendar-toolbar,.admin-crm .cc-calendar-columns>.box{padding:10px}
+ .admin-crm .cc-month-grid{grid-template-columns:repeat(7,minmax(38px,1fr));overflow-x:auto;padding:2px;overscroll-behavior-inline:contain}
+ .admin-crm .cc-month-grid .cc-day{padding:3px}
+ .admin-crm .cc-material-row label{min-width:0;flex:1 1 100%}
+ .admin-crm .cc-material-name{min-width:0;flex:1 1 100%}
+ .admin-crm .cc-weekday-group .cc-weekday-chip{min-width:0;padding:6px 7px}
+ .admin-crm .cc-lesson-actions,.admin-crm .cc-material-actions{flex-wrap:wrap;max-width:100%}
+ .admin-crm .cc-day-actions>*{max-width:100%}
+ .admin-crm .crm-dossier-identity{min-width:0}
+}

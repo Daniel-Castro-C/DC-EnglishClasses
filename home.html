@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>D.C English Classes — Portal do aluno</title>
 <link rel="stylesheet" href="style.css">
 <style>
@@ -306,8 +306,7 @@ function previewBadgeCelebration(){
   await syncThemeFromProfile(profile);
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(profile.id);
 
-  const grammarUnlocked = await isGrammarUnlocked();
-  const notifCounts = await getNotificationCounts(profile.id);
+  const [grammarUnlocked, notifCounts, stats, initialLessonDays] = await Promise.all([isGrammarUnlocked(), getNotificationCounts(profile.id), loadHomeLessonStats(profile), homeNextLessonDays(profile)]);
   document.getElementById('nav-container').innerHTML = buildStudentTopNav('home', grammarUnlocked, notifCounts);
 
   const firstName = (profile.full_name || profile.email || '').split(' ')[0];
@@ -315,20 +314,12 @@ function previewBadgeCelebration(){
     ? `<img class="welcome-avatar" src="${profile.avatar_url}" alt="Foto">`
     : `<div class="welcome-avatar"></div>`;
 
-  const { count: lessonCount, error: lessonCountError } = await sb.from('lessons').select('id', { count: 'exact', head: true }).eq('student_id', profile.id);
-  let completedCount = lessonCount || 0, completedError = lessonCountError;
-  if (!isTestStudentProfile(profile)) {
-    try {
-      const result = await sb.rpc('completed_lesson_count',{p_student:profile.id});
-      if (result.error || result.data == null) throw result.error || new Error('Completion count unavailable');
-      completedCount = Number(result.data) || 0; completedError = null;
-    } catch(err) { console.warn('Completion count unavailable; preserving legacy count',err); completedError = err; }
-  }
+  const {lessonCount, completedCount, completedError}=stats;
   pendingBadgeStudentId = profile.id;
   pendingBadgeCelebration = completedError ? null : getBadgeToCelebrate(profile.id, completedCount);
   const achievementsHtml = buildAchievementsSection(completedCount);
   const isEnglish = getLang() === 'en';
-  let lessonDays = await homeNextLessonDays(profile);
+  let lessonDays = initialLessonDays;
   const lessonCallHtml = renderHomeLessonCall({url:profile.permanent_lesson_link,demo:isTestStudentProfile(profile),days:lessonDays,lang:getLang()});
 
 

@@ -55,3 +55,35 @@ jobs:
           assert 'id="nav-container"' in admin
           print('OK: dashboard entry points')
           PY
+
+  responsive-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.51.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Build isolated candidate and baseline
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          node landing/build.mjs
+          git worktree add --detach "$RUNNER_TEMP/baseline" "${BASE_SHA:-HEAD}"
+          cd "$RUNNER_TEMP/baseline"
+          node landing/build.mjs
+      - name: Measure navigation and check narrow layouts
+        run: python tests/browser-audit.py --baseline "$RUNNER_TEMP/baseline" --candidate "$GITHUB_WORKSPACE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: responsive-browser-results
+          path: browser-audit-results.json
+          retention-days: 3

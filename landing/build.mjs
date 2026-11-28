@@ -14,7 +14,6 @@ const cp=(from,to)=>{
 for(const name of ['index.html','admin.html','depoimento.html','disponibilidade.html','availability.js','availability-embedded.css','analytics.js','admin-analytics.js','enrollment-settings.js','admin-navigation.js','admin-notifications.js','admin-crm.js','admin-navigation.css'])cp('landing/'+name,name);
 // Use the real module grid and notification code in a data-free preview, never in production.
 if(process.env.VERCEL_ENV!=='production'){
- cp('tests/responsive-probe.html','responsive-probe.html');
  const admin=fs.readFileSync(path.join(root,'landing','admin.html'),'utf8');
  const head=admin.match(/^[\s\S]*?<\/head>/)?.[0];
  const grid=admin.match(/<nav class="admin-module-grid"[\s\S]*?<\/nav>/)?.[0];

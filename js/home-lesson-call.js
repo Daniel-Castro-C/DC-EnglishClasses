@@ -49,3 +49,16 @@ function toggleHomeLessonDayPreview(){
   const card=document.querySelector('#home-lesson-call-container .home-lesson-call');
   updateHomeLessonCall({role:'student',is_test_profile:true},card?.classList.contains('is-lesson-day')?3:0);
 }
+
+// Home data reads are independent. Preserve the existing fallback and badge error boundary.
+async function loadHomeLessonStats(profile){
+  const legacy=Promise.resolve(sb.from('lessons').select('id',{count:'exact',head:true}).eq('student_id',profile.id)).catch(error=>({count:null,error}));
+  const actual=isTestStudentProfile(profile)?Promise.resolve(null):Promise.resolve(sb.rpc('completed_lesson_count',{p_student:profile.id})).catch(error=>({error}));
+  const [fallback,result]=await Promise.all([legacy,actual]);
+  let completedCount=fallback.count||0,completedError=fallback.error;
+  if(result){
+    if(result.error||result.data==null){completedError=result.error||new Error('Completion count unavailable');console.warn('Completion count unavailable; preserving legacy count',completedError);}
+    else{completedCount=Number(result.data)||0;completedError=null;}
+  }
+  return {lessonCount:fallback.count,completedCount,completedError};
+}

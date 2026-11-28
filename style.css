@@ -1305,3 +1305,12 @@ body.dark-mode .student-test-badge-preview:hover,body.dark-mode .student-test-ex
 .student-notification-count{margin-left:auto;background:#D4A34E;color:#19263A;padding:2px 7px;border-radius:999px}
 .student-notification-list{padding:0 7px 7px}.student-notification-list a{display:flex;align-items:center;justify-content:space-between;gap:7px;color:#E7ECF5;padding:7px;font-size:12px;border-radius:5px;text-decoration:none}.student-notification-list a:hover{background:#ffffff14}
 .student-notification-list p{margin:4px 7px 7px;color:#C5D3E5;font-size:12px}
+
+@media(max-width:600px){
+ .app-shell .main{min-width:0}
+ .home-dashboard .dashboard-hero-action{white-space:normal;max-width:100%;text-align:center}
+ .student-profile-avatar-row{flex-wrap:wrap}
+ .student-profile-avatar-row .student-avatar-picker{flex:1 1 150px;max-width:100%}
+ .student-journey-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .student-journey-card{overflow-wrap:anywhere}
+}

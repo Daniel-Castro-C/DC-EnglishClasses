@@ -16,7 +16,8 @@ let myProfile = null;
   await syncThemeFromProfile(myProfile);
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
 
-  document.getElementById('nav-container').innerHTML = buildStudentTopNav('perfil', await isGrammarUnlocked(), await getNotificationCounts(myProfile.id));
+  const [grammarUnlocked,notifCounts]=await Promise.all([isGrammarUnlocked(),getNotificationCounts(myProfile.id)]);
+  document.getElementById('nav-container').innerHTML = buildStudentTopNav('perfil', grammarUnlocked, notifCounts);
   render();
 })();
 

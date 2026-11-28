@@ -84,8 +84,7 @@ Object.assign(I18N.en, {
   await syncThemeFromProfile(myProfile);
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(myProfile.id);
 
-  grammarUnlocked = await isGrammarUnlocked();
-  notifCounts = await getNotificationCounts(myProfile.id);
+  [grammarUnlocked, notifCounts] = await Promise.all([isGrammarUnlocked(),getNotificationCounts(myProfile.id)]);
 
   // Abre direto no corretor quando há uma correção nova (sininho) ou com recursos.html?s=texto
   try {
