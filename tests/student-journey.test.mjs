@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync('js/student-journey.js','utf8'),ctx);const J=ctx.window.StudentJourney;
-test('lesson duration is always 50 minutes per completed class and is formatted hh:mm',()=>{
- for(const [n,s] of [[0,'00:00'],[1,'00:50'],[2,'01:40'],[38,'31:40'],[150,'125:00'],[null,'—']])assert.equal(J.duration(n),s);
+test('lesson duration is always 50 minutes per completed class and is formatted in hours and minutes',()=>{
+ for(const [n,s] of [[0,'0h00m'],[1,'0h50m'],[2,'1h40m'],[38,'31h40m'],[150,'125h00m'],[null,'—']])assert.equal(J.duration(n),s);
 });
 test('locked Grammar Guides never render a card; each badge milestone counts exactly once',async()=>{
  const calls=[];const db={from(table){calls.push(table);return{select(_f,opts){assert.equal(opts.count,'exact');assert.equal(opts.head,true);return this},eq(k,v){if(k==='student_id'){assert.equal(v,'own');return this;}assert.equal(v,table==='word_of_day_answers'?'nao_uso':'estudado');return Promise.resolve({count:table==='word_of_day_answers'?7:3})}}}};

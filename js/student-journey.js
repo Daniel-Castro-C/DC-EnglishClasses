@@ -2,7 +2,7 @@
 (function(){
  'use strict';
  const words={pt:{journey:'Minha jornada',classes:'Aulas realizadas',time:'Tempo em aula',saved:'Palavras salvas',guides:'Grammar Guides estudados',badges:'Marcos alcançados',year:'Retrospectiva',yearDesc:'Sua evolução neste ano'},en:{journey:'My journey',classes:'Lessons completed',time:'Learning time',saved:'Saved words',guides:'Grammar Guides studied',badges:'Milestones reached',year:'Year in review',yearDesc:'Your progress this year'}};
- function duration(count){if(count==null)return '—';const mins=Math.max(0,Math.trunc(Number(count)||0))*50;return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');}
+ function duration(count){if(count==null)return '—';const mins=Math.max(0,Math.trunc(Number(count)||0))*50;return String(Math.floor(mins/60))+'h'+String(mins%60).padStart(2,'0')+'m';}
  function text(n){return n==null?'—':String(Math.max(0,Math.trunc(Number(n)||0)));}
  function metrics({completed=null,saved=null,guides=null,badges=null,grammarUnlocked=false},lang='pt'){
   const labels=words[lang]||words.pt;
