@@ -1765,7 +1765,7 @@ function renderMaterialExternalLink(raw){
 
 function crmStudyTab(){
  const s=currentStudent;
- document.getElementById('tab-content').innerHTML='<section class="box"><h3>Mural de conquistas</h3>'+ (buildAchievementsSection(crmCompletedLocalCount(),{title:''})||'<p class="small-note">Ainda sem conquistas.</p>')+'</section><section class="box"><h3>Status de estudo — Guias de Gramática</h3><div id="grammar-status-box">Carregando...</div></section>';
+ document.getElementById('tab-content').innerHTML='<section class="box"><h3>Mural de conquistas</h3>'+ (buildAchievementsSection(crmCompletedLocalCount(),{title:''})||'<p class="small-note">Ainda sem conquistas.</p>')+'</section><section class="box"><h3>Status de estudo — Guias de Gramática</h3><div id="grammar-status-box">Carregando...</div></section>'+(typeof crmRetrospectivePanel==='function'?crmRetrospectivePanel(s):'');
  renderGrammarStatusBox(s.id);
 }
 async function crmStudentInboxTab(tab){

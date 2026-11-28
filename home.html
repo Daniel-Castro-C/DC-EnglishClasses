@@ -156,6 +156,7 @@ html.welcome-tour-active,html.welcome-tour-active body{overflow:hidden!important
 <script src="js/supabaseClient.js"></script>
 <script src="js/common.js"></script>
 <script src="js/home-lesson-call.js"></script>
+<script src="js/student-journey.js"></script>
 <script>
 
 async function renderRecentDashboardMaterials(studentId){
@@ -346,6 +347,8 @@ function previewBadgeCelebration(){
 
       <div id="home-lesson-call-container">${lessonCallHtml}</div>
       ${achievementsHtml}
+      <div id="student-journey" aria-live="polite"></div>
+      <div id="student-retrospective"></div>
       ${isTestStudentProfile(profile) ? `<div class="badge-preview-tools"><button type="button" onclick="previewBadgeCelebration()">✦ ${t('badge_celebration_preview')}</button><button type="button" onclick="toggleHomeLessonDayPreview()">${isEnglish ? 'Preview lesson day' : 'Simular dia de aula'}</button></div>` : ''}
 
       <section class="dashboard-hero" aria-label="${t('dashboard_continue')}">
@@ -411,6 +414,18 @@ function previewBadgeCelebration(){
     window.addEventListener('focus', refreshLessonDay);
     setInterval(refreshLessonDay, 60000);
   }
+  // Jornada: counts from existing records, never inferred from scheduled classes.
+  const refreshJourney=async()=>{
+    const holder=document.getElementById('student-journey');
+    const stats=await StudentJourney.load(sb,profile.id,completedError?null:completedCount,grammarUnlocked,BADGE_MILESTONES);
+    if(holder?.isConnected)holder.innerHTML=StudentJourney.render(stats,getLang());
+  };
+  refreshJourney();
+  window.addEventListener('word-answer-changed',refreshJourney);
+  StudentJourney.yearly(sb,profile.id,grammarUnlocked).then(result=>{
+    const holder=document.getElementById('student-retrospective');
+    if(result&&holder?.isConnected)holder.innerHTML=StudentJourney.render(result.stats,getLang(),result.year);
+  });
   // Os materiais são buscados apenas entre aulas pertencentes ao aluno logado.
   renderRecentDashboardMaterials(profile.id);
 
