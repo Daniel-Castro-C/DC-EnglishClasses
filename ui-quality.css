@@ -1,0 +1,14 @@
+/* Cross-surface interaction standards; each environment retains its own colors. */
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{outline:2px solid currentColor;outline-offset:3px}
+:where(input,select,textarea){max-width:100%;min-width:0}
+:where(img,video){max-width:100%}
+:where(.crm-table-wrap,.resource-list){max-width:100%;min-width:0}
+@media(max-width:600px){
+ :where(.row,.controls,.crm-heading-tools){flex-wrap:wrap}
+ :where(.card,.box,.crm-panel,.home-card){min-width:0;overflow-wrap:anywhere}
+ :where(button,input,select,textarea){min-height:40px}
+ :where(input[type=checkbox],input[type=radio],input[type=range]){min-height:0}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
+}

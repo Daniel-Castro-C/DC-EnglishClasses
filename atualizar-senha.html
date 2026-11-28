@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-</head>
+<link rel="stylesheet" href="ui-quality.css"></head>
 <body>
 <script>(function(){try{if(localStorage.getItem('portal_theme')==='dark')document.body.classList.add('dark-mode');}catch(e){}})();</script>
 
@@ -47,7 +47,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabaseClient.js"></script>
+<script src="js/supabaseClient.js"></script><script src="js/diagnostics.js"></script>
 <script>
 function showMsg(msg, ok){
   const el = document.getElementById('msg-box');

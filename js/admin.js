@@ -38,9 +38,7 @@ let quickLessonFiles = [];
   await syncThemeFromProfile(profile);
   document.getElementById('theme-toggle-container').innerHTML = buildThemeToggle(profile.id);
 
-  await loadStudents();
-  try { await ccLoadCloud(); } catch(error) { console.error(error); alert('Não foi possível carregar o calendário do Supabase. As alterações do calendário estão bloqueadas até recarregar a página.'); }
-  await refreshPendingCounts();
+  await Promise.all([loadStudents(),refreshPendingCounts(),ccLoadCloud().catch(error=>{console.error(error);alert('Não foi possível carregar o calendário do Supabase. As alterações do calendário estão bloqueadas até recarregar a página.');})]);
   renderNav();
   const requestedStudent = new URLSearchParams(location.search).get('student');
   if (requestedStudent && students.some(s => s.id === requestedStudent)) await openStudent(requestedStudent);
@@ -100,7 +98,7 @@ async function crmRefreshIndicators(){
   if(nav)nav.innerHTML=crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas');
 }
 function renderNav(){
- const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['turmas','Turmas','users','tgOpen()'],['agenda','Agenda','calendar','ccGlobalView()'],['atividades','Atividades recentes','activity','openRecentAdminActivity()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['materiais-busca','Banco de aulas e materiais','file','crmMaterialSearch()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
+ const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['turmas','Turmas','users','tgOpen()'],['agenda','Agenda','calendar','ccGlobalView()'],['atividades','Atividades recentes','activity','openRecentAdminActivity()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['materiais-busca','Banco de aulas e materiais','file','crmMaterialSearch()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['diagnostics','Diagnóstico técnico','activity','crmDiagnostics()'],['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
  document.getElementById('nav-container').innerHTML=groups.map(([label,items])=>'<div class="nav-label">'+label+'</div>'+items.map(([key,name,icon,action])=>{const active=currentView===key||(key==='alunos'&&currentView==='student');return '<button type="button" class="nav-item crm-nav'+(active?' active':'')+'" onclick="'+escapeHtml(action)+'">'+crmIcon(icon)+'<span class="nav-item-label">'+name+'</span>'+(key==='daniel'&&danielPendingTotal?'<span class="pill">'+danielPendingTotal+'</span>':'')+(key==='alunos'?'<span data-crm-nav-inbox>'+crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas')+'</span>':'')+'</button>'}).join('')).join('');
 }
 function filterAdminStudentNav(query){
@@ -187,9 +185,10 @@ async function renderHome(){
   const homeRequest = ++crmHomeRequest;
   let completedIds = new Set(), registeredIds = new Set(), registeredLessons=[], agendaLoadError = false, groupLoadError=false;
   const groupsReady=tgLoad();
+  const lessonsReady=Promise.resolve(sb.from('lessons').select('student_id,calendar_status,group_id,lesson_date').eq('lesson_date',today.date)).then(result=>({result}),error=>({error}));
   // Resolve the group source before building or counting the daily agenda.
   try{await groupsReady;}catch(error){console.error('Agenda: falha ao consultar turmas',error);groupLoadError=true;}
-  try { const {data,error}=await sb.from('lessons').select('student_id,calendar_status,group_id,lesson_date').eq('lesson_date',today.date); if(error)throw error; registeredLessons=data||[]; registeredIds=new Set((data||[]).map(l=>l.student_id)); completedIds=new Set((data||[]).filter(l=>!l.calendar_status||l.calendar_status==='done').map(l=>l.student_id)); } catch(error){console.error('Agenda: falha ao consultar aulas cadastradas',error);agendaLoadError=true;}
+  try { const loaded=await lessonsReady;if(loaded.error)throw loaded.error;const {data,error}=loaded.result; if(error)throw error; registeredLessons=data||[]; registeredIds=new Set((data||[]).map(l=>l.student_id)); completedIds=new Set((data||[]).filter(l=>!l.calendar_status||l.calendar_status==='done').map(l=>l.student_id)); } catch(error){console.error('Agenda: falha ao consultar aulas cadastradas',error);agendaLoadError=true;}
   if(currentView!=='home'||homeRequest!==crmHomeRequest)return;
   const classes = groupLoadError?[]:crmGroupDailyAgenda(ccAgenda(today,completedIds,true,registeredIds,registeredLessons));
   const main = document.getElementById('main-content');
@@ -1825,4 +1824,16 @@ function crmEditLesson(id){
 function crmCompletedLocalCount(){
  const dates=new Set(currentLessons.map(l=>l.lesson_date).filter(Boolean));
  return currentLessons.filter(l=>!l.calendar_status||l.calendar_status==='done').length+ccManualDoneDates(ccData(currentStudent)).filter(d=>!dates.has(d)).length;
+}
+
+async function crmDiagnostics(){
+ currentStudent=null;currentView='diagnostics';renderNav();
+ const root=document.getElementById('main-content');
+ root.innerHTML='<div class="topline"><h1>Diagnóstico técnico</h1></div><section class="box"><p>Falhas de execução observadas em sessões autenticadas nos últimos 7 dias. Nenhuma mensagem, texto, endereço ou registro de aluno é exibido.</p><div id="crm-diagnostics-results" aria-live="polite">Consultando...</div></section>';
+ const target=root.querySelector('#crm-diagnostics-results');
+ try{
+  const {data,error}=await sb.rpc('portal_diagnostic_summary');
+  if(error)throw error;if(!target.isConnected)return;
+  target.innerHTML=(data||[]).map(r=>'<div class="resource-row"><div class="resource-info"><strong>'+escapeHtml(r.surface)+'</strong><p>'+escapeHtml(({runtime:'Erro de execução',script_load:'Falha ao carregar script',promise:'Operação interrompida'})[r.kind]||r.kind)+' · '+Number(r.affected_hours)+' sinal(is)</p></div><small>'+escapeHtml(new Date(r.last_seen).toLocaleString('pt-BR'))+'</small></div>').join('')||'<p>Nenhuma falha capturada neste período.</p>';
+ }catch(error){if(target.isConnected)target.textContent='Monitoramento indisponível. Verifique a migração e tente novamente.';}
 }
