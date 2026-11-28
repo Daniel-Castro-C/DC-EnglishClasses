@@ -6,12 +6,12 @@ const students=[{id:'demo-1',full_name:'Aluno de teste',lesson_weekday:4,lesson_
 let currentStudent=students[0],currentView='student',currentTab='calendario',currentLessons=[],currentLessonsReady=true;
 const crmRegisteredDates=new Set(),materialDisplayName=r=>r.name;
 const demoGroup={id:'demo-group',name:'Dupla de teste',members:['demo-2','demo-3'],start:'2026-11-12',days:'4',time:'21:00',calendar_events:{'2026-11-12':{status:'owed',time:'21:00'}},calendarLessons:[],lessons:[],events:{}};
-let demoLessons=students.flatMap(s=>['2026-11-19','2026-11-26'].map((date,i)=>({id:crypto.randomUUID(),student_id:s.id,group_id:s.id==='demo-1'?null:demoGroup.id,lesson_date:date,title:'Class #'+(i+1),title_automatic:true,topic:i?'Conversation':'Introductions',resources:[{id:crypto.randomUUID(),name:(i?'Conversation':'Introductions')+' — Slides.pdf',type:'ppt'},{id:crypto.randomUUID(),name:(i?'Conversation':'Introductions')+' — Exercícios.docx',type:'ex'}]})));
+let demoLessons=students.flatMap(s=>['2026-11-19','2026-11-26'].map((date,i)=>({id:crypto.randomUUID(),student_id:s.id,group_id:s.id==='demo-1'?null:demoGroup.id,lesson_date:date,title:'Class #'+(i+1),title_automatic:true,topic:i?'Conversation':'Introductions',grammar_content:i?'Present Perfect':'Verb to be',resources:[{id:crypto.randomUUID(),name:(i?'Conversation':'Introductions')+' — Slides.pdf',type:'ppt',file_path:'demo/slides.pdf'},{id:crypto.randomUUID(),name:(i?'Conversation':'Introductions')+' — Exercícios.docx',type:'ex',file_path:'demo/exercise.docx'}]})));
 const demoStates=new Map(students.map(s=>[s.id,{calendar_key:s.id,revision:1,payload:{start:'2026-11-12',weekdays:'4',time:'21:00',events:{'2026-11-12':{status:'owed',time:'21:00',...(s.id==='demo-1'?{}:{group_id:demoGroup.id,group_status:'owed'})}}}}]));
 demoStates.set('global',{calendar_key:'global',revision:1,payload:[{start:'2026-12-18',end:'2027-01-03',status:'break',name:'Recesso de fim de ano'}]});
 function demoRefresh(){currentLessons=demoLessons.filter(l=>l.student_id===currentStudent?.id);demoGroup.calendarLessons=demoLessons.filter(l=>demoGroup.members.includes(l.student_id));}
 const sb={
- storage:{from:()=>({upload:async()=>({error:null})})},
+ storage:{from:()=>({upload:async()=>({error:null}),download:async()=>({data:new Blob(['Prévia de material'])})})},
  from:table=>({select(){return this},limit:async()=>({data:[]}),in(){return this}}),
  async rpc(name,args){
   if(name==='save_admin_calendar'){const row={calendar_key:args.p_key,revision:args.p_revision+1,payload:ccClone(args.p_payload)};demoStates.set(row.calendar_key,row);return {data:row.revision};}
@@ -29,7 +29,7 @@ const sb={
      const existing=demoLessons.filter(l=>l.lesson_date===move.date&&(args.p_group?l.group_id===args.p_group:l.student_id===args.p_student&&!l.group_id));
      if(existing.length!==move.ids.length||existing.some(l=>!move.ids.includes(l.id))||demoLessons.some(l=>l.lesson_date===move.to&&args.p_changes.some(c=>c.id===l.student_id)))throw Error('Aula alterada; recarregue');
      for(const l of existing)l.lesson_date=move.to;
-     const result=await sb.rpc('portal_calendar_lesson_save',{p_group:args.p_group,p_student:args.p_student,p_date:move.to,p_title:move.title,p_topic:move.topic,p_members:existing.map(l=>l.student_id),p_materials:move.materials,p_edit:true});
+     const result=await sb.rpc('portal_calendar_lesson_save',{p_group:args.p_group,p_student:args.p_student,p_date:move.to,p_title:move.title,p_topic:move.topic,p_grammar:move.grammar,p_members:existing.map(l=>l.student_id),p_materials:move.materials,p_edit:true});
      if(result.error)throw result.error;
     }
     if(args.p_deletions.length){const result=await sb.rpc('portal_calendar_save_with_deletions',args);if(result.error)throw result.error;return result;}
@@ -52,11 +52,11 @@ const sb={
    if(args.p_group)Object.assign(demoGroup,ccClone(args.p_schedule));
    demoRefresh();return {data:args.p_group?null:args.p_changes[0].revision+1};
   }
-  if(name!=='portal_calendar_lesson_save')return {error:new Error('Operação não simulada')};
+  if(!['portal_calendar_lesson_save','portal_calendar_lesson_save_with_grammar'].includes(name))return {error:new Error('Operação não simulada')};
   for(const id of args.p_members){
    let l=demoLessons.find(l=>l.student_id===id&&l.lesson_date===args.p_date);
    if(!l){l={id:crypto.randomUUID(),student_id:id,group_id:args.p_group,lesson_date:args.p_date,resources:[]};demoLessons.push(l);}
-   l.title=args.p_title||'Class #1';l.title_automatic=args.p_title===null;l.topic=args.p_topic;
+   l.title=args.p_title||'Class #1';l.title_automatic=args.p_title===null;l.topic=args.p_topic;if(args.p_grammar!==undefined)l.grammar_content=args.p_grammar;
    for(const r of args.p_materials.filter(r=>r.type!=='rep'||!args.p_group||r.student===id))l.resources.push({id:crypto.randomUUID(),name:r.name,type:r.type});
   }
   const sorted=demoLessons.filter(l=>args.p_group?l.group_id===args.p_group:l.student_id===args.p_student).sort((a,b)=>a.lesson_date.localeCompare(b.lesson_date));

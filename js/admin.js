@@ -100,7 +100,7 @@ async function crmRefreshIndicators(){
   if(nav)nav.innerHTML=crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas');
 }
 function renderNav(){
- const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['turmas','Turmas','users','tgOpen()'],['agenda','Agenda','calendar','ccGlobalView()'],['atividades','Atividades recentes','activity','openRecentAdminActivity()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['materiais-busca','Buscador de materiais','file','crmMaterialSearch()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
+ const groups=[['GESTÃO',[['home','Visão geral','dashboard','renderHome()'],['alunos','Alunos','users','ccRoster()'],['turmas','Turmas','users','tgOpen()'],['agenda','Agenda','calendar','ccGlobalView()'],['atividades','Atividades recentes','activity','openRecentAdminActivity()']]],['PEDAGÓGICO',[['guias','Guias de Gramática','book','openGuias()'],['materiais-busca','Banco de aulas e materiais','file','crmMaterialSearch()'],['daniel','Pergunte ao Daniel','message','openDanielModule()'],['comunicados','Comunicados','megaphone','openComunicados()']]],['FERRAMENTAS',[['test','Modo aluno de teste','graduation','enterStudentTestMode()'],['testprofile','Perfil de teste','users','openStudent(teacherTestProfile.id)'],['landing','Landing page','external',"window.open('https://dc-englishclasses.vercel.app/','_blank','noopener')"],['leads','Administração da landing page','settings',"window.open('https://dc-englishclasses.vercel.app/admin.html','_blank','noopener')"]]]];
  document.getElementById('nav-container').innerHTML=groups.map(([label,items])=>'<div class="nav-label">'+label+'</div>'+items.map(([key,name,icon,action])=>{const active=currentView===key||(key==='alunos'&&currentView==='student');return '<button type="button" class="nav-item crm-nav'+(active?' active':'')+'" onclick="'+escapeHtml(action)+'">'+crmIcon(icon)+'<span class="nav-item-label">'+name+'</span>'+(key==='daniel'&&danielPendingTotal?'<span class="pill">'+danielPendingTotal+'</span>':'')+(key==='alunos'?'<span data-crm-nav-inbox>'+crmCountBadge(students.filter(s=>!s.is_test_profile).reduce((a,s)=>a+crmInboxCount(s.id),0),'Envios e dúvidas')+'</span>':'')+'</button>'}).join('')).join('');
 }
 function filterAdminStudentNav(query){
@@ -1777,17 +1777,19 @@ async function crmStudentInboxTab(tab){
  el.innerHTML='<section class="box"><h3>'+(questions?'Perguntas do aluno':'Textos para correção')+'</h3><p class="small-note">Consulte os envios deste aluno. Use o módulo pedagógico para responder ou corrigir.</p><button class="btn-dark-sm" onclick="'+(questions?'openDanielModule()':'openTextosModule()')+'">Abrir módulo de atendimento</button>'+ (result.error?'<p>Não foi possível carregar os envios.</p>':rows.map(r=>'<div class="resource-row">'+crmIcon(questions?'message':'file')+'<div class="resource-info"><div class="name">'+(questions?(r.answer==null?'Aguardando resposta':'Respondida'):(r.status==='pending'?'Aguardando correção':'Correção pronta'))+'</div><div class="desc">'+escapeHtml(new Date(r.created_at).toLocaleString('pt-BR'))+'</div></div></div>').join('')||'<p class="small-note">Nenhum envio registrado.</p>')+'</section>';
 }
 
-function crmMaterialSearch(studentId=''){
- currentStudent=null;currentView='materiais-busca';renderNav();
- crmRenderMaterialSearch(document.getElementById('main-content'),students,studentId,async()=>{
+async function crmLoadLibraryRows(){
+  if(typeof demoLessons!=='undefined')return demoLessons.slice();
   const rows=[];
   for(let offset=0;;offset+=500){
-   const {data,error}=await sb.from('lessons').select('id,student_id,group_id,title,topic,lesson_date').order('id',{ascending:true}).range(offset,offset+499);
+   const {data,error}=await sb.from('lessons').select('id,student_id,group_id,title,topic,lesson_date,grammar_content,resources(id,type,name,file_path)').order('id',{ascending:true}).range(offset,offset+499);
    if(error)throw error;
    rows.push(...(data||[]));if((data||[]).length<500)break;
   }
   return rows;
- },async row=>{
+}
+function crmMaterialSearch(studentId=''){
+ currentStudent=null;currentView='materiais-busca';renderNav();
+ crmRenderMaterialSearch(document.getElementById('main-content'),students,studentId,crmLoadLibraryRows,async row=>{
   if(row.group_id&&row.lesson_date){await tgOpenDate(row.group_id,row.lesson_date);return;}
   await openStudent(row.student_id);
   if(currentStudent?.id!==row.student_id||currentView!=='student')return;

@@ -832,3 +832,12 @@ test('only a completed or missed-without-replacement makeup settles the debt; sk
  run("delete sample.events['2026-11-24'].skip;sample.events['2026-11-24'].status='done'");
  assert.equal(run("ccPending(sample)"),0);
 });
+test('grammar drafts persist for the same recipients as lesson materials',async()=>{
+ const {run,ctx}=setupUnified(true);ctx.calls=[];
+ ctx.sb={rpc:async(name,args)=>{ctx.calls.push({name,args});return {}}};
+ run("ccStageGroupDate(ctx,draft,'2026-11-23','done',{},'18:00','','');ccStageGroupDate(ctx,draft,'2026-11-23','done',{s1:'absent',s2:'inherit'},'18:00','','',true);ccLessonMap(ctx).set('2026-11-23',{date:'2026-11-23',automatic:false,title:'Class #12',topic:'Topic',grammar:'Present Perfect',files:[]})");
+ await run("ccFlushLessons(ctx,draft)");
+ assert.equal(ctx.calls[0].name,'portal_calendar_lesson_save_with_grammar');
+ assert.equal(ctx.calls[0].args.p_grammar,'Present Perfect');
+ assert.deepEqual(Array.from(ctx.calls[0].args.p_members),['s2']);
+});
