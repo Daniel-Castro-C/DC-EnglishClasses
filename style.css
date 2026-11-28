@@ -1288,3 +1288,20 @@ body.dark-mode .dashboard-hero{background:linear-gradient(115deg,#1A2A49,#315580
 body.dark-mode .ec-admin-intro{background:linear-gradient(110deg,#203657,#315580)}
 body.dark-mode .student-test-badge-preview,body.dark-mode .student-test-exit{background:var(--sky-soft);color:var(--sky);border-color:var(--control-line)}
 body.dark-mode .student-test-badge-preview:hover,body.dark-mode .student-test-exit:hover{background:#354F70;color:var(--text);border-color:var(--sky)}
+
+/* Student journey: use the existing blue portal theme, including dark mode. */
+.student-journey-panel{margin:0 0 18px;padding:17px 19px;border:1px solid var(--line);border-radius:12px;background:var(--paper-card);color:var(--text)}
+.student-journey-panel h2{font-size:17px;margin:0 0 13px;color:inherit}
+.journey-description{color:var(--text-soft);font-size:13px;margin:-5px 0 12px}
+.student-journey-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:10px}
+.student-journey-card{min-width:0;background:var(--paper-card);border:1px solid var(--line);border-radius:9px;padding:13px 12px;display:flex;flex-direction:column;gap:8px}
+.student-journey-card span{font-size:12px;color:var(--text-soft);overflow-wrap:anywhere}
+.student-journey-card strong{font-size:24px;font-weight:750;color:var(--text);font-variant-numeric:tabular-nums}
+@media(max-width:480px){.student-journey-panel{padding:14px}.student-journey-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-journey-card strong{font-size:21px}}
+
+.student-notification-center{margin:0 0 9px;border:1px solid #ffffff24;border-radius:8px;color:#E7ECF5}
+.student-notification-center summary{cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 10px;font-size:12px;font-weight:700;list-style:none}
+.student-notification-center summary::-webkit-details-marker{display:none}
+.student-notification-count{margin-left:auto;background:#D4A34E;color:#19263A;padding:2px 7px;border-radius:999px}
+.student-notification-list{padding:0 7px 7px}.student-notification-list a{display:flex;align-items:center;justify-content:space-between;gap:7px;color:#E7ECF5;padding:7px;font-size:12px;border-radius:5px;text-decoration:none}.student-notification-list a:hover{background:#ffffff14}
+.student-notification-list p{margin:4px 7px 7px;color:#C5D3E5;font-size:12px}
